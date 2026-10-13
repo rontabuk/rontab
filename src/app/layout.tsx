@@ -40,7 +40,9 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <MobileBottomNav />
         </Suspense>
-        <InstallPrompt />
+        <Suspense fallback={null}>
+          <InstallPrompt />
+        </Suspense>
       </body>
     </html>
   );

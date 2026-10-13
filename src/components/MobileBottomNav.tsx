@@ -54,12 +54,12 @@ export async function MobileBottomNav() {
         config={{
           label: "Seller navigation",
           items: [
-            { href: "/seller/products", label: "Products", icon: "products" },
+            { href: "/products", label: "Home", icon: "home", exact: true },
             { href: "/seller/advertising", label: "Ads", icon: "ads", dot: viewer.hasNewAdCreditGrants, ariaLabel: viewer.hasNewAdCreditGrants ? "Ads, new click-credit grant" : undefined },
             { href: "/seller", label: "Add", icon: "add", exact: true, highlight: true, ariaLabel: "Add a product" },
-            { href: "/seller/profile", label: "Profile", icon: "account" },
+            { href: "/seller/products", label: "Products", icon: "products" },
           ],
-          menuLinks: [{ href: "/products", label: "View the catalogue" }, ...infoLinks],
+          menuLinks: [{ href: "/seller/profile", label: "Profile" }, ...infoLinks],
           signOutTo: "/seller/login",
         }}
       />
