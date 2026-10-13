@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { NotificationsCenter } from "@/components/NotificationsCenter";
@@ -13,6 +14,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 export const metadata: Metadata = { title: "Notification" };
 
 async function NotificationContent({ params }: NotificationRouteProps) {
+  await connection();
   const { id } = await params;
   if (!UUID_PATTERN.test(id)) notFound();
 

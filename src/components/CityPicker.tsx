@@ -25,7 +25,7 @@ export function CityPicker({
   required?: boolean;
   onSelect?: (city: SupportedCity | null) => void;
 }) {
-  const initialCountry = initialCountryCode ?? initialCity?.country_code ?? countries[0]?.country_code ?? "";
+  const initialCountry = initialCountryCode ?? initialCity?.country_code ?? (required ? "" : countries[0]?.country_code ?? "");
   const [countryCode, setCountryCode] = useState(initialCountry);
   const [selectedCity, setSelectedCity] = useState<SupportedCity | null>(initialCity);
   const countryCities = cities.filter((city) => city.country_code === countryCode);
@@ -52,7 +52,7 @@ export function CityPicker({
       <input type="hidden" name={`${name}_country_code`} value={selectedCity?.country_code ?? countryCode} />
       <label className="city-picker-country">
         Country
-        <select value={countryCode} onChange={(event) => selectCountry(event.target.value)} disabled={disabled}>
+        <select value={countryCode} onChange={(event) => selectCountry(event.target.value)} disabled={disabled} required={required}>
           <option value="">Choose a country</option>
           {countries.map((country) => <option value={country.country_code} key={country.country_code}>{country.country_name}</option>)}
         </select>

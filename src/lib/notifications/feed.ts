@@ -6,7 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type SiteNotification = {
   id: string;
-  kind: "verify-email" | "announcement" | "new-product";
+  kind: "verify-email" | "announcement" | "new-product" | "loyalty-offer";
   title: string;
   body: string;
   href: string | null;
@@ -23,10 +23,10 @@ export const getNotificationFeed = cache(async () => {
   const now = Date.now();
   const signedIn = viewer.role !== "guest";
 
-  const [announcements, products, reads] = await Promise.all([
+  const [announcements, products, reads, offers] = await Promise.all([
     supabase
       .from("site_announcements")
-      .select("id,title,body,link_url,created_at")
+      .select("id,title,body,link_url,audience,created_at")
       .eq("is_active", true)
       .gte("created_at", new Date(now - ANNOUNCEMENT_WINDOW_MS).toISOString())
       .order("created_at", { ascending: false })
@@ -41,10 +41,21 @@ export const getNotificationFeed = cache(async () => {
     signedIn
       ? supabase.from("notification_reads").select("last_seen_at").maybeSingle()
       : Promise.resolve({ data: null }),
+    viewer.role === "visitor" && viewer.emailVerifiedAt
+      ? supabase.rpc("get_visitor_loyalty_offers")
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
+  const announcementAudience = viewer.role === "admin" ? null
+    : viewer.role === "seller" ? "sellers"
+      : viewer.role === "visitor" ? "visitors"
+        : "guest";
+  const visibleAnnouncements = (announcements.data ?? []).filter((item) =>
+    viewer.role === "admin" || item.audience === "everyone" || item.audience === announcementAudience
+  );
+
   const items: SiteNotification[] = [
-    ...(announcements.data ?? []).map((item) => ({
+    ...visibleAnnouncements.map((item) => ({
       id: `announcement-${item.id}`,
       kind: "announcement" as const,
       title: item.title,
@@ -59,6 +70,14 @@ export const getNotificationFeed = cache(async () => {
       body: item.name,
       href: `/products/${item.slug}`,
       createdAt: item.published_at!,
+    })),
+    ...(offers?.data ?? []).slice(0, 50).map((offer) => ({
+      id: `offer-${offer.id}`,
+      kind: "loyalty-offer" as const,
+      title: "New reward offer",
+      body: offer.title,
+      href: `/visitor/rewards#offer-${offer.id}`,
+      createdAt: offer.starts_at,
     })),
   ].sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt));
 
@@ -80,5 +99,6 @@ export const getNotificationFeed = cache(async () => {
     ? await supabase.from("notification_item_reads").select("notification_id").in("notification_id", items.map((item) => item.id))
     : { data: null, error: null };
   if (itemReads.error) throw new Error("Notification read status is temporarily unavailable.");
+  if (offers?.error) throw new Error("Offer notifications are temporarily unavailable.");
   return { items, signedIn, userId: viewer.role === "guest" ? null : viewer.userId, readIds: (itemReads.data ?? []).map((item) => item.notification_id), lastSeenAt: reads.data?.last_seen_at ?? null };
 });

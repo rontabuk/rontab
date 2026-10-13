@@ -2,6 +2,7 @@ import { informationPages } from "@/data/information";
 import { adminAreas } from "@/lib/admin/areas";
 import { getViewer } from "@/lib/auth/viewer";
 import { formatNumber } from "@/lib/format";
+import { getNotificationFeed } from "@/lib/notifications/feed";
 import { MobileBottomNavBar, type MobileNavConfig } from "@/components/MobileBottomNavBar";
 
 const infoLinks = informationPages.map((page) => ({ href: `/${page.slug}`, label: page.label }));
@@ -25,6 +26,11 @@ export async function MobileBottomNav() {
   const viewer = await getViewer();
 
   if (viewer.role === "visitor") {
+    const feed = await getNotificationFeed();
+    const unreadOfferCount = feed.items.filter((item) => {
+      if (item.kind !== "loyalty-offer" || feed.readIds.includes(item.id)) return false;
+      return !feed.lastSeenAt || Date.parse(item.createdAt) > Date.parse(feed.lastSeenAt);
+    }).length;
     return (
       <MobileBottomNavBar
         config={{
@@ -36,8 +42,8 @@ export async function MobileBottomNav() {
               href: "/visitor/rewards",
               label: "Rewards",
               icon: "rewards",
-              badge: viewer.points !== null ? formatNumber(viewer.points) : undefined,
-              ariaLabel: viewer.points !== null ? `Rewards, ${viewer.points} points` : undefined,
+              badge: unreadOfferCount ? formatNumber(unreadOfferCount) : undefined,
+              ariaLabel: unreadOfferCount ? `Rewards, ${unreadOfferCount} new offers` : "Rewards",
             },
             { href: "/visitor", label: "Account", icon: "account", exact: true },
           ],

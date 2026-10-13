@@ -18,6 +18,7 @@ export type Product = {
   clickCount?: number;
   clicksSinceTopUp?: number;
   description: string;
+  audioScript?: string;
   image: string;
   imageAlt: string;
   maker: string;

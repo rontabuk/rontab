@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { VisitorAccountForm } from "@/components/VisitorAccountForm";
+import { getSupportedLocations } from "@/lib/locations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSafeVisitorPath } from "@/lib/visitor/paths";
 import "./account.css";
@@ -27,5 +28,7 @@ export default async function VisitorAccountPage({
       ? "Confirm your email address before visiting a shop. Check your inbox for the confirmation link."
       : null;
 
-  return <VisitorAccountForm nextPath={nextPath} notice={notice} initialMode={mode === "register" ? "register" : "login"} />;
+  const initialMode = mode === "register" ? "register" : "login";
+  const locations = await getSupportedLocations(supabase);
+  return <VisitorAccountForm nextPath={nextPath} notice={notice} initialMode={initialMode} {...locations} />;
 }

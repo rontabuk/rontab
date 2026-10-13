@@ -58,7 +58,7 @@ export const getPublicCatalog = cache(async (): Promise<{
       .order("sort_order", { ascending: true }),
     supabase
       .from("products")
-      .select("id,slug,name,description,price,click_count,featured_until,new_until,category_id,seller_profile_id")
+      .select("id,slug,name,description,audio_script,price,click_count,featured_until,new_until,category_id,seller_profile_id")
       .eq("status", "approved")
       .order("created_at", { ascending: false }),
   ]);
@@ -112,6 +112,7 @@ export const getPublicCatalog = cache(async (): Promise<{
         featuredUntil: row.featured_until,
         newUntil: row.new_until,
         description: row.description,
+        audioScript: row.audio_script,
         image: media ? mediaUrls.get(media.storage_path) ?? "" : "",
         imageAlt: media?.alt_text || row.name,
         mediaType: media?.media_type ?? "image",

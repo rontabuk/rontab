@@ -18,7 +18,7 @@ export default async function EditSellerProductPage({ params }: EditProductPageP
   const { supabase, seller } = await getSellerAccount();
   const { data: product, error: productError } = await supabase
     .from("products")
-    .select("id,name,slug,status,price,currency,category_id,description,external_url")
+    .select("id,name,slug,status,price,currency,category_id,description,audio_script,external_url")
     .eq("id", id)
     .eq("seller_profile_id", seller.id)
     .maybeSingle();

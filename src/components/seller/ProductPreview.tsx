@@ -1,6 +1,7 @@
 "use client";
 
 import { ProductCard } from "@/components/ProductCard";
+import { BrowserSpeechPlayer } from "@/components/BrowserSpeechPlayer";
 import { getOverlayTone, type Product } from "@/data/products";
 
 export type SellerCategoryOption = { id: string; slug: string; name: string };
@@ -11,6 +12,7 @@ export function ProductPreview({
   category,
   price,
   description,
+  audioScript,
   shopName,
   shopLogo,
   mediaUrl,
@@ -21,6 +23,7 @@ export function ProductPreview({
   category: SellerCategoryOption | undefined;
   price: string;
   description: string;
+  audioScript: string;
   shopName: string;
   shopLogo: string | null;
   mediaUrl: string;
@@ -45,6 +48,10 @@ export function ProductPreview({
   return (
     <aside className="seller-product-preview" aria-label="Live product preview">
       <h2>Preview</h2>
+      <section className="seller-product-audio-preview" aria-label="Audio summary preview">
+        <h3>Audio summary</h3>
+        <BrowserSpeechPlayer text={audioScript} preview />
+      </section>
       <div className="seller-product-preview-card">
         <ProductCard product={product} previewOnly showUploadPlaceholder={!mediaUrl} />
       </div>

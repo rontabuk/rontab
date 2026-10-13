@@ -40,8 +40,8 @@ export type Database = {
         [{ foreignKeyName: "product_images_product_id_fkey"; columns: ["product_id"]; isOneToOne: false; referencedRelation: "products"; referencedColumns: ["id"] }]
       >;
       products: Table<
-        { category_id: string; click_count: number; clicks_since_top_up: number; created_at: string; currency: string; description: string; external_url: string; featured_until: string | null; id: string; name: string; new_until: string | null; price: number | null; published_at: string | null; reviewed_at: string | null; reviewed_by: string | null; seller_profile_id: string; slug: string; status: Database["public"]["Enums"]["product_status"]; updated_at: string },
-        { category_id: string; click_count?: number; created_at?: string; currency?: string; description: string; external_url: string; featured_until?: string | null; id?: string; name: string; new_until?: string | null; price?: number | null; published_at?: string | null; reviewed_at?: string | null; reviewed_by?: string | null; seller_profile_id: string; slug: string; status?: Database["public"]["Enums"]["product_status"]; updated_at?: string },
+        { audio_script: string; category_id: string; click_count: number; clicks_since_top_up: number; created_at: string; currency: string; description: string; external_url: string; featured_until: string | null; id: string; name: string; new_until: string | null; price: number | null; published_at: string | null; reviewed_at: string | null; reviewed_by: string | null; seller_profile_id: string; slug: string; status: Database["public"]["Enums"]["product_status"]; updated_at: string },
+        { audio_script?: string; category_id: string; click_count?: number; created_at?: string; currency?: string; description: string; external_url: string; featured_until?: string | null; id?: string; name: string; new_until?: string | null; price?: number | null; published_at?: string | null; reviewed_at?: string | null; reviewed_by?: string | null; seller_profile_id: string; slug: string; status?: Database["public"]["Enums"]["product_status"]; updated_at?: string },
         [
           { foreignKeyName: "products_category_id_fkey"; columns: ["category_id"]; isOneToOne: false; referencedRelation: "categories"; referencedColumns: ["id"] },
           { foreignKeyName: "products_seller_profile_id_fkey"; columns: ["seller_profile_id"]; isOneToOne: false; referencedRelation: "seller_profiles"; referencedColumns: ["id"] }
@@ -96,8 +96,8 @@ export type Database = {
         never
       >;
       marketplace_settings: Table<
-        { click_price_pence_per_1000: number; featured_duration_minutes: number; loyalty_random_draws_enabled: boolean; new_products_duration_minutes: number; product_approval_mode: "manual" | "automatic"; seller_approval_mode: "manual" | "automatic"; singleton: boolean; updated_at: string },
-        { click_price_pence_per_1000?: number; featured_duration_minutes?: number; loyalty_random_draws_enabled?: boolean; new_products_duration_minutes?: number; product_approval_mode?: "manual" | "automatic"; seller_approval_mode?: "manual" | "automatic"; singleton?: boolean; updated_at?: string }
+        { click_price_pence_per_1000: number; featured_duration_minutes: number; loyalty_random_draws_enabled: boolean; new_products_duration_minutes: number; product_approval_mode: "manual" | "automatic"; seller_approval_mode: "manual" | "automatic"; singleton: boolean; updated_at: string; visitor_daily_visit_points_cap: number },
+        { click_price_pence_per_1000?: number; featured_duration_minutes?: number; loyalty_random_draws_enabled?: boolean; new_products_duration_minutes?: number; product_approval_mode?: "manual" | "automatic"; seller_approval_mode?: "manual" | "automatic"; singleton?: boolean; updated_at?: string; visitor_daily_visit_points_cap?: number }
       >;
       top_video_ads: Table<
         { created_at: string; display_seconds: number; id: string; is_active: boolean; media_type: "video" | "image"; sort_order: number; storage_path: string; target_url: string | null; title: string; updated_at: string },
@@ -124,16 +124,17 @@ export type Database = {
     Functions: {
       admin_review_product: { Args: { p_next_status: Database["public"]["Enums"]["product_status"]; p_product_id: string }; Returns: undefined };
       admin_set_product_featured: { Args: { p_is_featured: boolean; p_product_id: string }; Returns: string | null };
-      admin_update_marketplace_settings: { Args: { p_click_price_pence_per_1000: number; p_featured_duration_minutes: number; p_new_products_duration_minutes: number; p_product_approval_mode: "manual" | "automatic"; p_seller_approval_mode: "manual" | "automatic" }; Returns: undefined };
+      admin_update_marketplace_settings: { Args: { p_click_price_pence_per_1000: number; p_featured_duration_minutes: number; p_new_products_duration_minutes: number; p_product_approval_mode: "manual" | "automatic"; p_seller_approval_mode: "manual" | "automatic"; p_visitor_daily_visit_points_cap: number }; Returns: undefined };
       get_click_price_pence_per_1000: { Args: Record<PropertyKey, never>; Returns: number };
+      get_visitor_daily_visit_points_status: { Args: Record<PropertyKey, never>; Returns: { daily_cap: number; points_earned: number }[] };
       get_visitor_loyalty_points: { Args: Record<PropertyKey, never>; Returns: number };
       get_visitor_loyalty_summary: { Args: Record<PropertyKey, never>; Returns: { points_balance: number; points_earned: number; points_spent: number }[] };
-      get_visitor_loyalty_activity: { Args: Record<PropertyKey, never>; Returns: { created_at: string; id: number; offer_title: string | null; points_delta: number; product_name: string | null; transaction_type: string }[] };
+      get_visitor_loyalty_activity: { Args: { p_limit: number; p_offset: number }; Returns: { created_at: string; id: number; offer_title: string | null; points_delta: number; product_name: string | null; transaction_type: string }[] };
       get_new_products_duration_minutes: { Args: Record<PropertyKey, never>; Returns: number };
       is_eligible_visitor: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_visitor_city_locked: { Args: Record<PropertyKey, never>; Returns: boolean };
       get_visitor_loyalty_offers: { Args: Record<PropertyKey, never>; Returns: { already_joined: boolean; capacity: number; claim_count: number; description: string; ends_at: string; id: string; image_url: string; locations: string[]; minimum_points: number; offer_type: string; points_cost: number; remaining_count: number; selection_method: string; starts_at: string; summary: string; terms: string; title: string }[] };
-      get_visitor_offer_history: { Args: Record<PropertyKey, never>; Returns: { claim_type: string; created_at: string; offer_id: string; points_spent: number; status: string; title: string }[] };
+      get_visitor_offer_history: { Args: { p_limit: number; p_offset: number }; Returns: { claim_type: string; created_at: string; id: string; offer_id: string; points_spent: number; status: string; title: string }[] };
       admin_save_loyalty_offer: { Args: { p_city_quotas: Json; p_description: string; p_ends_at: string; p_global_capacity: number; p_image_url: string; p_minimum_points: number; p_offer_id: string | null; p_offer_type: "participation" | "redemption"; p_points_cost: number; p_selection_method: "random" | "first_come"; p_starts_at: string; p_summary: string; p_terms: string; p_title: string }; Returns: string };
       admin_set_loyalty_random_draws_enabled: { Args: { p_enabled: boolean }; Returns: undefined };
       admin_set_loyalty_offer_status: { Args: { p_next_status: "published" | "paused"; p_offer_id: string }; Returns: undefined };

@@ -23,7 +23,7 @@ export default async function AdminSettingsPage({
   const { supabase } = await requireAdmin();
   const { data: settings, error } = await supabase
     .from("marketplace_settings")
-    .select("product_approval_mode,seller_approval_mode,featured_duration_minutes,new_products_duration_minutes,click_price_pence_per_1000")
+    .select("product_approval_mode,seller_approval_mode,featured_duration_minutes,new_products_duration_minutes,click_price_pence_per_1000,visitor_daily_visit_points_cap")
     .eq("singleton", true)
     .single();
 
@@ -93,6 +93,17 @@ export default async function AdminSettingsPage({
             Price per 1,000 clicks (GBP)
             <input name="click_price_gbp_per_1000" type="number" min="0.01" max="1000" step="0.01" defaultValue={(settings.click_price_pence_per_1000 / 100).toFixed(2)} required />
             <small>Between £0.01 and £1,000. Example: £1.25 displays 1,000 clicks as £1.25.</small>
+          </label>
+        </section>
+        <section className="admin-settings-section" aria-labelledby="daily-visitor-points-title">
+          <div>
+            <h2 id="daily-visitor-points-title">Daily visitor points cap</h2>
+            <p>Limit points earned from distinct eligible product visits during any rolling 24-hour period. Shop visits remain available after the cap, but do not earn points.</p>
+          </div>
+          <label>
+            Maximum points per visitor
+            <input name="visitor_daily_visit_points_cap" type="number" min="1" max="250" step="1" defaultValue={settings.visitor_daily_visit_points_cap} required />
+            <small>Between 1 and 250 points per rolling 24 hours. Default: 250.</small>
           </label>
         </section>
         <button className="admin-primary-button" type="submit">Save marketplace settings</button>

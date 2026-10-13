@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Check, Eye, EyeOff, Loader2 } from "lucide-react";
+import { CityPicker, type SupportedCity, type SupportedCountry } from "@/components/CityPicker";
 import { registerVisitorAccount, sendVisitorEmailVerification } from "@/app/account/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -31,7 +32,13 @@ const benefits = [
   "Your points stay safe on every device",
 ];
 
-export function VisitorAccountForm({ nextPath, notice, initialMode = "login" }: { nextPath: string; notice: string | null; initialMode?: Mode }) {
+export function VisitorAccountForm({ nextPath, notice, initialMode = "login", countries, cities }: {
+  nextPath: string;
+  notice: string | null;
+  initialMode?: Mode;
+  countries: SupportedCountry[];
+  cities: SupportedCity[];
+}) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -67,7 +74,14 @@ export function VisitorAccountForm({ nextPath, notice, initialMode = "login" }: 
     }
 
     if (mode === "register") {
-      const { error: registerError } = await registerVisitorAccount(email, password);
+      const cityId = String(formData.get("city_id") ?? "").trim();
+      const countryCode = String(formData.get("city_id_country_code") ?? "").trim().toUpperCase();
+      if (!cityId || !countryCode) {
+        setFeedback({ tone: "error", text: "Choose your country and city to create your account." });
+        setIsSubmitting(false);
+        return;
+      }
+      const { error: registerError } = await registerVisitorAccount(email, password, cityId, countryCode);
       if (registerError) {
         setFeedback({ tone: "error", text: registerError });
         setIsSubmitting(false);
@@ -144,6 +158,13 @@ export function VisitorAccountForm({ nextPath, notice, initialMode = "login" }: 
           </div>
           {mode === "register" && <small id="visitor-password-hint" className="visitor-account-hint">Use at least 8 characters.</small>}
           {mode === "login" && <Link className="password-recovery-link" href="/auth/forgot-password">Forgot password?</Link>}
+
+          {mode === "register" && (
+            <div className="visitor-registration-location">
+              <p>Choose your location to access local offers and redeem points.</p>
+              <CityPicker name="city_id" countries={countries} cities={cities} initialCity={null} initialCountryCode={null} required />
+            </div>
+          )}
 
           {feedback && (
             <p className="visitor-account-alert" data-tone={feedback.tone} role={feedback.tone === "error" ? "alert" : "status"}>{feedback.text}</p>

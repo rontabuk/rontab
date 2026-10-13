@@ -20,10 +20,15 @@
 .seller-product-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; margin: 0; padding: 17px; border: 1px solid #e0e4dc; border-radius: 4px; background: #fcfdf9; }
 .seller-product-preview { position: sticky; top: 20px; min-width: 0; }
 .seller-product-preview h2 { margin: 0 0 11px; color: #354137; font-size: 15px; }
+.seller-product-audio-preview { margin-bottom: 14px; padding-block: 11px; border-block: 1px solid #e0e4dc; }
+.seller-product-audio-preview h3 { margin: 0 0 8px; color: #586258; font-size: 12px; }
+.seller-product-audio-preview .browser-speech-player { margin: 0; }
 .seller-product-preview-card { width: min(100%, 280px); }
 .seller-product-form > label { display: grid; align-content: start; gap: 5px; color: #626c60; font-size: 11px; font-weight: 700; }
-.seller-product-form .seller-product-description, .seller-product-form .seller-form-message, .seller-product-form .seller-auth-submit { grid-column: 1 / -1; }
+.seller-product-form .seller-product-description, .seller-product-form .seller-product-audio-script, .seller-product-form .seller-form-message, .seller-product-form .seller-auth-submit { grid-column: 1 / -1; }
 .seller-product-form textarea { min-height: 74px; resize: vertical; }
+.seller-product-form .seller-product-audio-script textarea { min-height: 68px; }
+.seller-product-form > label > small { color: #788176; font-size: 10px; font-weight: 400; line-height: 1.45; }
 .seller-product-form input[type="file"] { padding: 7px; }
 .seller-media-clear { justify-self: start; margin-top: -5px; padding: 0; border: 0; background: transparent; color: #8e4038; cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; }
 .seller-media-guide { grid-column: 1 / -1; padding: 13px 15px; border-left: 3px solid #829578; background: #f0f3ed; color: #596458; }

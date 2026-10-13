@@ -4,7 +4,9 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { CalendarDays, Gift, MapPin, Ticket } from "lucide-react";
 import { joinLoyaltyOffer } from "@/app/visitor/actions";
+import { OfferNotificationReadMarker } from "@/components/OfferNotificationReadMarker";
 import { formatDateTime, formatNumber as formatPoints } from "@/lib/format";
+import { getNotificationFeed } from "@/lib/notifications/feed";
 import { getVisitorAccount } from "@/lib/visitor/access";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -15,22 +17,32 @@ type VisitorOffer = Database["public"]["Functions"]["get_visitor_loyalty_offers"
 type PointTransaction = Database["public"]["Functions"]["get_visitor_loyalty_activity"]["Returns"][number];
 type OfferClaim = Pick<
   Database["public"]["Tables"]["loyalty_offer_claims"]["Row"],
-  "claim_type" | "created_at" | "offer_id" | "points_spent" | "status"
+  "id" | "claim_type" | "created_at" | "offer_id" | "points_spent" | "status"
 >;
 
 export default async function VisitorRewardsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ offerError?: string; offerMessage?: string }>;
+  searchParams: Promise<{ offerError?: string; offerMessage?: string; history?: string; activityPage?: string; offerPage?: string }>;
 }) {
   await connection();
-  const [{ offerError, offerMessage }, { supabase, user }] = await Promise.all([searchParams, getVisitorAccount()]);
-  const [summaryResult, offersResult, transactionsResult, claimsResult, profileResult] = await Promise.all([
+  const [{ offerError, offerMessage, history, activityPage: activityPageValue, offerPage: offerPageValue }, { supabase, user }] = await Promise.all([searchParams, getVisitorAccount()]);
+  const notificationFeed = await getNotificationFeed();
+  const unreadOfferNotificationIds = notificationFeed.items
+    .filter((item) => item.kind === "loyalty-offer" && !notificationFeed.readIds.includes(item.id)
+      && (!notificationFeed.lastSeenAt || Date.parse(item.createdAt) > Date.parse(notificationFeed.lastSeenAt)))
+    .map((item) => item.id);
+  const historyView = history === "offers" ? "offers" : "activity";
+  const pageSize = 25;
+  const activityPage = parsePage(activityPageValue);
+  const offerPage = parsePage(offerPageValue);
+  const [summaryResult, offersResult, transactionsResult, claimsResult, profileResult, dailyStatusResult] = await Promise.all([
     supabase.rpc("get_visitor_loyalty_summary"),
     supabase.rpc("get_visitor_loyalty_offers"),
-    supabase.rpc("get_visitor_loyalty_activity"),
-    supabase.rpc("get_visitor_offer_history"),
+    supabase.rpc("get_visitor_loyalty_activity", { p_limit: pageSize + 1, p_offset: activityPage * pageSize }),
+    supabase.rpc("get_visitor_offer_history", { p_limit: pageSize + 1, p_offset: offerPage * pageSize }),
     supabase.from("profiles").select("city,country_code").eq("id", user.id).single(),
+    supabase.rpc("get_visitor_daily_visit_points_status"),
   ]);
 
   if (summaryResult.error) throw new Error(summaryResult.error.message);
@@ -38,11 +50,17 @@ export default async function VisitorRewardsPage({
   if (transactionsResult.error) throw new Error(transactionsResult.error.message);
   if (claimsResult.error) throw new Error(claimsResult.error.message);
   if (profileResult.error) throw new Error(profileResult.error.message);
+  if (dailyStatusResult.error) throw new Error(dailyStatusResult.error.message);
 
   const summary = summaryResult.data?.[0] ?? { points_balance: 0, points_earned: 0, points_spent: 0 };
   const offers = offersResult.data ?? [];
-  const transactions = (transactionsResult.data ?? []) as PointTransaction[];
-  const claims = (claimsResult.data ?? []) as (OfferClaim & { title: string })[];
+  const transactions = ((transactionsResult.data ?? []) as PointTransaction[]);
+  const claims = ((claimsResult.data ?? []) as (OfferClaim & { title: string })[]);
+  const dailyStatus = dailyStatusResult.data?.[0];
+  if (!dailyStatus) throw new Error("Daily points status is temporarily unavailable.");
+  const dailyProgress = Math.min(100, dailyStatus.points_earned / dailyStatus.daily_cap * 100);
+  const visibleTransactions = transactions.slice(0, pageSize);
+  const visibleClaims = claims.slice(0, pageSize);
   const nearestTarget = offers
     .map((offer) => Math.max(offer.minimum_points, offer.points_cost))
     .filter((target) => target > summary.points_balance)
@@ -61,6 +79,7 @@ export default async function VisitorRewardsPage({
 
   return (
     <main className="admin-overview visitor-rewards-page">
+      {unreadOfferNotificationIds.length > 0 && <OfferNotificationReadMarker userId={user.id} notificationIds={unreadOfferNotificationIds} />}
       <header className="admin-page-heading visitor-rewards-heading">
         <p className="admin-eyebrow">POINTS & REWARDS</p>
         <h1>Good things add up.</h1>
@@ -93,6 +112,13 @@ export default async function VisitorRewardsPage({
             <div><strong>{formatPoints(summary.points_earned)}</strong><span>earned</span></div>
             <div><strong>{formatPoints(summary.points_spent)}</strong><span>used</span></div>
           </div>
+          <div className="visitor-daily-points">
+            <div><span>Visit points in the last 24 hours</span><strong>{formatPoints(dailyStatus.points_earned)} / {formatPoints(dailyStatus.daily_cap)}</strong></div>
+            <div className="visitor-daily-points-track" role="progressbar" aria-label="Visit points earned in the last 24 hours" aria-valuemin={0} aria-valuemax={dailyStatus.daily_cap} aria-valuenow={Math.min(dailyStatus.points_earned, dailyStatus.daily_cap)}>
+              <span style={{ width: `${dailyProgress}%` }} />
+            </div>
+            {dailyStatus.points_earned >= dailyStatus.daily_cap && <small>The limit is reached. Points resume as earlier visits leave the 24-hour window.</small>}
+          </div>
           <p className="visitor-rewards-location"><MapPin size={14} aria-hidden="true" />{profileResult.data.city ? `${profileResult.data.city}, ${profileResult.data.country_code}` : "Add a city to see local offers"}<Link href="/visitor">Edit profile</Link></p>
         </div>
       </section>
@@ -118,14 +144,19 @@ export default async function VisitorRewardsPage({
         )}
       </section>
 
-      <div className="visitor-rewards-lower-grid">
+      <section className="visitor-history" aria-label="Points and offer history">
+        <nav className="visitor-history-tabs" aria-label="History type">
+          <Link href={`/visitor/rewards?history=activity&activityPage=${activityPage}&offerPage=${offerPage}`} aria-current={historyView === "activity" ? "page" : undefined}>Points activity</Link>
+          <Link href={`/visitor/rewards?history=offers&activityPage=${activityPage}&offerPage=${offerPage}`} aria-current={historyView === "offers" ? "page" : undefined}>Offer history</Link>
+        </nav>
+        {historyView === "activity" ? (
         <section className="visitor-activity-section" aria-labelledby="visitor-activity-title">
           <div className="visitor-rewards-section-heading">
             <div><p className="admin-eyebrow">POINTS LEDGER</p><h2 id="visitor-activity-title">Recent activity</h2></div>
           </div>
-          {transactions.length ? (
+          {visibleTransactions.length ? (
             <ol className="visitor-activity-list">
-              {transactions.map((transaction) => (
+              {visibleTransactions.map((transaction) => (
                 <li key={transaction.id}>
                   <span className={`visitor-activity-icon${transaction.points_delta < 0 ? " is-spent" : ""}`} aria-hidden="true">
                     {transaction.points_delta > 0 ? <MapPin size={15} /> : <Ticket size={15} />}
@@ -143,32 +174,44 @@ export default async function VisitorRewardsPage({
             <p className="visitor-rewards-quiet">Eligible first visits will appear here.</p>
           )}
         </section>
-
-        <section className="visitor-claims-section" aria-labelledby="visitor-claims-title">
+        ) : (
+          <section className="visitor-claims-section" aria-labelledby="visitor-claims-title">
           <div className="visitor-rewards-section-heading">
             <div><p className="admin-eyebrow">YOUR ENTRIES</p><h2 id="visitor-claims-title">Offer history</h2></div>
           </div>
-          {claims.length ? (
+          {visibleClaims.length ? (
             <ol className="visitor-claim-list">
-              {claims.map((claim, index) => {
-                return (
-                  <li key={`${claim.offer_id}-${index}`}>
-                    <span><strong>{claim.title}</strong><small>{claim.claim_type === "redemption" ? "Redemption" : "Participation"} · {formatDateTime(claim.created_at)}</small></span>
-                    <span className={`visitor-claim-status is-${claim.status}`}>{claimStatusLabel(claim.status)}</span>
-                  </li>
-                );
-              })}
+              {visibleClaims.map((claim) => (
+                <li key={claim.id}>
+                  <span><strong>{claim.title}</strong><small>{claim.claim_type === "redemption" ? "Redemption" : "Participation"} · {formatDateTime(claim.created_at)} · {formatPoints(claim.points_spent)} points</small></span>
+                  <span className={`visitor-claim-status is-${claim.status}`}>{claimStatusLabel(claim.status)}</span>
+                </li>
+              ))}
             </ol>
           ) : (
             <p className="visitor-rewards-quiet">Your entries and redemptions will appear here.</p>
           )}
         </section>
-      </div>
+        )}
+        <nav className="visitor-history-pagination" aria-label="History pages">
+          {historyView === "activity" ? (
+            <>
+              {activityPage > 0 ? <Link href={`/visitor/rewards?history=activity&activityPage=${activityPage - 1}&offerPage=${offerPage}`}>Newer activity</Link> : <span />}
+              {transactions.length > pageSize && <Link href={`/visitor/rewards?history=activity&activityPage=${activityPage + 1}&offerPage=${offerPage}`}>Older activity</Link>}
+            </>
+          ) : (
+            <>
+              {offerPage > 0 ? <Link href={`/visitor/rewards?history=offers&activityPage=${activityPage}&offerPage=${offerPage - 1}`}>Newer entries</Link> : <span />}
+              {claims.length > pageSize && <Link href={`/visitor/rewards?history=offers&activityPage=${activityPage}&offerPage=${offerPage + 1}`}>Older entries</Link>}
+            </>
+          )}
+        </nav>
+      </section>
 
       <section className="visitor-points-explainer" aria-labelledby="visitor-points-explainer-title">
         <p className="admin-eyebrow">HOW POINTS WORK</p>
         <h2 id="visitor-points-explainer-title">One point for a first visit</h2>
-        <p>Earn one point the first time you visit each eligible product while signed in with a confirmed visitor account. Returning to a product does not earn another point. Guests and seller accounts do not earn visitor rewards.</p>
+        <p>Earn one point the first time you visit each eligible product while signed in with a confirmed visitor account, up to {formatPoints(dailyStatus.daily_cap)} visit points in any rolling 24-hour period. Shop visits after the cap do not earn points. Returning to a product does not earn another point. Guests and seller accounts do not earn visitor rewards.</p>
         <p>Joining a limited offer spends its stated points whether or not you are selected. Choosing not to join never costs points. A guaranteed redemption spends points only when your gift is successfully claimed.</p>
       </section>
     </main>
@@ -184,7 +227,7 @@ function VisitorOfferCard({ offer, balance }: { offer: VisitorOffer; balance: nu
   const enoughForEntry = Math.max(offer.minimum_points, offer.points_cost);
 
   return (
-    <article className="visitor-offer-row">
+            <article id={`offer-${offer.id}`} className="visitor-offer-row">
       <div className="visitor-offer-image">
         <Image src={offer.image_url} alt={offer.title} fill unoptimized sizes="(max-width: 700px) 100vw, 190px" />
       </div>
@@ -242,4 +285,9 @@ function claimStatusLabel(status: OfferClaim["status"]) {
   if (status === "won") return "Selected";
   if (status === "lost") return "Not selected";
   return "Gift claimed";
+}
+
+function parsePage(value: string | undefined) {
+  const page = Number(value);
+  return Number.isSafeInteger(page) && page >= 0 ? Math.min(page, 400) : 0;
 }

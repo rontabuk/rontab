@@ -6,6 +6,7 @@ import { io } from "next/cache";
 import { ArrowLeft, ArrowUpRight, Image as ImageIcon } from "lucide-react";
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/ProductCard";
+import { BrowserSpeechPlayer } from "@/components/BrowserSpeechPlayer";
 import { ShopVisitLink } from "@/components/ShopVisitLink";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { formatPrice } from "@/lib/format";
@@ -29,9 +30,11 @@ async function ProductPageContent({ params }: ProductPageProps) {
 
   const product = catalog.products.find((item) => item.slug === slug);
   if (!product) notFound();
-  const relatedProducts = catalog.products
-    .filter((item) => item.category === product.category && item.slug !== product.slug)
-    .slice(0, 3);
+  const otherProducts = catalog.products.filter((item) => item.slug !== product.slug);
+  const relatedProducts = [
+    ...otherProducts.filter((item) => item.category === product.category),
+    ...otherProducts.filter((item) => item.category !== product.category),
+  ].slice(0, 8);
 
   return (
     <>
@@ -59,6 +62,7 @@ async function ProductPageContent({ params }: ProductPageProps) {
             <h1>{product.name}</h1>
             <p className="detail-maker">{product.maker}</p>
             <p className="detail-price">{formatPrice(product.price)}</p>
+            {product.audioScript && <BrowserSpeechPlayer text={product.audioScript} />}
             <p className="detail-description">{product.description}</p>
             <div className="detail-actions">
               <ShopVisitLink className="button button-dark" slug={product.slug} productName={product.name}>

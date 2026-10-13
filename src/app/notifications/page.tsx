@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { NotificationsCenter } from "@/components/NotificationsCenter";
 import { getNotificationFeed } from "@/lib/notifications/feed";
@@ -7,6 +8,7 @@ import { getNotificationFeed } from "@/lib/notifications/feed";
 export const metadata: Metadata = { title: "Notifications" };
 
 async function Inbox() {
+  await connection();
   const feed = await getNotificationFeed();
   return <NotificationsCenter {...feed} />;
 }

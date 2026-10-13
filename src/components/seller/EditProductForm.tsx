@@ -11,7 +11,7 @@ import { isHttpsUrl } from "@/lib/validation";
 
 type EditableProduct = Pick<
   Database["public"]["Tables"]["products"]["Row"],
-  "id" | "name" | "slug" | "status" | "price" | "currency" | "category_id" | "description" | "external_url"
+  "id" | "name" | "slug" | "status" | "price" | "currency" | "category_id" | "description" | "audio_script" | "external_url"
 >;
 type ExistingMedia = {
   storagePath: string;
@@ -44,6 +44,7 @@ export function EditProductForm({
   const [price, setPrice] = useState(product.price === null ? "" : String(product.price));
   const [externalUrl, setExternalUrl] = useState(product.external_url);
   const [description, setDescription] = useState(product.description);
+  const [audioScript, setAudioScript] = useState(product.audio_script);
   const [imagePreviewUrl, setImagePreviewUrl] = useState("");
   const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
   const [removeCurrentMedia, setRemoveCurrentMedia] = useState(false);
@@ -128,6 +129,12 @@ export function EditProductForm({
       return;
     }
 
+    if (description.trim().length > 1000 || audioScript.trim().length > 300) {
+      setMessage("Use up to 1,000 characters for the full description and 300 for the audio summary.");
+      setIsSubmitting(false);
+      return;
+    }
+
     const rawPrice = price.trim();
     const nextPrice = rawPrice ? Number(rawPrice) : null;
     if (nextPrice !== null && (!Number.isFinite(nextPrice) || nextPrice < 0)) {
@@ -150,6 +157,7 @@ export function EditProductForm({
         category_id: categoryId,
         price: nextPrice,
         description: description.trim(),
+        audio_script: audioScript.trim(),
         external_url: externalUrl.trim(),
         status: "pending",
       })
@@ -224,7 +232,8 @@ export function EditProductForm({
         <label>Category<select value={categoryId} onChange={(event) => setCategoryId(event.target.value)} required><option value="" disabled>Select a category</option>{categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></label>
         <label>Price in GBP<input value={price} onChange={(event) => setPrice(event.target.value)} type="number" min="0" step="0.01" /></label>
         <label>Shop URL<input value={externalUrl} onChange={(event) => setExternalUrl(event.target.value)} type="url" placeholder="https://" required /></label>
-        <label className="seller-product-description">Description<textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} maxLength={500} required /></label>
+        <label className="seller-product-description"><span>Product description</span><textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} maxLength={1000} required /><small>Up to 1,000 characters.</small></label>
+        <label className="seller-product-audio-script"><span>Audio summary <small>(optional)</small></span><textarea value={audioScript} onChange={(event) => setAudioScript(event.target.value)} rows={3} maxLength={300} /><small>Up to 300 characters, around 30 seconds. Preview uses a voice on your device.</small></label>
         <label>Replace with product photos<input ref={imageInputRef} type="file" accept={PHOTO_ACCEPT} onChange={handleImageChange} multiple /></label>
         <label>Replace with Reel video<input ref={videoInputRef} type="file" accept={REEL_ACCEPT} onChange={handleVideoChange} /></label>
         {currentMedia.length > 0 && (
@@ -256,6 +265,7 @@ export function EditProductForm({
         category={selectedCategory}
         price={price}
         description={description}
+        audioScript={audioScript}
         shopName={shopName}
         shopLogo={shopLogo}
         mediaUrl={selectedMediaUrl}

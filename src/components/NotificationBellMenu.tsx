@@ -2,13 +2,42 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
-import { Bell, CheckCheck, MailWarning, Megaphone, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
+import { Bell, CheckCheck, Gift, MailWarning, Megaphone, Sparkles, Volume2, VolumeX } from "lucide-react";
 import { sendVisitorEmailVerification } from "@/app/account/actions";
 import { useNotificationReads } from "@/lib/notifications/read-state";
 import type { SiteNotification } from "@/lib/notifications/feed";
 
-const icons = { "verify-email": MailWarning, announcement: Megaphone, "new-product": Sparkles };
+const icons = { "verify-email": MailWarning, announcement: Megaphone, "new-product": Sparkles, "loyalty-offer": Gift };
+const soundChangedEvent = "rontab:notification-sound-changed";
+const volatileSoundPreferences = new Set<string>();
+
+function subscribeToSoundPreference(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(soundChangedEvent, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(soundChangedEvent, onChange);
+  };
+}
+
+function getSoundPreference(key: string) {
+  try {
+    return localStorage.getItem(key) === "on" || volatileSoundPreferences.has(key);
+  } catch {
+    return volatileSoundPreferences.has(key);
+  }
+}
+
+function saveSoundPreference(key: string, enabled: boolean) {
+  if (enabled) volatileSoundPreferences.add(key);
+  else volatileSoundPreferences.delete(key);
+  try {
+    localStorage.setItem(key, enabled ? "on" : "off");
+  } catch {
+    return;
+  }
+}
 
 function formatExact(iso: string) {
   return new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -32,10 +61,69 @@ export function NotificationBellMenu({
   const [resendState, setResendState] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [isResending, startResend] = useTransition();
   const rootRef = useRef<HTMLDivElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const knownIdsRef = useRef(new Set(items.map((item) => item.id)));
+  const pendingToneRef = useRef(false);
+  const soundStorageKey = `rontab:notification-sound:v1:${userId ?? "guest"}`;
+  const soundEnabled = useSyncExternalStore(subscribeToSoundPreference, () => getSoundPreference(soundStorageKey), () => false);
   const { isUnread, markRead, error: readError, saving } = useNotificationReads({ userId, readIds, lastSeenAt });
   const unreadItems = items.filter(isUnread);
   const unread = unreadItems.length;
   const visibleItems = tab === "unread" ? unreadItems : items;
+
+  useEffect(() => {
+    const refreshNotifications = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    const interval = window.setInterval(refreshNotifications, 30_000);
+    document.addEventListener("visibilitychange", refreshNotifications);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshNotifications);
+    };
+  }, [router]);
+
+  useEffect(() => {
+    const currentIds = new Set(items.map((item) => item.id));
+    const hasArrivals = [...currentIds].some((id) => !knownIdsRef.current.has(id));
+    knownIdsRef.current = currentIds;
+    if (hasArrivals && soundEnabled) {
+      if (document.visibilityState === "visible") void playNotificationTone();
+      else pendingToneRef.current = true;
+    }
+  }, [items, soundEnabled]);
+
+  useEffect(() => {
+    const playPendingTone = () => {
+      if (document.visibilityState !== "visible" || !soundEnabled || !pendingToneRef.current) return;
+      pendingToneRef.current = false;
+      void playNotificationTone();
+    };
+    document.addEventListener("visibilitychange", playPendingTone);
+    return () => document.removeEventListener("visibilitychange", playPendingTone);
+  }, [soundEnabled]);
+
+  async function playNotificationTone() {
+    if (typeof window === "undefined" || !("AudioContext" in window)) return;
+    try {
+      const audioContext = audioContextRef.current ?? new AudioContext();
+      audioContextRef.current = audioContext;
+      if (audioContext.state === "suspended") await audioContext.resume();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.value = 880;
+      gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.12, audioContext.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.24);
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.25);
+    } catch {
+      return;
+    }
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -93,11 +181,21 @@ export function NotificationBellMenu({
         <header className="notification-panel-header">
           <div className="notification-panel-title">
             <h2>Notifications</h2>
-            {unreadItems.some((item) => item.kind !== "verify-email") && (
-              <button type="button" className="notification-mark-read" disabled={saving} onClick={() => void markRead(unreadItems.map((item) => item.id))}>
-                <CheckCheck size={15} aria-hidden="true" /> Mark all as read
+            <div className="notification-panel-controls">
+              <button type="button" className="notification-sound-toggle" title={soundEnabled ? "Turn notification sound off" : "Turn notification sound on"} aria-label={soundEnabled ? "Turn notification sound off" : "Turn notification sound on"} aria-pressed={soundEnabled} onClick={() => {
+                const nextEnabled = !soundEnabled;
+                saveSoundPreference(soundStorageKey, nextEnabled);
+                window.dispatchEvent(new Event(soundChangedEvent));
+                if (nextEnabled) void playNotificationTone();
+              }}>
+                {soundEnabled ? <Volume2 size={17} aria-hidden="true" /> : <VolumeX size={17} aria-hidden="true" />}
               </button>
-            )}
+              {unreadItems.some((item) => item.kind !== "verify-email") && (
+                <button type="button" className="notification-mark-read" disabled={saving} onClick={() => void markRead(unreadItems.map((item) => item.id))}>
+                  <CheckCheck size={15} aria-hidden="true" /> Mark all as read
+                </button>
+              )}
+            </div>
           </div>
           <div className="notification-tabs" role="tablist" aria-label="Filter notifications">
             <button type="button" role="tab" aria-selected={tab === "all"} onClick={() => setTab("all")}>All</button>

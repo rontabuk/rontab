@@ -12,6 +12,13 @@ English to match Rontab's current launch language.
 - Seller and administrator accounts are not eligible for visitor rewards.
 - A visitor earns one point on their first eligible product visit. Repeat visits
   to that product do not award another point.
+- Product visits award at most the administrator-configured number of points
+  per visitor in a rolling 24-hour period (default 250, configurable from 1 to
+  250). Visits after the cap still work but do not award points; serialize this
+  check per visitor in PostgreSQL to prevent concurrent requests exceeding it.
+- Show the visitor their earned points against the rolling limit and state when
+  the limit is reached. Account navigation must show the current spendable
+  balance, not lifetime product visits.
 - Guest visits do not award points and do not consume seller click credits.
 - Keep loyalty-point accounting separate from seller advertising click counts.
 - Migrate each existing `visitor_product_points` row as one earned point; do not
@@ -88,6 +95,8 @@ English to match Rontab's current launch language.
 - Display active, eligible offers with image, offer type, location, dates,
   eligibility balance, point cost, availability, and clear terms.
 - Keep entry, result, and redemption history visible to the visitor.
+- Present point activity and offer history as separate views, each paginated in
+  stable newest-first order; include the points spent on each offer claim.
 - Explain that participation costs points regardless of outcome before the
   visitor confirms.
 - Explain that redemption is guaranteed only after a successful claim while

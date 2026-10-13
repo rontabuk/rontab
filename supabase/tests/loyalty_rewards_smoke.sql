@@ -10,6 +10,9 @@ declare
 	random_offer uuid := gen_random_uuid();
 	join_result jsonb;
 	current_balance bigint;
+	daily_cap integer;
+	daily_earned bigint;
+	test_product_id uuid;
 	doncaster_id text;
 	leeds_id text;
 	city_capacity bigint;
@@ -231,6 +234,34 @@ begin
 	perform set_config('request.jwt.claims', jsonb_build_object('sub', visitor_three::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
 	if public.get_visitor_loyalty_points() <> 8 then
 		raise exception 'Visitor balance RPC should return the ledger-backed balance.';
+	end if;
+	select status.daily_cap, status.points_earned
+	into daily_cap, daily_earned
+	from public.get_visitor_daily_visit_points_status() status;
+	if daily_cap not between 1 and 250 or daily_earned <> 12 then
+		raise exception 'Visitor daily points status should report the configured cap and recent earned points.';
+	end if;
+	if (select count(*) from public.get_visitor_loyalty_activity(5, 0)) <> 5
+		or exists (
+			select id from public.get_visitor_loyalty_activity(5, 0)
+			intersect
+			select id from public.get_visitor_loyalty_activity(5, 5)
+		) then
+		raise exception 'Point history pages should contain distinct stable rows.';
+	end if;
+	if (select count(*) from public.get_visitor_offer_history(1, 0)) <> 1 then
+		raise exception 'Offer history should respect its requested page size.';
+	end if;
+	select id into test_product_id from public.products limit 1;
+	if test_product_id is not null then
+		update public.marketplace_settings set visitor_daily_visit_points_cap = 12 where singleton = true;
+		insert into public.visitor_product_points (visitor_id, product_id)
+		values (visitor_three, test_product_id)
+		on conflict (visitor_id, product_id) do nothing;
+		if (select count(*) from public.loyalty_point_transactions
+			where visitor_id = visitor_three and transaction_type = 'visit_earned') <> 12 then
+			raise exception 'A visitor at the daily cap must not receive another visit point.';
+		end if;
 	end if;
 
 		raise exception using errcode = 'P0001', message = '__ROLLBACK_LOYALTY_SMOKE__';

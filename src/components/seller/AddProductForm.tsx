@@ -12,6 +12,7 @@ type PreviewValues = {
   categoryId: string;
   price: string;
   description: string;
+  audioScript: string;
 };
 
 const initialPreviewValues: PreviewValues = {
@@ -19,6 +20,7 @@ const initialPreviewValues: PreviewValues = {
   categoryId: "",
   price: "",
   description: "",
+  audioScript: "",
 };
 
 export function AddProductForm({
@@ -124,6 +126,13 @@ export function AddProductForm({
 
     const productId = crypto.randomUUID();
     const productName = String(formData.get("name") ?? "").trim();
+    const description = String(formData.get("description") ?? "").trim();
+    const audioScript = String(formData.get("audio_script") ?? "").trim();
+    if (description.length > 1000 || audioScript.length > 300) {
+      setMessage("Use up to 1,000 characters for the full description and 300 for the audio summary.");
+      setIsSubmitting(false);
+      return;
+    }
     const nameSlug = productName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const productSlug = `${nameSlug || "product"}-${productId.slice(0, 8)}`;
     const rawPrice = String(formData.get("price") ?? "").trim();
@@ -135,7 +144,8 @@ export function AddProductForm({
       category_id: String(formData.get("category_id") ?? ""),
       slug: productSlug,
       name: productName,
-      description: String(formData.get("description") ?? "").trim(),
+      description,
+      audio_script: audioScript,
       price,
       currency: "GBP",
       external_url: externalUrl,
@@ -208,7 +218,8 @@ export function AddProductForm({
         <label>Category<select name="category_id" value={previewValues.categoryId} onChange={(event) => setPreviewValues({ ...previewValues, categoryId: event.target.value })} required><option value="" disabled>Select a category</option>{categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></label>
         <label>Price in GBP<input name="price" type="number" min="0" step="0.01" value={previewValues.price} onChange={(event) => setPreviewValues({ ...previewValues, price: event.target.value })} /></label>
         <label>Shop URL<input name="external_url" type="url" placeholder="https://" required /></label>
-        <label className="seller-product-description">Description<textarea name="description" rows={3} maxLength={500} value={previewValues.description} onChange={(event) => setPreviewValues({ ...previewValues, description: event.target.value })} required /></label>
+        <label className="seller-product-description"><span>Product description</span><textarea name="description" rows={4} maxLength={1000} value={previewValues.description} onChange={(event) => setPreviewValues({ ...previewValues, description: event.target.value })} required /><small>Up to 1,000 characters.</small></label>
+        <label className="seller-product-audio-script"><span>Audio summary <small>(optional)</small></span><textarea name="audio_script" rows={3} maxLength={300} value={previewValues.audioScript} onChange={(event) => setPreviewValues({ ...previewValues, audioScript: event.target.value })} /><small>Up to 300 characters, around 30 seconds. Preview uses a voice on your device.</small></label>
         <label>Product photos<input ref={imageInputRef} name="images" type="file" accept={PHOTO_ACCEPT} onChange={handleImagePreviewChange} multiple /></label>
         {imagePreviewUrl && <button className="seller-media-clear" type="button" onClick={clearSelectedImages}>Remove selected photos</button>}
         <label>Reel video<input ref={videoInputRef} name="reel" type="file" accept={REEL_ACCEPT} onChange={handleVideoPreviewChange} /></label>
@@ -224,6 +235,7 @@ export function AddProductForm({
         category={selectedCategory}
         price={previewValues.price}
         description={previewValues.description}
+        audioScript={previewValues.audioScript}
         shopName={shopName}
         shopLogo={shopLogo}
         mediaUrl={videoPreviewUrl || imagePreviewUrl}

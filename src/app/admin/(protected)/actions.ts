@@ -66,6 +66,7 @@ export async function saveMarketplaceSettings(formData: FormData) {
   const featuredDurationMinutes = Number(formData.get("featured_duration_minutes"));
   const newProductsDurationMinutes = Number(formData.get("new_products_duration_minutes"));
   const clickPriceGbpPer1000 = Number(formData.get("click_price_gbp_per_1000"));
+  const visitorDailyVisitPointsCap = Number(formData.get("visitor_daily_visit_points_cap"));
   const clickPricePencePer1000 = Math.round(clickPriceGbpPer1000 * 100);
 
   if (
@@ -77,12 +78,15 @@ export async function saveMarketplaceSettings(formData: FormData) {
     || !Number.isInteger(newProductsDurationMinutes)
     || newProductsDurationMinutes < 1
     || newProductsDurationMinutes > 10080
+    || !Number.isInteger(visitorDailyVisitPointsCap)
+    || visitorDailyVisitPointsCap < 1
+    || visitorDailyVisitPointsCap > 250
     || !Number.isFinite(clickPriceGbpPer1000)
     || clickPriceGbpPer1000 < 0.01
     || clickPriceGbpPer1000 > 1000
     || Math.abs(clickPriceGbpPer1000 * 100 - clickPricePencePer1000) > 0.000001
   ) {
-    throw new Error("Enter valid approval modes, durations, and a click value from £0.01 to £1,000 per 1,000 clicks.");
+    throw new Error("Enter valid approval modes, durations, a daily visitor points cap from 1 to 250, and a click value from £0.01 to £1,000 per 1,000 clicks.");
   }
 
   const supabase = await requireAdminClient();
@@ -92,6 +96,7 @@ export async function saveMarketplaceSettings(formData: FormData) {
     p_featured_duration_minutes: featuredDurationMinutes,
     p_new_products_duration_minutes: newProductsDurationMinutes,
     p_click_price_pence_per_1000: clickPricePencePer1000,
+    p_visitor_daily_visit_points_cap: visitorDailyVisitPointsCap,
   });
   if (error) throw new Error(error.message);
 

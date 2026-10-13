@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
-import { ArrowLeft, ArrowUpRight, Bell, CheckCheck, ChevronRight, MailOpen, MailWarning, Megaphone, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Bell, CheckCheck, ChevronRight, Gift, MailOpen, MailWarning, Megaphone, Sparkles } from "lucide-react";
 import { useNotificationReads } from "@/lib/notifications/read-state";
 import type { SiteNotification } from "@/lib/notifications/feed";
 
 type Message = { id: string; title: string; body: string; link_url: string | null; created_at: string };
-const icons = { announcement: Megaphone, "new-product": Sparkles, "verify-email": MailWarning };
+const icons = { announcement: Megaphone, "new-product": Sparkles, "verify-email": MailWarning, "loyalty-offer": Gift };
 function subscribeTime() { return () => {}; }
 
 function ReceivedTime({ value, compact = false }: { value: string; compact?: boolean }) {
