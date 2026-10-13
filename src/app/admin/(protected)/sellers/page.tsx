@@ -1,17 +1,41 @@
 import type { Metadata } from "next";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { setSellerStatus } from "@/app/admin/(protected)/actions";
+import { connection } from "next/server";
+import { requireAdmin } from "@/lib/admin/access";
+import { formatNumber } from "@/lib/format";
+import { grantSellerAdCredits, setSellerStatus } from "@/app/admin/(protected)/actions";
 
 export const metadata: Metadata = { title: "Sellers", robots: { index: false, follow: false } };
+export const instant = false;
 
 export default async function AdminSellersPage() {
-  const supabase = await createSupabaseServerClient();
+  await connection();
+  const { supabase } = await requireAdmin();
   const { data: sellers, error } = await supabase
     .from("seller_profiles")
-    .select("id,shop_name,slug,status,is_public,created_at")
+    .select("id,shop_name,slug,shop_url,status,is_public,created_at")
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
+
+  const sellerIds = (sellers ?? []).map((seller) => seller.id);
+  const [{ data: contactDetails, error: contactError }, { data: adAccounts, error: adAccountsError }] = sellerIds.length
+    ? await Promise.all([
+        supabase
+          .from("seller_contact_details")
+          .select("seller_profile_id,contact_name,phone,phone_contact_confirmed_at,website_url,instagram_url,business_address,registered_email,registered_email_confirmed_at")
+          .in("seller_profile_id", sellerIds),
+        supabase
+          .from("seller_ad_accounts")
+          .select("seller_profile_id,clicks_remaining,welcome_clicks_remaining,admin_clicks_remaining")
+          .in("seller_profile_id", sellerIds),
+      ])
+    : [{ data: [], error: null }, { data: [], error: null }];
+
+  if (contactError) throw new Error(contactError.message);
+  if (adAccountsError) throw new Error(adAccountsError.message);
+
+  const contactBySellerId = new Map((contactDetails ?? []).map((details) => [details.seller_profile_id, details]));
+  const adAccountBySellerId = new Map((adAccounts ?? []).map((account) => [account.seller_profile_id, account]));
 
   return (
     <main className="admin-overview">
@@ -23,11 +47,55 @@ export default async function AdminSellersPage() {
       {sellers?.length ? (
         <div className="admin-table-wrap">
           <table className="admin-table">
-            <thead><tr><th>Shop</th><th>Status</th><th>Public</th><th>Access</th></tr></thead>
+            <thead><tr><th>Shop</th><th>Seller contact details</th><th>Click credits</th><th>Status</th><th>Public</th><th>Access</th></tr></thead>
             <tbody>
               {sellers.map((seller) => (
                 <tr key={seller.id}>
-                  <td><strong>{seller.shop_name}</strong><small>{seller.slug}</small></td>
+                  <td><strong>{seller.shop_name}</strong><small>{seller.slug}</small>{seller.shop_url && <a className="admin-seller-shop-url" href={seller.shop_url} target="_blank" rel="noreferrer">Shop website</a>}</td>
+                  <td>
+                    {(() => {
+                      const contact = contactBySellerId.get(seller.id);
+                      if (!contact) return <span className="admin-muted">No contact details provided</span>;
+                      return (
+                        <div className="admin-seller-contact-details">
+                          <strong>{contact.contact_name || "Contact name not provided"}</strong>
+                          <span>{contact.registered_email}</span>
+                          <span className={contact.registered_email_confirmed_at ? "admin-email-confirmed" : "admin-email-unconfirmed"}>
+                            {contact.registered_email_confirmed_at ? "Email confirmed" : "Email not confirmed"}
+                          </span>
+                          {contact.phone && <span>Phone: {contact.phone}{contact.phone_contact_confirmed_at ? " · email-confirmed" : " · not confirmed"}</span>}
+                          {contact.website_url && <a href={contact.website_url} target="_blank" rel="noreferrer">Website</a>}
+                          {contact.instagram_url && <a href={contact.instagram_url} target="_blank" rel="noreferrer">Instagram</a>}
+                          {contact.business_address && <span>{contact.business_address}</span>}
+                        </div>
+                      );
+                    })()}
+                  </td>
+                  <td>
+                    {(() => {
+                      const account = adAccountBySellerId.get(seller.id);
+                      if (!account) return <span className="admin-muted">No advertising balance</span>;
+                      return (
+                        <div className="admin-seller-credit-cell">
+                          <strong>{formatNumber(account.clicks_remaining)} total</strong>
+                          <small>Welcome: {formatNumber(account.welcome_clicks_remaining)}</small>
+                          <small>Admin gifts: {formatNumber(account.admin_clicks_remaining)}</small>
+                          <form className="admin-seller-credit-form" action={grantSellerAdCredits}>
+                            <input type="hidden" name="seller_id" value={seller.id} />
+                            <label>
+                              <span className="visually-hidden">Free clicks for {seller.shop_name}</span>
+                              <input name="clicks" type="number" min="1" max="10000000" step="1" placeholder="Clicks" required />
+                            </label>
+                            <label>
+                              <span className="visually-hidden">Grant note for {seller.shop_name}</span>
+                              <input name="note" type="text" maxLength={300} placeholder="Reason (optional)" />
+                            </label>
+                            <button className="admin-approve-button" type="submit">Grant free clicks</button>
+                          </form>
+                        </div>
+                      );
+                    })()}
+                  </td>
                   <td><span className={`admin-status admin-status-${seller.status}`}>{seller.status}</span></td>
                   <td>{seller.is_public ? "Visible" : "Hidden"}</td>
                   <td>
@@ -46,7 +114,7 @@ export default async function AdminSellersPage() {
           </table>
         </div>
       ) : (
-        <div className="admin-empty-state"><h2>No seller applications</h2><p>Seller applications will appear here after seller onboarding is enabled.</p></div>
+        <div className="admin-empty-state"><h2>No seller applications</h2><p>New seller registrations will appear here for review.</p></div>
       )}
     </main>
   );

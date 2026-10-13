@@ -14,7 +14,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: InformationRouteProps): Promise<Metadata> {
   const { page: slug } = await params;
-  return { title: informationPages.find((item) => item.slug === slug)?.label ?? "Information" };
+  return { title: informationPages.find((item) => item.slug === slug)?.label ?? "Page not found" };
 }
 
 async function InformationPageContent({ params }: InformationRouteProps) {
@@ -26,7 +26,7 @@ async function InformationPageContent({ params }: InformationRouteProps) {
     <>
       <SiteHeader />
       <main className="information-page page-shell">
-        <Link className="back-link" href="/"><ArrowLeft size={15} aria-hidden="true" /> Back to Rontab</Link>
+        <Link className="back-link" href="/products"><ArrowLeft size={15} aria-hidden="true" /> Back to Rontab</Link>
         <div className="information-copy">
           <p className="eyebrow">{page.eyebrow}</p>
           <h1>{page.title}</h1>
@@ -42,7 +42,7 @@ async function InformationPageContent({ params }: InformationRouteProps) {
               <Link className="text-link" href="/seller/login">Seller sign in</Link>
             </div>
           )}
-          <Link className="text-link information-link" href="/">Explore the sample edit <ArrowRight size={15} aria-hidden="true" /></Link>
+          <Link className="text-link information-link" href="/products">Explore available products <ArrowRight size={15} aria-hidden="true" /></Link>
         </div>
       </main>
       <SiteFooter />

@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { createBrowserClient } from "@supabase/ssr";
-import type { Database } from "@/lib/supabase/database.types";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export function SellerAuthForm({ mode }: { mode: "register" | "login" }) {
   const router = useRouter();
@@ -19,16 +18,13 @@ export function SellerAuthForm({ mode }: { mode: "register" | "login" }) {
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    const supabase = createSupabaseBrowserClient();
 
-    if (!supabaseUrl || !supabaseKey) {
-      setMessage("Seller access is not configured yet.");
+    if (!supabase) {
+      setMessage("Seller access is temporarily unavailable.");
       setIsSubmitting(false);
       return;
     }
-
-    const supabase = createBrowserClient<Database>(supabaseUrl, supabaseKey);
 
     if (mode === "register") {
       const shopName = String(formData.get("shop_name") ?? "").trim();
@@ -50,7 +46,7 @@ export function SellerAuthForm({ mode }: { mode: "register" | "login" }) {
             shop_name: shopName,
             shop_slug: shopSlug,
           },
-          emailRedirectTo: `${window.location.origin}/seller/login`,
+          emailRedirectTo: `${window.location.origin}/seller/login?registered=1&confirmation=1`,
         },
       });
 
@@ -61,10 +57,15 @@ export function SellerAuthForm({ mode }: { mode: "register" | "login" }) {
       }
 
       if (!data.session) {
-        setMessage("Check your email to confirm the account. Your shop will be reviewed before it can publish products.");
-        setIsSubmitting(false);
+        router.replace("/seller/login?registered=1&confirmation=1");
+        router.refresh();
         return;
       }
+
+      await supabase.auth.signOut();
+      router.replace("/seller/login?registered=1");
+      router.refresh();
+      return;
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
@@ -88,7 +89,7 @@ export function SellerAuthForm({ mode }: { mode: "register" | "login" }) {
       }
     }
 
-    router.replace("/seller");
+    router.replace("/?welcome=1&next=%2Fproducts");
     router.refresh();
   }
 

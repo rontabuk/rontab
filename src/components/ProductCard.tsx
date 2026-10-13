@@ -1,15 +1,29 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight } from "lucide-react";
-import { formatPrice, type Product } from "@/data/products";
+import { ArrowUpRight, Image as ImageIcon, Volume2, VolumeX } from "lucide-react";
+import type { Product } from "@/data/products";
+import { ShopVisitLink } from "@/components/ShopVisitLink";
+import { formatCompactNumber, formatPrice } from "@/lib/format";
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({
+  product,
+  isFeatured = false,
+  previewOnly = false,
+  showUploadPlaceholder = false,
+}: {
+  product: Product;
+  isFeatured?: boolean;
+  previewOnly?: boolean;
+  showUploadPlaceholder?: boolean;
+}) {
   const [descriptionOpen, setDescriptionOpen] = useState(false);
-  const [shopClicks, setShopClicks] = useState(0);
   const [visibleDetailLength, setVisibleDetailLength] = useState(0);
+  const [previewMuted, setPreviewMuted] = useState(true);
   const closeTimer = useRef<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const descriptionId = `description-${product.slug}`;
 
   const clearCloseTimer = () => {
@@ -48,26 +62,112 @@ export function ProductCard({ product }: { product: Product }) {
   useEffect(() => {
     if (!descriptionOpen) return;
 
+    const description = product.description;
     let characterCount = 0;
     let timer: number;
     const typeNextCharacter = () => {
-      characterCount = Math.min(characterCount + 1, product.detail.length);
+      characterCount = Math.min(characterCount + 1, description.length);
       setVisibleDetailLength(characterCount);
 
-      if (characterCount < product.detail.length) {
-        const justTyped = product.detail[characterCount - 1];
+      if (characterCount < description.length) {
+        const justTyped = description[characterCount - 1];
         timer = window.setTimeout(typeNextCharacter, justTyped === " " ? 120 : 28);
       }
     };
 
     timer = window.setTimeout(typeNextCharacter, 50);
     return () => window.clearTimeout(timer);
-  }, [descriptionOpen, product.detail]);
+  }, [descriptionOpen, product.description]);
+
+  useEffect(() => {
+    if (product.mediaType !== "video") return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (previewOnly) {
+      void video.play().catch(() => {});
+      return;
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) void video.play().catch(() => {});
+      else video.pause();
+    }, { rootMargin: "100px" });
+
+    observer.observe(video);
+    return () => {
+      observer.disconnect();
+      video.pause();
+    };
+  }, [previewOnly, product.mediaType]);
+
+  const mediaElement = !product.image && previewOnly && showUploadPlaceholder ? (
+    <div className="seller-upload-preview-placeholder" role="img" aria-label="Preview placeholder for your product photo or Reel">
+      <div className="seller-upload-preview-topline"><span>YOUR SHOP</span><span>4:5 PORTRAIT</span></div>
+      <div className="seller-upload-preview-art" aria-hidden="true">
+        <span className="seller-upload-preview-shape seller-upload-preview-shape-one" />
+        <span className="seller-upload-preview-shape seller-upload-preview-shape-two" />
+        <span className="seller-upload-preview-shape seller-upload-preview-shape-three" />
+        <span className="seller-upload-preview-icon"><ImageIcon size={23} /></span>
+      </div>
+      <div className="seller-upload-preview-copy">
+        <span>PRODUCT PHOTO OR REEL</span>
+        <strong>{product.name === "Product name" ? "Your next great find" : product.name}</strong>
+        <small>Your uploaded media will appear here</small>
+      </div>
+    </div>
+  ) : !product.image ? (
+    <div className="product-media-placeholder" aria-label="No product image">
+      <ImageIcon size={28} aria-hidden="true" />
+    </div>
+  ) : product.mediaType === "video" ? (
+    <video
+      ref={videoRef}
+      className="product-card-media"
+      src={product.image}
+      aria-label={product.imageAlt}
+      loop
+      muted={previewOnly ? previewMuted : true}
+      playsInline
+      preload="none"
+    />
+  ) : (
+    <Image src={product.image} alt={product.imageAlt} fill unoptimized sizes="(max-width: 640px) 46vw, (max-width: 1000px) 30vw, 22vw" />
+  );
+
+  const visitLabel = (
+    <>
+      <span className="product-visit-price">{product.price === null ? "On request" : formatPrice(product.price)}</span>
+      <span className="product-visit-meta">
+        <ArrowUpRight className="product-visit-arrow" size={16} strokeWidth={3} aria-hidden="true" />
+        {product.clickCount !== undefined && <span className="product-click-count" aria-label={`${product.clickCount} shop clicks`}>{formatCompactNumber(product.clickCount)}</span>}
+      </span>
+    </>
+  );
 
   return (
-    <article className="product-card" data-product-card>
-      <div className="product-image">
-        <Image src={product.image} alt={product.imageAlt} fill unoptimized sizes="(max-width: 640px) 46vw, (max-width: 1000px) 30vw, 22vw" />
+    <article className="product-card" data-product-card data-preview-only={previewOnly || undefined}>
+      <div className="product-image" data-media-type={product.mediaType ?? "image"}>
+        {previewOnly ? (
+          <div className="product-image-link">{mediaElement}</div>
+        ) : (
+          <Link className="product-image-link" href={`/products/${product.slug}`} aria-label={`View details for ${product.name}`}>
+            {mediaElement}
+          </Link>
+        )}
+        {isFeatured && <span className="product-featured-badge">Featured</span>}
+        {previewOnly && product.mediaType === "video" && (
+          <button
+            className="product-preview-audio-toggle"
+            type="button"
+            aria-label={previewMuted ? "Enable preview sound" : "Mute preview"}
+            aria-pressed={!previewMuted}
+            title={previewMuted ? "Enable sound" : "Mute sound"}
+            onClick={() => setPreviewMuted((muted) => !muted)}
+          >
+            {previewMuted ? <VolumeX size={16} aria-hidden="true" /> : <Volume2 size={16} aria-hidden="true" />}
+          </button>
+        )}
         {descriptionOpen && (
           <div
             className="description-panel"
@@ -83,17 +183,17 @@ export function ProductCard({ product }: { product: Product }) {
               else resetCloseTimer();
             }}
           >
-            <p title={product.detail} aria-label={product.detail}>
-              {product.detail.slice(0, visibleDetailLength)}
+            <p title={product.description} aria-label={product.description}>
+              {product.description.slice(0, visibleDetailLength)}
             </p>
-            <div className="description-click-count">
-              <span>Shop clicks this session</span>
-              <strong>{shopClicks}</strong>
-            </div>
           </div>
         )}
         <div className="product-card-info" data-tone={product.overlayTone}>
-          <Image className="advertiser-avatar" src={product.makerImage} alt="" width={36} height={36} unoptimized />
+          {product.makerImage ? (
+            <Image className="advertiser-avatar" src={product.makerImage} alt="" width={36} height={36} unoptimized />
+          ) : (
+            <span className="advertiser-avatar advertiser-avatar-placeholder" aria-hidden="true">{getMakerInitials(product.maker)}</span>
+          )}
           <button
             className="product-description-preview animate-pulse"
             type="button"
@@ -103,23 +203,25 @@ export function ProductCard({ product }: { product: Product }) {
             onClick={toggleDescription}
             onPointerEnter={() => descriptionOpen && resetCloseTimer()}
           >
-            {product.description}
+            {product.name}
           </button>
-          <a
-            className="product-visit-button"
-            href={product.externalUrl}
-            target="_blank"
-            rel="noreferrer"
-            aria-label={`Visit shop for ${product.name}`}
-            onClick={() => {
-              setShopClicks((count) => count + 1);
-              if (descriptionOpen) resetCloseTimer();
-            }}
-          >
-            {formatPrice(product.price)} <ArrowUpRight size={14} aria-hidden="true" />
-          </a>
+          {previewOnly ? (
+            <span className="product-visit-button">{visitLabel}</span>
+          ) : (
+            <ShopVisitLink
+              className="product-visit-button"
+              slug={product.slug}
+              productName={product.name}
+            >
+              {visitLabel}
+            </ShopVisitLink>
+          )}
         </div>
       </div>
     </article>
   );
+}
+
+function getMakerInitials(maker: string) {
+  return maker.trim().split(/\s+/).slice(0, 2).map((word) => word[0]?.toUpperCase()).join("") || "R";
 }

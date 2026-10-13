@@ -1,0 +1,51 @@
+.rontab-splash { position: relative; display: grid; min-height: 100svh; place-items: center; overflow: hidden; padding: 36px 24px; background: #081222; color: #f7f7f4; isolation: isolate; }
+.rontab-splash::before { position: absolute; z-index: -1; inset: 0; background: repeating-linear-gradient(118deg, transparent 0 112px, rgb(255 255 255 / 1.8%) 113px, transparent 114px 226px); content: ""; }
+.splash-corner { position: absolute; z-index: -1; width: min(44vw, 510px); aspect-ratio: 1.9; pointer-events: none; }
+.splash-corner-top { top: -29%; left: -13%; border: 1px solid rgb(255 146 29 / 38%); background: linear-gradient(145deg, #f4a313, #f15b1c 53%, transparent 54%); clip-path: polygon(0 0, 100% 0, 37% 100%, 0 70%); opacity: .82; transform: rotate(-9deg); }
+.splash-corner-bottom { right: -15%; bottom: -30%; border: 1px solid rgb(255 146 29 / 34%); background: linear-gradient(325deg, #f4a313, #f15b1c 53%, transparent 54%); clip-path: polygon(63% 0, 100% 30%, 100% 100%, 0 100%); opacity: .75; transform: rotate(-9deg); }
+.splash-content { display: grid; width: min(100%, 620px); justify-items: center; text-align: center; animation: splash-arrive 750ms cubic-bezier(.2,.7,.2,1) both; }
+.splash-brand-mark { position: relative; display: grid; width: 82px; height: 70px; place-items: center; color: #ff9c1b; }
+.splash-brand-mark > svg:first-child { filter: drop-shadow(0 7px 16px rgb(242 118 23 / 20%)); }
+.splash-brand-arrow { position: absolute; top: -4px; right: -6px; color: #ff681e; }
+.splash-wordmark { margin: 5px 0 0; color: #f7f7f4; font-family: var(--font-display), Georgia, serif; font-size: clamp(64px, 10vw, 104px); font-weight: 500; line-height: .95; }
+.splash-wordmark span { color: #ff9415; }
+.splash-tagline { display: flex; align-items: center; gap: 14px; margin: 18px 0 0; color: #ccd2dc; font-size: 13px; letter-spacing: .12em; }
+.splash-tagline i { width: 5px; height: 5px; border-radius: 50%; background: #ff8618; }
+.splash-actions { display: grid; width: min(100%, 370px); gap: 11px; margin-top: 43px; animation: splash-options 700ms 180ms both; }
+.splash-action { display: flex; min-height: 49px; align-items: center; justify-content: center; gap: 10px; border: 1px solid transparent; border-radius: 3px; font-size: 12px; font-weight: 700; transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease; }
+.splash-action:hover { transform: translateY(-1px); }
+.splash-action-primary { background: linear-gradient(100deg, #ff9a17, #f16b1d); color: #101826; }
+.splash-action-primary:hover { background: linear-gradient(100deg, #ffad35, #fa7d2a); }
+.splash-action-secondary { border-color: rgb(235 239 246 / 27%); background: rgb(255 255 255 / 4%); color: #f7f7f4; }
+.splash-action-secondary:hover { border-color: rgb(255 255 255 / 55%); background: rgb(255 255 255 / 8%); }
+.splash-seller-entry { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 14px; margin-top: 13px; color: #aab4c3; font-size: 12px; }
+.splash-seller-entry a { display: inline-flex; align-items: center; gap: 4px; color: #ffc06a; font-weight: 700; }
+.splash-seller-entry a:last-child { color: #d5dbe4; font-weight: 500; }
+.splash-entering { display: grid; width: min(100%, 210px); justify-items: center; gap: 10px; margin-top: 43px; color: #cbd3df; font-size: 12px; animation: splash-options 450ms both; }
+.splash-loading-line { position: relative; width: 100%; height: 2px; overflow: hidden; background: rgb(255 255 255 / 13%); }
+.splash-loading-line::after { position: absolute; inset: 0; background: linear-gradient(90deg, #ff9a17, #f16b1d); content: ""; transform: translateX(-100%); animation: splash-loading 1.35s ease-in-out forwards; }
+.splash-footer { position: absolute; right: 24px; bottom: 18px; left: 24px; margin: 0; color: #8b96a7; font-size: 10px; font-weight: 700; letter-spacing: .16em; text-align: center; }
+.splash-footer span { padding-inline: 6px; color: #f28a1c; }
+.rontab-splash-intro .splash-content { animation: splash-logo-only 1.55s both; }
+.rontab-splash-intro .splash-brand-mark { animation: splash-mark 1.2s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes splash-arrive { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes splash-options { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes splash-loading { to { transform: translateX(0); } }
+@keyframes splash-mark { 0% { opacity: 0; transform: scale(.7) rotate(-8deg); } 50% { opacity: 1; transform: scale(1.08) rotate(2deg); } 100% { transform: scale(1) rotate(0); } }
+@keyframes splash-logo-only { 0% { opacity: 0; transform: scale(.96); } 25%, 75% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.02); } }
+@media (max-width: 640px) {
+	.rontab-splash { padding: 20px 20px 40px; }
+	.splash-corner { width: 76vw; }
+	.splash-corner-top { top: -18%; left: -31%; }
+	.splash-corner-bottom { right: -31%; bottom: -19%; }
+	.splash-brand-mark { width: 64px; height: 52px; }
+	.splash-brand-mark > svg:first-child { width: 46px; height: 46px; }
+	.splash-brand-arrow { width: 22px; height: 22px; }
+	.splash-wordmark { margin-top: 2px; font-size: 54px; }
+	.splash-tagline { gap: 9px; margin-top: 10px; font-size: 10px; }
+	.splash-actions { gap: 7px; margin-top: 20px; }
+	.splash-action { min-height: 42px; }
+	.splash-seller-entry { gap: 6px 11px; margin-top: 5px; font-size: 11px; }
+	.splash-footer { bottom: 8px; }
+}
+@media (prefers-reduced-motion: reduce) { .splash-content, .splash-actions, .splash-entering, .rontab-splash-intro .splash-brand-mark, .rontab-splash-intro .splash-content { animation-duration: 1ms; animation-delay: 0ms; } .splash-loading-line::after { animation-duration: 1ms; } }

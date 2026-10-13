@@ -1,10 +1,240 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { headers } from "next/headers";
+import { FormError, runFormAction, type FormState } from "@/lib/form-state";
+import { getSellerAccount } from "@/lib/seller/access";
+import { getProfileImageProblem, isCityId, isHttpsUrl, isUuid } from "@/lib/validation";
 
-export async function signOutSeller() {
-  const supabase = await createSupabaseServerClient();
-  await supabase.auth.signOut();
-  redirect("/seller/login");
+export async function saveSellerProfile(_state: FormState, formData: FormData) {
+  return runFormAction(() => persistSellerProfile(formData));
+}
+
+export async function sendSellerPhoneConfirmation() {
+  return runFormAction(requestPhoneConfirmation);
+}
+
+async function persistSellerProfile(formData: FormData) {
+  const shopName = String(formData.get("shop_name") ?? "").trim();
+  const shopCityId = String(formData.get("shop_city_id") ?? "").trim() || null;
+  const shopUrl = String(formData.get("shop_url") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const contactName = String(formData.get("contact_name") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const websiteUrl = String(formData.get("website_url") ?? "").trim();
+  const instagramUrl = String(formData.get("instagram_url") ?? "").trim();
+  const businessAddress = String(formData.get("business_address") ?? "").trim();
+  const requestedLogoUrl = String(formData.get("logo_url") ?? "").trim();
+  const removeLogo = formData.get("remove_logo") === "on";
+  const logoFileValue = formData.get("logo_image");
+  const logoFile = logoFileValue instanceof File && logoFileValue.size > 0 ? logoFileValue : null;
+
+  if (shopName.length < 2 || shopName.length > 100) {
+    throw new FormError("Shop name must be between 2 and 100 characters.");
+  }
+  if (shopUrl && !isHttpsUrl(shopUrl)) {
+    throw new FormError("Enter a valid HTTPS shop website URL.");
+  }
+  if (description.length > 500) {
+    throw new FormError("Shop description must be 500 characters or fewer.");
+  }
+  if (contactName.length > 100 || phone.length > 32 || businessAddress.length > 300) {
+    throw new FormError("Contact name, phone, or business address is too long.");
+  }
+  if (phone && !/^\+?[0-9() -]{7,32}$/.test(phone)) {
+    throw new FormError("Enter a valid phone number, preferably with its country code.");
+  }
+  if (websiteUrl && !isHttpsUrl(websiteUrl)) {
+    throw new FormError("Business website must use HTTPS.");
+  }
+  if (instagramUrl && !/^https:\/\/(www\.)?instagram\.com\//i.test(instagramUrl)) {
+    throw new FormError("Enter a valid HTTPS Instagram profile URL.");
+  }
+  if (!logoFile && requestedLogoUrl && !isHttpsUrl(requestedLogoUrl)) {
+    throw new FormError("Logo URL must be a valid HTTPS address.");
+  }
+
+  const { supabase, seller } = await getSellerAccount();
+  if (seller.status === "suspended") throw new FormError("Suspended sellers cannot update their profile.");
+  if (shopCityId) {
+    if (!isCityId(shopCityId)) throw new FormError("Choose a supported United Kingdom city.");
+    const { data: selectedCity, error: selectedCityError } = await supabase
+      .from("supported_cities")
+      .select("city_id")
+      .eq("city_id", shopCityId)
+      .maybeSingle();
+    if (selectedCityError) throw new Error(selectedCityError.message);
+    if (!selectedCity) throw new FormError("Choose a supported United Kingdom city.");
+  }
+
+  const logoProblem = logoFile && getProfileImageProblem(logoFile, "Shop logo");
+  if (logoProblem) throw new FormError(logoProblem);
+
+  const { data: existingProfile, error: existingProfileError } = await supabase
+    .from("seller_profiles")
+    .select("logo_url")
+    .eq("id", seller.id)
+    .single();
+  if (existingProfileError) throw new Error(existingProfileError.message);
+
+  let logoUrl = removeLogo ? null : requestedLogoUrl || existingProfile.logo_url;
+  let newLogoPath: string | null = null;
+
+  if (logoFile) {
+    const safeFileName = logoFile.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+    newLogoPath = `${seller.id}/${crypto.randomUUID()}-${safeFileName}`;
+    const { error: uploadError } = await supabase.storage.from("seller-logos").upload(newLogoPath, logoFile, {
+      cacheControl: "3600",
+      contentType: logoFile.type,
+      upsert: false,
+    });
+
+    if (uploadError) throw new Error(uploadError.message);
+    logoUrl = supabase.storage.from("seller-logos").getPublicUrl(newLogoPath).data.publicUrl;
+  }
+
+  const { error } = await supabase
+    .from("seller_profiles")
+    .update({
+      shop_name: shopName,
+      shop_url: shopUrl || null,
+      shop_city_id: shopCityId,
+      description: description || null,
+      logo_url: logoUrl || null,
+    })
+    .eq("id", seller.id);
+
+  if (error && newLogoPath) {
+    await supabase.storage.from("seller-logos").remove([newLogoPath]);
+  }
+  if (error?.code === "23505") {
+    throw new FormError("That shop URL is already in use. Choose another one.");
+  }
+  if (error) throw new Error(error.message);
+
+  const { error: contactError } = await supabase.rpc("seller_save_contact_details", {
+    p_contact_name: contactName || null,
+    p_phone: phone || null,
+    p_website_url: websiteUrl || null,
+    p_instagram_url: instagramUrl || null,
+    p_business_address: businessAddress || null,
+  });
+  if (contactError) throw new Error(contactError.message);
+
+  const oldLogoPrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/seller-logos/`;
+  if (existingProfile.logo_url?.startsWith(oldLogoPrefix) && existingProfile.logo_url !== logoUrl) {
+    const oldLogoPath = decodeURIComponent(existingProfile.logo_url.slice(oldLogoPrefix.length).split("?")[0]);
+    if (oldLogoPath) await supabase.storage.from("seller-logos").remove([oldLogoPath]);
+  }
+
+  revalidatePath("/seller/profile");
+  revalidatePath("/seller");
+  revalidatePath("/seller/products");
+  revalidatePath("/admin/sellers");
+  revalidatePath("/");
+  redirect("/seller/profile?saved=1");
+}
+
+async function requestPhoneConfirmation() {
+  const { supabase, seller } = await getSellerAccount();
+  if (seller.status === "suspended") throw new FormError("Suspended sellers cannot verify contact details.");
+
+  const [{ data: authResult, error: authError }, { data: contact, error: contactError }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from("seller_contact_details").select("phone").eq("seller_profile_id", seller.id).maybeSingle(),
+  ]);
+
+  if (authError || !authResult.user?.email) throw new Error(authError?.message ?? "Registered email not found.");
+  if (contactError) throw new Error(contactError.message);
+  if (!contact?.phone) throw new FormError("Save a phone number before requesting confirmation.");
+
+  const origin = (await headers()).get("origin");
+  if (!origin) throw new Error("Could not determine the profile URL for email confirmation.");
+  const emailRedirectTo = new URL("/auth/callback?flow=contact-phone", origin).toString();
+  const { error } = await supabase.auth.signInWithOtp({
+    email: authResult.user.email,
+    options: { shouldCreateUser: false, emailRedirectTo },
+  });
+  if (error) throw new Error(error.message);
+
+  redirect("/seller/profile?verificationSent=1");
+}
+
+export async function saveSellerAdAllocations(formData: FormData) {
+  const { supabase, seller } = await getSellerAccount();
+  if (seller.status !== "active") throw new Error("Only active sellers can manage advertising credits.");
+
+  const allocations: { product_id: string; clicks_remaining: number; clicks_limit: number }[] = [];
+  for (const [key, value] of formData.entries()) {
+    if (!key.startsWith("allocation_") || key.startsWith("allocation_limit_") || typeof value !== "string") continue;
+    const productId = key.slice("allocation_".length);
+    if (value === "shared") continue;
+    const clicks = Number(value);
+    const requestedLimit = Number(formData.get(`allocation_limit_${productId}`));
+    if (!productId || !Number.isSafeInteger(clicks) || clicks < 0 || !Number.isSafeInteger(requestedLimit) || requestedLimit < clicks) {
+      throw new Error("Enter a valid click allocation for each product.");
+    }
+    allocations.push({ product_id: productId, clicks_remaining: clicks, clicks_limit: requestedLimit });
+  }
+
+  const { error } = await supabase.rpc("seller_set_product_click_allocations", { p_allocations: allocations });
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/seller/advertising");
+  redirect("/seller/advertising?saved=1");
+}
+
+export async function markSellerAdCreditGrantsSeen() {
+  const { supabase } = await getSellerAccount();
+  const { error } = await supabase.rpc("seller_mark_ad_credit_grants_seen");
+  if (error) throw new Error(error.message);
+  revalidatePath("/seller", "layout");
+}
+
+export async function deleteSellerProduct(formData: FormData) {
+  const productId = String(formData.get("product_id") ?? "");
+  if (!isUuid(productId)) throw new Error("Invalid product deletion request.");
+
+  const { supabase, seller } = await getSellerAccount();
+  if (seller.status !== "active") throw new Error("Only active sellers can delete products.");
+
+  const { data: product, error: productError } = await supabase
+    .from("products")
+    .select("id")
+    .eq("id", productId)
+    .eq("seller_profile_id", seller.id)
+    .maybeSingle();
+
+  if (productError) throw new Error(productError.message);
+  if (!product) {
+    revalidatePath("/seller/products");
+    revalidatePath("/seller");
+    return;
+  }
+
+  const { data: media, error: mediaError } = await supabase
+    .from("product_images")
+    .select("storage_path")
+    .eq("product_id", product.id);
+
+  if (mediaError) throw new Error(mediaError.message);
+
+  const storagePaths = (media ?? []).map((item) => item.storage_path);
+  if (storagePaths.length) {
+    const { error: storageError } = await supabase.storage.from("product-images").remove(storagePaths);
+    if (storageError) throw new Error(storageError.message);
+  }
+
+  const { error: deleteError } = await supabase
+    .from("products")
+    .delete()
+    .eq("id", product.id)
+    .eq("seller_profile_id", seller.id);
+
+  if (deleteError) throw new Error(deleteError.message);
+
+  revalidatePath("/seller/products");
+  revalidatePath("/seller");
+  revalidatePath("/");
 }

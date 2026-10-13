@@ -82,26 +82,24 @@ export function ProductBrowser({
   }, []);
 
   const normalizedQuery = query.trim().toLowerCase();
+  // Time windows are evaluated on the client only, after mount, to keep hydration stable.
+  const isActiveUntil = (until?: string | null) => currentTime > 0 && Boolean(until) && Date.parse(until!) > currentTime;
   const filteredProducts = products.filter((product) => {
     const matchesCategory =
       activeCategory === "all" ||
-      (activeCategory === "new"
-        ? currentTime > 0 &&
-          currentTime >= new Date(product.addedAt).getTime() &&
-          currentTime - new Date(product.addedAt).getTime() <= 72 * 60 * 60 * 1000
-        : product.category === activeCategory);
-    const matchesQuery = !normalizedQuery || `${product.name} ${product.category} ${product.description} ${product.maker}`.toLowerCase().includes(normalizedQuery);
+      (activeCategory === "new" ? isActiveUntil(product.newUntil) : product.category === activeCategory);
+    const matchesQuery = !normalizedQuery || `${product.name} ${product.categoryName} ${product.description} ${product.maker}`.toLowerCase().includes(normalizedQuery);
     return matchesCategory && matchesQuery;
-  });
+  }).sort((first, second) => Number(isActiveUntil(second.featuredUntil)) - Number(isActiveUntil(first.featuredUntil)));
   const clearFilters = () => { setQuery(""); setActiveCategory("all"); };
 
   return (
     <main className="product-browser page-shell" id="discover">
       <div className="browse-tools">
-        <label className="browser-search">
+        <label className="browser-search" id="product-search">
           <Search size={16} aria-hidden="true" />
           <span className="visually-hidden">Search by product or category</span>
-          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find something…" aria-controls="product-grid" />
+          <input id="product-search-input" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find something…" aria-controls="product-grid" />
           {query && <button className="clear-search" type="button" aria-label="Clear search" onClick={() => setQuery("")}><X size={15} aria-hidden="true" /></button>}
         </label>
         <div className="filter-list" role="group" aria-label="Filter by category">
@@ -115,14 +113,20 @@ export function ProductBrowser({
       <p className="visually-hidden" role="status" aria-live="polite">{filteredProducts.length} {filteredProducts.length === 1 ? "find" : "finds"}</p>
       {filteredProducts.length ? (
         <div className="product-grid" id="product-grid">
-          {filteredProducts.map((product) => <ProductCard product={product} key={product.slug} />)}
+          {filteredProducts.map((product) => (
+            <ProductCard
+              product={product}
+              isFeatured={isActiveUntil(product.featuredUntil)}
+              key={product.slug}
+            />
+          ))}
         </div>
       ) : (
         <div className="empty-state">
-          <p className="eyebrow">Nothing here just yet</p>
-          <h3>No finds match that search.</h3>
-          <p>Try another word or clear the category filter.</p>
-          <button className="button button-outline" type="button" onClick={clearFilters}>Clear filters</button>
+          <p className="eyebrow">{products.length ? "Nothing here just yet" : "Rontab catalogue"}</p>
+          <h3>{products.length ? "No finds match that search." : "No products are published yet."}</h3>
+          <p>{products.length ? "Try another word or clear the category filter." : "Approved products will appear here when sellers publish their listings."}</p>
+          {products.length > 0 && <button className="button button-outline" type="button" onClick={clearFilters}>Clear filters</button>}
         </div>
       )}
     </main>

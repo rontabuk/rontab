@@ -1,48 +1,37 @@
 import "server-only";
 
-import type { Product, ProductCategory, ProductOverlayTone } from "@/data/products";
-import { categories as sampleCategories, products as sampleProducts } from "@/data/products";
+import { cache } from "react";
+import { getOverlayTone, type Product, type ProductCategory } from "@/data/products";
 import type { Database } from "@/lib/supabase/database.types";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabasePublicClient } from "@/lib/supabase/server";
+import { createProductMediaUrls } from "@/lib/supabase/storage";
 
-type CategoryRow = Database["public"]["Tables"]["categories"]["Row"];
-type ProductRow = Database["public"]["Tables"]["products"]["Row"];
-type SellerRow = Database["public"]["Tables"]["seller_profiles"]["Row"];
 type ProductImageRow = Database["public"]["Tables"]["product_images"]["Row"];
 
-const toneByCategory: Record<string, ProductOverlayTone> = {
-  kitchen: "coffee",
-  tableware: "ceramic",
-  textiles: "linen",
-  storage: "woven",
-  living: "lamp",
-};
-
-const fallbackAvatar =
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=96&h=96&q=80";
-
-function categoryImage(category: CategoryRow) {
-  return (
-    category.image_url ??
-    sampleCategories.find((sample) => sample.id === category.slug)?.image ??
-    sampleCategories[0].image
-  );
+// Products lead with their Reel when one exists, otherwise with their first photo.
+export function pickLeadMedia<T extends Pick<ProductImageRow, "product_id" | "media_type">>(mediaRows: readonly T[]) {
+  const leadMedia = new Map<string, T>();
+  for (const media of mediaRows) {
+    if (!leadMedia.has(media.product_id) || media.media_type === "video") leadMedia.set(media.product_id, media);
+  }
+  return leadMedia;
 }
 
-export async function getPublicCatalog(): Promise<{
+// Cached per request so page metadata and content share one catalogue read.
+export const getPublicCatalog = cache(async (): Promise<{
   categories: ProductCategory[];
   products: Product[];
-}> {
-  const supabase = await createSupabaseServerClient();
+}> => {
+  const supabase = createSupabasePublicClient();
   const [categoriesResult, productsResult] = await Promise.all([
     supabase
       .from("categories")
-      .select("*")
+      .select("id,slug,name")
       .eq("is_active", true)
       .order("sort_order", { ascending: true }),
     supabase
       .from("products")
-      .select("*")
+      .select("id,slug,name,description,price,click_count,featured_until,new_until,category_id,seller_profile_id")
       .eq("status", "approved")
       .order("created_at", { ascending: false }),
   ]);
@@ -50,91 +39,60 @@ export async function getPublicCatalog(): Promise<{
   if (categoriesResult.error) throw categoriesResult.error;
   if (productsResult.error) throw productsResult.error;
 
-  const categoryRows = (categoriesResult.data ?? []) as CategoryRow[];
-  const productRows = (productsResult.data ?? []) as ProductRow[];
+  const productRows = productsResult.data;
   const sellerIds = [...new Set(productRows.map((product) => product.seller_profile_id))];
   const productIds = productRows.map((product) => product.id);
 
-  const [sellersResult, imagesResult] = await Promise.all([
+  const [sellersResult, mediaResult] = await Promise.all([
     sellerIds.length
-      ? supabase
-          .from("seller_profiles")
-          .select("*")
-          .in("id", sellerIds)
+      ? supabase.from("seller_profiles").select("id,shop_name,shop_url,logo_url").in("id", sellerIds)
       : Promise.resolve({ data: [], error: null }),
     productIds.length
       ? supabase
           .from("product_images")
-          .select("*")
+          .select("product_id,storage_path,media_type,alt_text")
           .in("product_id", productIds)
           .order("sort_order", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (sellersResult.error) throw sellersResult.error;
-  if (imagesResult.error) throw imagesResult.error;
+  if (mediaResult.error) throw mediaResult.error;
 
-  const sellers = new Map(
-    ((sellersResult.data ?? []) as SellerRow[]).map((seller) => [seller.id, seller]),
-  );
-  const categoryById = new Map(categoryRows.map((category) => [category.id, category]));
-  const firstImageByProduct = new Map<string, ProductImageRow>();
-
-  for (const image of (imagesResult.data ?? []) as ProductImageRow[]) {
-    if (!firstImageByProduct.has(image.product_id)) {
-      firstImageByProduct.set(image.product_id, image);
-    }
-  }
-
-  const mappedProducts = await Promise.all(
-    productRows.map(async (row): Promise<Product> => {
-      const category = categoryById.get(row.category_id);
-      const image = firstImageByProduct.get(row.id);
-      const seller = sellers.get(row.seller_profile_id);
-      let productImage = category ? categoryImage(category) : sampleCategories[0].image;
-      let imageAlt = row.name;
-
-      if (image) {
-        imageAlt = image.alt_text || row.name;
-        const { data } = await supabase.storage
-          .from("product-images")
-          .createSignedUrl(image.storage_path, 60 * 60);
-        productImage = data?.signedUrl ?? productImage;
-      }
-
-      const publicLogo = seller?.logo_url?.startsWith("https://")
-        ? seller.logo_url
-        : fallbackAvatar;
-
-      return {
-        slug: row.slug,
-        name: row.name,
-        category: category?.slug ?? "home",
-        price: row.price,
-        addedAt: row.created_at,
-        description: row.description,
-        image: productImage,
-        imageAlt,
-        maker: seller?.shop_name ?? "Independent maker",
-        makerImage: publicLogo,
-        overlayTone: toneByCategory[category?.slug ?? ""] ?? "ceramic",
-        detail: row.description,
-        externalUrl: row.external_url,
-      };
-    }),
+  const sellers = new Map(sellersResult.data.map((seller) => [seller.id, seller]));
+  const categoryById = new Map(categoriesResult.data.map((category) => [category.id, category]));
+  const leadMediaByProduct = pickLeadMedia(mediaResult.data);
+  const mediaUrls = await createProductMediaUrls(
+    supabase,
+    [...leadMediaByProduct.values()].map((media) => media.storage_path),
   );
 
   return {
-    categories: categoryRows.map((category) => ({
-      id: category.slug,
-      name: category.name,
-      image: categoryImage(category),
-      imageAlt: category.name,
-    })),
-    products: mappedProducts,
-  };
-}
+    categories: categoriesResult.data.map((category) => ({ id: category.slug, name: category.name })),
+    products: productRows.map((row) => {
+      const category = categoryById.get(row.category_id);
+      const media = leadMediaByProduct.get(row.id);
+      const seller = sellers.get(row.seller_profile_id);
 
-export function getDevelopmentSampleCatalog() {
-  return { categories: sampleCategories, products: sampleProducts };
-}
+      return {
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        category: category?.slug ?? "home",
+        categoryName: category?.name ?? "Home",
+        price: row.price,
+        clickCount: row.click_count,
+        featuredUntil: row.featured_until,
+        newUntil: row.new_until,
+        description: row.description,
+        image: media ? mediaUrls.get(media.storage_path) ?? "" : "",
+        imageAlt: media?.alt_text || row.name,
+        mediaType: media?.media_type ?? "image",
+        maker: seller?.shop_name ?? "Independent maker",
+        shopUrl: seller?.shop_url ?? null,
+        makerImage: seller?.logo_url?.startsWith("https://") ? seller.logo_url : "",
+        overlayTone: getOverlayTone(category?.slug),
+      };
+    }),
+  };
+});

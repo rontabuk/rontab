@@ -1,0 +1,156 @@
+import type { Metadata } from "next";
+import Image from "next/image";
+import { connection } from "next/server";
+import { saveSellerProfile, sendSellerPhoneConfirmation } from "@/app/seller/(protected)/actions";
+import { ActionForm } from "@/components/ActionForm";
+import { CityPicker } from "@/components/CityPicker";
+import { formatDate } from "@/lib/format";
+import { getSavedCity, getSupportedLocations } from "@/lib/locations";
+import { getSellerAccount } from "@/lib/seller/access";
+
+export const metadata: Metadata = { title: "Seller profile", robots: { index: false, follow: false } };
+export const instant = false;
+
+export default async function SellerProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ saved?: string; verificationSent?: string; phoneConfirmed?: string; verificationError?: string }>;
+}) {
+  await connection();
+  const { saved, verificationSent, phoneConfirmed, verificationError } = await searchParams;
+  const { supabase, seller } = await getSellerAccount();
+  const [{ data: authResult, error: authError }, { data: contact, error: contactError }, { countries, cities }, savedCity] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from("seller_contact_details")
+      .select("contact_name,phone,phone_contact_confirmed_at,website_url,instagram_url,business_address")
+      .eq("seller_profile_id", seller.id)
+      .maybeSingle(),
+    getSupportedLocations(supabase),
+    getSavedCity(supabase, seller.shop_city_id),
+  ]);
+
+  if (authError) throw new Error(authError.message);
+  if (contactError) throw new Error(contactError.message);
+  const registeredEmail = authResult.user?.email ?? "";
+  const isRegisteredEmailVerified = Boolean(authResult.user?.email_confirmed_at);
+
+  return (
+    <main className="admin-overview seller-overview">
+      <header className="admin-page-heading">
+        <p className="admin-eyebrow">SHOP WORKSPACE</p>
+        <h1>Seller profile</h1>
+        <p>Manage your shop identity and private contact information for the Rontab team.</p>
+      </header>
+      {saved === "1" && <p className="admin-save-success" role="status">Seller profile saved successfully.</p>}
+      {phoneConfirmed === "1" && <p className="admin-save-success" role="status">Phone contact confirmed through your registered email.</p>}
+      <ActionForm className="seller-profile-form" action={saveSellerProfile}>
+        <div className="seller-profile-section-heading">
+          <h2>Shop details</h2>
+          <p>These details describe your shop to customers.</p>
+        </div>
+        <label>
+          Shop name
+          <input name="shop_name" defaultValue={seller.shop_name} minLength={2} maxLength={100} required />
+        </label>
+        <label>
+          Rontab shop handle
+          <input value={seller.slug} readOnly />
+          <small>Internal identifier only; use the next field for your actual website link.</small>
+        </label>
+        <label>
+          External shop website
+          <input name="shop_url" type="url" defaultValue={seller.shop_url ?? ""} placeholder="https://your-shop.com" />
+          <small>Optional HTTPS address shown to customers on your product details.</small>
+        </label>
+        <CityPicker
+          name="shop_city_id"
+          countries={countries}
+          cities={cities}
+          initialCity={savedCity}
+          initialCountryCode={savedCity?.country_code ?? null}
+        />
+        <label className="seller-profile-description">
+          Shop description
+          <textarea name="description" defaultValue={seller.description ?? ""} rows={5} maxLength={500} />
+          <small>Up to 500 characters.</small>
+        </label>
+        <label className="seller-profile-logo">
+          Shop logo image
+          {seller.logo_url ? (
+            <Image className="seller-profile-logo-preview" src={seller.logo_url} alt={`${seller.shop_name} logo`} width={88} height={88} unoptimized />
+          ) : (
+            <span className="seller-profile-logo-empty" aria-hidden="true">{seller.shop_name.slice(0, 1).toUpperCase()}</span>
+          )}
+          <input name="logo_image" type="file" accept="image/jpeg,image/png,image/webp" />
+          <small>JPEG, PNG, or WebP. Maximum 5 MB. This image appears beside your product name on cards.</small>
+          {seller.logo_url && (
+            <label className="seller-profile-remove-logo">
+              <input name="remove_logo" type="checkbox" />
+              Remove current shop logo
+            </label>
+          )}
+        </label>
+        <label className="seller-profile-logo-url">
+          Or use an image URL
+          <input name="logo_url" type="url" defaultValue={seller.logo_url ?? ""} placeholder="https://" />
+          <small>Leave blank to keep the current logo, unless you select Remove current shop logo.</small>
+        </label>
+        <div className="seller-profile-section-heading">
+          <h2>Private contact details</h2>
+          <p>These details are visible to Rontab administration, not public shop visitors.</p>
+        </div>
+        <label>
+          Registered email
+          <input value={registeredEmail} readOnly aria-describedby="seller-email-verification" />
+          <small id="seller-email-verification" className={isRegisteredEmailVerified ? "seller-profile-verified" : "seller-profile-unverified"}>
+            {isRegisteredEmailVerified ? "Account email verified" : "Account email not verified"}
+          </small>
+        </label>
+        <label>
+          Contact person
+          <input name="contact_name" defaultValue={contact?.contact_name ?? ""} maxLength={100} placeholder="Name of the person we should contact" />
+        </label>
+        <label>
+          Phone number
+          <input name="phone" type="tel" autoComplete="tel" defaultValue={contact?.phone ?? ""} maxLength={32} placeholder="+44…" />
+          <small>A confirmation link will be sent to your registered email to confirm this contact number.</small>
+        </label>
+        <label>
+          Business website
+          <input name="website_url" type="url" defaultValue={contact?.website_url ?? ""} placeholder="https://" />
+        </label>
+        <label>
+          Instagram profile
+          <input name="instagram_url" type="url" defaultValue={contact?.instagram_url ?? ""} placeholder="https://www.instagram.com/your-shop" />
+        </label>
+        <label className="seller-profile-business-address">
+          Business address
+          <textarea name="business_address" defaultValue={contact?.business_address ?? ""} rows={3} maxLength={300} placeholder="Business address for Rontab administration" />
+          <small>Private; visible to Rontab administration only.</small>
+        </label>
+        <section className="seller-profile-status" aria-label="Account status">
+          <span>Account status <span className={`admin-status admin-status-${seller.status}`}>{seller.status}</span></span>
+          <span>Public shop <strong>{seller.is_public ? "Visible" : "Hidden"}</strong></span>
+        </section>
+        <button className="admin-primary-button" type="submit">Save profile</button>
+      </ActionForm>
+      {contact?.phone && !contact.phone_contact_confirmed_at && (
+        <section className="seller-phone-verification" aria-labelledby="seller-phone-verification-title">
+          <div>
+            <h2 id="seller-phone-verification-title">Confirm your phone contact</h2>
+            <p>We will send a confirmation link to {registeredEmail}. This confirms the contact details through your account email; it does not independently verify phone-network ownership.</p>
+          </div>
+          <ActionForm action={sendSellerPhoneConfirmation}>
+            <button className="admin-approve-button" type="submit">Send confirmation link to email</button>
+          </ActionForm>
+          {verificationSent === "1" && <p role="status">A confirmation link was sent to {registeredEmail}. Open it to confirm this contact number.</p>}
+          {verificationError === "1" && <p className="seller-profile-verification-error" role="alert">The confirmation link could not be used. Request a new link and try again.</p>}
+        </section>
+      )}
+      {contact?.phone_contact_confirmed_at && (
+        <p className="seller-profile-phone-confirmed" role="status">Phone contact confirmed through registered email on {formatDate(contact.phone_contact_confirmed_at)}.</p>
+      )}
+    </main>
+  );
+}

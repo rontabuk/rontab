@@ -1,39 +1,38 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
-import Link from "next/link";
-import { redirect } from "next/navigation";
-import { AdminSignOutButton } from "@/components/admin/AdminSignOutButton";
-import { getAdminUser } from "@/lib/supabase/server";
+import { connection } from "next/server";
+import { WorkspaceNavigation } from "@/components/WorkspaceNavigation";
+import { WorkspaceShell } from "@/components/WorkspaceShell";
+import { requireAdmin } from "@/lib/admin/access";
+import { adminAreas } from "@/lib/admin/areas";
 
 export const instant = false;
 
-async function ProtectedAdminShell({ children }: { children: ReactNode }) {
-  const admin = await getAdminUser();
+const adminLinks = [
+  { href: "/admin", label: "Overview", exact: true },
+  ...adminAreas.map(({ href, label }) => ({ href, label })),
+];
 
-  if (!admin) redirect("/admin/login");
+async function ProtectedAdminShell({ children }: { children: ReactNode }) {
+  const { admin } = await requireAdmin();
 
   return (
-    <div className="admin-shell">
-      <aside className="admin-sidebar">
-        <Link className="admin-brand" href="/admin">rontab<span>.</span><small>ADMIN</small></Link>
-        <p className="admin-sidebar-label">WORKSPACE</p>
-        <nav className="admin-navigation" aria-label="Admin navigation">
-          <Link className="admin-navigation-active" href="/admin">Overview</Link>
-          <Link href="/admin/products">Product review</Link>
-          <Link href="/admin/sellers">Sellers</Link>
-          <Link href="/admin/categories">Categories</Link>
-        </nav>
-        <div className="admin-sidebar-bottom">
-          <span>{admin.email}</span>
-          <AdminSignOutButton />
-        </div>
-      </aside>
-      <div className="admin-main">{children}</div>
-    </div>
+    <WorkspaceShell
+      area="ADMIN"
+      homeHref="/admin"
+      sectionLabel="WORKSPACE"
+      navigation={<WorkspaceNavigation label="Admin navigation" links={adminLinks} />}
+      accountLabel={admin.email}
+      signOutTo="/admin/login"
+    >
+      {children}
+    </WorkspaceShell>
   );
 }
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  await connection();
+
   return (
     <Suspense fallback={<main className="admin-loading">Loading private workspace…</main>}>
       <ProtectedAdminShell>{children}</ProtectedAdminShell>

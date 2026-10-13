@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DM_Sans, DM_Serif_Display } from "next/font/google";
 import "./globals.css";
 
@@ -20,6 +20,10 @@ export const metadata: Metadata = {
   },
   description:
     "A considered edit of useful, characterful finds for the everyday home.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#f5f2eb",
 };
 
 export default function RootLayout({

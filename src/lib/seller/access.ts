@@ -1,9 +1,10 @@
 import "server-only";
 
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function getSellerAccount() {
+export const getSellerAccount = cache(async () => {
   const supabase = await createSupabaseServerClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
 
@@ -18,4 +19,4 @@ export async function getSellerAccount() {
   if (sellerError || !seller) redirect("/seller/register");
 
   return { supabase, seller };
-}
+});

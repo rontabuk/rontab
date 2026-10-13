@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export function AdminLoginForm() {
   const router = useRouter();
@@ -17,16 +17,14 @@ export function AdminLoginForm() {
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    const supabase = createSupabaseBrowserClient();
 
-    if (!supabaseUrl || !supabaseKey) {
-      setErrorMessage("Admin sign-in is not configured yet.");
+    if (!supabase) {
+      setErrorMessage("Admin sign-in is temporarily unavailable.");
       setIsSubmitting(false);
       return;
     }
 
-    const supabase = createBrowserClient(supabaseUrl, supabaseKey);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error || !data.user) {
@@ -35,7 +33,9 @@ export function AdminLoginForm() {
       return;
     }
 
-    if (data.user.app_metadata.role !== "admin") {
+    const role = data.user.app_metadata?.role;
+
+    if (role !== "admin") {
       await supabase.auth.signOut();
       setErrorMessage("This account is not authorized for administration.");
       setIsSubmitting(false);

@@ -1,33 +1,34 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
-import Link from "next/link";
-import { SellerSignOutButton } from "@/components/seller/SellerSignOutButton";
+import { connection } from "next/server";
+import { SellerNavigation } from "@/components/seller/SellerNavigation";
+import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getSellerAccount } from "@/lib/seller/access";
 
 export const instant = false;
 
 async function ProtectedSellerShell({ children }: { children: ReactNode }) {
-  const { seller } = await getSellerAccount();
+  const { supabase, seller } = await getSellerAccount();
+  const { data: hasNewAdCreditGrants, error } = await supabase.rpc("seller_has_new_ad_credit_grants");
+  if (error) throw new Error(error.message);
 
   return (
-    <div className="admin-shell seller-shell">
-      <aside className="admin-sidebar">
-        <Link className="admin-brand" href="/seller">rontab<span>.</span><small>SELLER</small></Link>
-        <p className="admin-sidebar-label">SHOP WORKSPACE</p>
-        <nav className="admin-navigation" aria-label="Seller navigation">
-          <Link className="admin-navigation-active" href="/seller">Products</Link>
-        </nav>
-        <div className="admin-sidebar-bottom">
-          <span>{seller.shop_name} · {seller.status}</span>
-          <SellerSignOutButton />
-        </div>
-      </aside>
-      <div className="admin-main">{children}</div>
-    </div>
+    <WorkspaceShell
+      area="SELLER"
+      homeHref="/seller"
+      sectionLabel="SHOP WORKSPACE"
+      navigation={<SellerNavigation hasNewAdCreditGrants={hasNewAdCreditGrants} />}
+      accountLabel={`${seller.shop_name} · ${seller.status}`}
+      signOutTo="/seller/login"
+    >
+      {children}
+    </WorkspaceShell>
   );
 }
 
-export default function SellerLayout({ children }: { children: ReactNode }) {
+export default async function SellerLayout({ children }: { children: ReactNode }) {
+  await connection();
+
   return (
     <Suspense fallback={<main className="admin-loading">Loading seller workspace…</main>}>
       <ProtectedSellerShell>{children}</ProtectedSellerShell>
