@@ -1,6 +1,7 @@
 .seller-auth-page { display: grid; min-height: 100vh; place-items: center; padding: 22px; background: radial-gradient(ellipse at top right, #e4ebe0, transparent 48%), #f5f2eb; }
 .seller-auth-panel { width: min(100%, 460px); padding: 34px; border: 1px solid #dce1d7; border-radius: 5px; background: rgb(255 253 248 / 94%); box-shadow: 0 18px 56px rgb(40 56 42 / 8%); }
 .seller-auth-panel h1 { margin: 0; color: #28332a; font-family: var(--font-display), Georgia, serif; font-size: 36px; font-weight: 400; }
+.seller-auth-logo { display: inline-block; margin-bottom: 18px; color: #34483a; }
 .seller-auth-intro { margin: 10px 0 23px; color: #6c756b; font-size: 13px; line-height: 1.65; }
 .seller-auth-form { display: grid; gap: 8px; }
 .seller-auth-form label { margin-top: 7px; color: #465246; font-size: 11px; font-weight: 700; }
@@ -103,6 +104,17 @@
 .seller-ad-slider:disabled { cursor: not-allowed; opacity: .45; }
 .seller-ad-slider-scale { display: flex; justify-content: space-between; gap: 10px; color: #7d847a; font-size: 11px; }
 .seller-ad-topup-button { display: inline-flex; min-height: 37px; align-items: center; gap: 8px; margin-top: 15px; padding: 0 12px; border: 1px solid #d7ddd2; border-radius: 3px; background: #ecefe9; color: #6f766c; cursor: not-allowed; font: inherit; font-size: 12px; font-weight: 700; }
+.seller-ad-topup-button:not(:disabled) { background: var(--green-dark); color: #fff; cursor: pointer; }
+.seller-ad-topup-button:not(:disabled):hover { background: var(--green); }
+.seller-checkout-error { margin-top: 12px; color: #a13326; font-size: 13px; }
+.seller-checkout-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; padding: 12px 0; border-block: 1px solid var(--line); }
+.seller-checkout-status p { margin: 0; font-size: 13px; }
+.seller-checkout-status a { display: inline-flex; flex: 0 0 38px; height: 38px; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 3px; color: var(--green-dark); }
+.seller-purchase-history { min-width: 0; margin-top: 28px; }
+.seller-purchase-history h2 { margin: 0 0 12px; font-size: 18px; }
+.seller-purchase-table-wrap { overflow-x: auto; }
+.seller-purchase-history table { width: 100%; min-width: 500px; border-collapse: collapse; font-size: 12px; text-align: left; }
+.seller-purchase-history th, .seller-purchase-history td { padding: 12px 10px; border-bottom: 1px solid var(--line); }
 .seller-ad-credit-balances { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin-top: 18px; border: 1px solid #e0e4dc; background: #e0e4dc; }
 .seller-ad-credit-balances > div { display: grid; gap: 4px; min-width: 0; padding: 12px; background: #fffdf8; }
 .seller-ad-credit-balances span { color: #5f6b5c; font-size: 11px; font-weight: 700; }

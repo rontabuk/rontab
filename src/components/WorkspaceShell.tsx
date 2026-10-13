@@ -4,7 +4,6 @@ import { signOut, type SignOutDestination } from "@/lib/auth/actions";
 
 export function WorkspaceShell({
   area,
-  homeHref,
   sectionLabel,
   navigation,
   accountLabel,
@@ -12,7 +11,6 @@ export function WorkspaceShell({
   children,
 }: {
   area: string;
-  homeHref: string;
   sectionLabel: string;
   navigation: ReactNode;
   accountLabel: string;
@@ -22,7 +20,7 @@ export function WorkspaceShell({
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
-        <Link className="admin-brand" href={homeHref}>
+        <Link className="admin-brand" href="/products">
           <span className="admin-brand-word">rontab<span>.</span></span>
           <small>{area}</small>
         </Link>

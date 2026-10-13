@@ -15,7 +15,6 @@ async function ProtectedSellerShell({ children }: { children: ReactNode }) {
   return (
     <WorkspaceShell
       area="SELLER"
-      homeHref="/seller"
       sectionLabel="SHOP WORKSPACE"
       navigation={<SellerNavigation hasNewAdCreditGrants={hasNewAdCreditGrants} />}
       accountLabel={`${seller.shop_name} · ${seller.status}`}

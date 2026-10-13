@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -52,6 +53,7 @@ export function AdminLoginForm() {
       <input id="admin-email" name="email" type="email" autoComplete="username" required />
       <label htmlFor="admin-password">Password</label>
       <input id="admin-password" name="password" type="password" autoComplete="current-password" required />
+      <Link className="admin-security-note" href="/auth/forgot-password?returnTo=%2Fadmin%2Flogin">Forgot password?</Link>
       {errorMessage && <p className="admin-login-error" role="alert">{errorMessage}</p>}
       <button className="admin-primary-button" type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Signing in…" : "Sign in to admin"}

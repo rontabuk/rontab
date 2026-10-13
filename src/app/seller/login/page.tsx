@@ -12,7 +12,7 @@ export default async function SellerLoginPage({ searchParams }: { searchParams: 
   return (
     <main className="seller-auth-page">
       <section className="seller-auth-panel" aria-labelledby="seller-login-title">
-        <p className="admin-eyebrow">RONTAB / SELLERS</p>
+        <Link className="wordmark seller-auth-logo" href="/" aria-label="Rontab home">rontab<span>.</span></Link>
         <h1 id="seller-login-title">Seller sign in</h1>
         <p className="seller-auth-intro">Manage your shop profile and product submissions.</p>
         {registered === "1" && <p className="seller-auth-message" role="status">Registration complete. Sign in after confirming your email.</p>}

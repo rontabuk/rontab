@@ -12,10 +12,10 @@ export const instant = false;
 export default async function VisitorAccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; confirm?: string; confirmationError?: string }>;
+  searchParams: Promise<{ next?: string; confirm?: string; confirmationError?: string; mode?: string }>;
 }) {
   await connection();
-  const { next, confirm, confirmationError } = await searchParams;
+  const { next, confirm, confirmationError, mode } = await searchParams;
   const nextPath = getSafeVisitorPath(next);
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -27,5 +27,5 @@ export default async function VisitorAccountPage({
       ? "Confirm your email address before visiting a shop. Check your inbox for the confirmation link."
       : null;
 
-  return <VisitorAccountForm nextPath={nextPath} notice={notice} />;
+  return <VisitorAccountForm nextPath={nextPath} notice={notice} initialMode={mode === "register" ? "register" : "login"} />;
 }

@@ -17,6 +17,33 @@ export function pickLeadMedia<T extends Pick<ProductImageRow, "product_id" | "me
   return leadMedia;
 }
 
+export type TopVideoAd = { id: string; title: string; mediaUrl: string; mediaType: "video" | "image"; displaySeconds: number; targetUrl: string | null };
+
+export async function getTopVideoAds(): Promise<TopVideoAd[]> {
+  const supabase = createSupabasePublicClient();
+  const { data, error } = await supabase
+    .from("top_video_ads")
+    .select("id,title,storage_path,media_type,display_seconds,target_url")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: false });
+
+  // The banner is optional, so a failed read must not take the catalogue down.
+  if (error) {
+    console.error("Top video ads could not be loaded:", error.message);
+    return [];
+  }
+
+  return data.map((ad) => ({
+    id: ad.id,
+    title: ad.title,
+    mediaUrl: supabase.storage.from("top-video-ads").getPublicUrl(ad.storage_path).data.publicUrl,
+    mediaType: ad.media_type,
+    displaySeconds: ad.display_seconds,
+    targetUrl: ad.target_url,
+  }));
+}
+
 // Cached per request so page metadata and content share one catalogue read.
 export const getPublicCatalog = cache(async (): Promise<{
   categories: ProductCategory[];

@@ -48,7 +48,7 @@ export type Database = {
         ]
       >;
       profiles: Table<
-        { avatar_url: string | null; city: string | null; city_id: string | null; country_code: string | null; created_at: string; display_name: string | null; id: string; updated_at: string },
+        { avatar_url: string | null; city: string | null; city_id: string | null; country_code: string | null; created_at: string; display_name: string | null; email_verified_at: string | null; id: string; updated_at: string },
         { avatar_url?: string | null; city?: string | null; city_id?: string | null; country_code?: string | null; created_at?: string; display_name?: string | null; id: string; updated_at?: string }
       >;
       seller_profiles: Table<
@@ -99,6 +99,26 @@ export type Database = {
         { click_price_pence_per_1000: number; featured_duration_minutes: number; loyalty_random_draws_enabled: boolean; new_products_duration_minutes: number; product_approval_mode: "manual" | "automatic"; seller_approval_mode: "manual" | "automatic"; singleton: boolean; updated_at: string },
         { click_price_pence_per_1000?: number; featured_duration_minutes?: number; loyalty_random_draws_enabled?: boolean; new_products_duration_minutes?: number; product_approval_mode?: "manual" | "automatic"; seller_approval_mode?: "manual" | "automatic"; singleton?: boolean; updated_at?: string }
       >;
+      top_video_ads: Table<
+        { created_at: string; display_seconds: number; id: string; is_active: boolean; media_type: "video" | "image"; sort_order: number; storage_path: string; target_url: string | null; title: string; updated_at: string },
+        never
+      >;
+      site_announcements: Table<
+        { audience: "everyone" | "visitors" | "sellers"; body: string; created_at: string; created_by: string | null; id: string; is_active: boolean; link_url: string | null; title: string },
+        never
+      >;
+      notification_reads: Table<
+        { last_seen_at: string; user_id: string },
+        never
+      >;
+      notification_item_reads: Table<
+        { notification_id: string; read_at: string; user_id: string },
+        never
+      >;
+      seller_credit_purchases: Table<
+        { amount_pence: number; clicks: number; created_at: string; currency: string; id: string; is_test: boolean; paid_at: string | null; paid_event_id: string | null; seller_profile_id: string; status: "pending" | "paid" | "expired"; stripe_checkout_session_id: string | null; stripe_payment_intent_id: string | null; unit_price_pence_per_1000: number },
+        never
+      >;
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -130,6 +150,18 @@ export type Database = {
       seller_set_product_click_allocations: { Args: { p_allocations: Json }; Returns: undefined };
       seller_save_contact_details: { Args: { p_business_address: string | null; p_contact_name: string | null; p_instagram_url: string | null; p_phone: string | null; p_website_url: string | null }; Returns: undefined };
       seller_confirm_contact_email: { Args: Record<PropertyKey, never>; Returns: undefined };
+      visitor_mark_email_verified: { Args: Record<PropertyKey, never>; Returns: boolean };
+      mark_notifications_seen: { Args: Record<PropertyKey, never>; Returns: undefined };
+      mark_notification_items_read: { Args: { p_notification_ids: string[] }; Returns: string[] };
+      seller_create_credit_purchase: { Args: { p_clicks: number; p_expected_rate: number; p_request_id: string; p_seller_id: string }; Returns: Database["public"]["Tables"]["seller_credit_purchases"]["Row"][] };
+      billing_attach_credit_checkout: { Args: { p_purchase_id: string; p_session_id: string }; Returns: undefined };
+      billing_complete_credit_purchase: { Args: { p_amount_pence: number; p_currency: string; p_event_id: string; p_payment_intent_id: string; p_purchase_id: string; p_session_id: string }; Returns: boolean };
+      billing_expire_credit_purchase: { Args: { p_purchase_id: string; p_session_id: string }; Returns: undefined };
+      admin_create_announcement: { Args: { p_audience: "everyone" | "visitors" | "sellers"; p_body: string; p_link_url: string | null; p_title: string }; Returns: string };
+      admin_set_announcement_active: { Args: { p_announcement_id: string; p_is_active: boolean }; Returns: undefined };
+      admin_create_top_video_ad: { Args: { p_display_seconds: number; p_is_active: boolean; p_media_type: "video" | "image"; p_sort_order: number; p_storage_path: string; p_target_url: string | null; p_title: string }; Returns: string };
+      admin_update_top_video_ad: { Args: { p_ad_id: string; p_display_seconds: number; p_is_active: boolean; p_sort_order: number; p_target_url: string | null; p_title: string }; Returns: undefined };
+      admin_delete_top_video_ad: { Args: { p_ad_id: string }; Returns: string };
       admin_save_category: { Args: { p_category_id: string | null; p_description: string | null; p_image_url: string | null; p_is_active: boolean; p_name: string; p_slug: string; p_sort_order: number }; Returns: string };
       admin_set_seller_status: { Args: { p_is_public: boolean; p_next_status: Database["public"]["Enums"]["seller_status"]; p_seller_id: string }; Returns: undefined };
       admin_grant_seller_ad_credits: { Args: { p_clicks: number; p_note: string; p_seller_id: string }; Returns: number };

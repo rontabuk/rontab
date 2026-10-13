@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { DM_Sans, DM_Serif_Display } from "next/font/google";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -31,7 +33,12 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${dmSans.variable} ${dmSerifDisplay.variable}`} data-scroll-behavior="smooth">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Suspense fallback={null}>
+          <MobileBottomNav />
+        </Suspense>
+      </body>
     </html>
   );
 }

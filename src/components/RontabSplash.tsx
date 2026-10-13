@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowDownRight, ArrowUpRight, ShoppingCart } from "lucide-react";
+import { ArrowUpRight, ShoppingBag, ShoppingCart, Store } from "lucide-react";
 
 export function RontabSplash({ showOnly = false, destination = "/products" }: { showOnly?: boolean; destination?: string }) {
   const router = useRouter();
@@ -16,15 +16,17 @@ export function RontabSplash({ showOnly = false, destination = "/products" }: { 
 
   return (
     <main className={`rontab-splash${showOnly ? " rontab-splash-intro" : ""}`}>
-      <div className="splash-corner splash-corner-top" aria-hidden="true" />
-      <div className="splash-corner splash-corner-bottom" aria-hidden="true" />
+      <div className="splash-blob splash-blob-a" aria-hidden="true" />
+      <div className="splash-blob splash-blob-b" aria-hidden="true" />
+      <div className="splash-blob splash-blob-c" aria-hidden="true" />
       <section className="splash-content" aria-label="Rontab">
         <div className="splash-brand-mark" aria-hidden="true">
-          <ShoppingCart size={57} strokeWidth={1.8} />
-          <ArrowUpRight className="splash-brand-arrow" size={29} strokeWidth={2.8} />
+          <ShoppingCart size={46} strokeWidth={2} />
+          <ArrowUpRight className="splash-brand-arrow" size={24} strokeWidth={3} />
         </div>
-        <h1 className="splash-wordmark"><span>R</span>ontab</h1>
-        <p className="splash-tagline">Connect <i /> Market <i /> Grow</p>
+        <h1 className="splash-wordmark">Ron<span>.</span>Tab</h1>
+        <p className="splash-tagline">Find it. Sell it. Grow it.</p>
+        <p className="splash-sub">The marketplace where independent shops and shoppers meet.</p>
 
         {showOnly ? (
           <div className="splash-entering" role="status">
@@ -34,19 +36,19 @@ export function RontabSplash({ showOnly = false, destination = "/products" }: { 
         ) : (
           <nav className="splash-actions" aria-label="Choose how to continue">
             <Link className="splash-action splash-action-primary" href="/products">
-              Continue as a visitor <ArrowDownRight size={17} aria-hidden="true" />
+              <ShoppingBag size={18} aria-hidden="true" /> Start shopping
             </Link>
             <Link className="splash-action splash-action-secondary" href="/seller/register">
-              For sellers <ArrowUpRight size={15} aria-hidden="true" />
+              <Store size={18} aria-hidden="true" /> Open your shop
             </Link>
             <div className="splash-seller-entry">
-              <span>Already a seller?</span>
-              <Link href="/seller/login">Sign in</Link>
+              <span>Already selling with us?</span>
+              <Link href="/seller/login">Seller sign in</Link>
             </div>
           </nav>
         )}
       </section>
-      <p className="splash-footer">RONTAB <span>·</span> INDEPENDENT COMMERCE</p>
+      <p className="splash-footer">Ron.Tab · Independent commerce</p>
     </main>
   );
 }

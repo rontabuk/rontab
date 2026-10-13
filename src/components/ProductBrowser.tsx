@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, X } from "lucide-react";
+import { LayoutGrid, Search, Sparkles, X } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import type { Product, ProductCategory } from "@/data/products";
 
@@ -96,19 +96,19 @@ export function ProductBrowser({
   return (
     <main className="product-browser page-shell" id="discover">
       <div className="browse-tools">
-        <label className="browser-search" id="product-search">
-          <Search size={16} aria-hidden="true" />
-          <span className="visually-hidden">Search by product or category</span>
-          <input id="product-search-input" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find something…" aria-controls="product-grid" />
-          {query && <button className="clear-search" type="button" aria-label="Clear search" onClick={() => setQuery("")}><X size={15} aria-hidden="true" /></button>}
-        </label>
         <div className="filter-list" role="group" aria-label="Filter by category">
-          <button className={`filter-button filter-button-new${activeCategory === "new" ? " is-active" : ""}`} type="button" aria-pressed={activeCategory === "new"} onClick={() => setActiveCategory("new")}>New</button>
-          <button className={`filter-button${activeCategory === "all" ? " is-active" : ""}`} type="button" aria-pressed={activeCategory === "all"} onClick={() => setActiveCategory("all")}>All finds</button>
+          <button className={`filter-button${activeCategory === "all" ? " is-active" : ""}`} type="button" aria-pressed={activeCategory === "all"} onClick={() => setActiveCategory("all")}><LayoutGrid size={15} aria-hidden="true" />All</button>
+          <button className={`filter-button filter-button-new${activeCategory === "new" ? " is-active" : ""}`} type="button" aria-pressed={activeCategory === "new"} onClick={() => setActiveCategory("new")}><Sparkles size={15} aria-hidden="true" />New</button>
           {categories.map((category) => (
             <button className={`filter-button${activeCategory === category.id ? " is-active" : ""}`} type="button" aria-pressed={activeCategory === category.id} key={category.id} onClick={() => setActiveCategory(category.id)}>{category.name}</button>
           ))}
         </div>
+        <label className="browser-search" id="product-search">
+          <Search size={16} aria-hidden="true" />
+          <span className="visually-hidden">Search by product or category</span>
+          <input id="product-search-input" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search for products, shops…" aria-controls="product-grid" />
+          {query && <button className="clear-search" type="button" aria-label="Clear search" onClick={() => setQuery("")}><X size={15} aria-hidden="true" /></button>}
+        </label>
       </div>
       <p className="visually-hidden" role="status" aria-live="polite">{filteredProducts.length} {filteredProducts.length === 1 ? "find" : "finds"}</p>
       {filteredProducts.length ? (

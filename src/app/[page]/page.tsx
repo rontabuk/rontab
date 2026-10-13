@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Mail } from "lucide-react";
 import { notFound } from "next/navigation";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
-import { informationPages } from "@/data/information";
+import { informationPages, supportEmail } from "@/data/information";
 
 type InformationRouteProps = { params: Promise<{ page: string }> };
 
@@ -31,6 +31,7 @@ async function InformationPageContent({ params }: InformationRouteProps) {
           <p className="eyebrow">{page.eyebrow}</p>
           <h1>{page.title}</h1>
           <p className="information-intro">{page.intro}</p>
+          {page.slug === "contact" && <a className="button button-dark" href={`mailto:${supportEmail}`}><Mail size={16} aria-hidden="true" /> Email support</a>}
           <div className="information-sections">
             {page.sections.map((section) => (
               <section key={section.heading}><h2>{section.heading}</h2><p>{section.body}</p></section>

@@ -40,6 +40,11 @@ begin
 	update public.profiles set city_id = doncaster_id where id = visitor_one;
 	update public.profiles set city_id = leeds_id where id = visitor_two;
 	update public.profiles set city_id = doncaster_id where id = visitor_three;
+	if public.is_supported_loyalty_visitor(visitor_one) then
+		raise exception 'An unverified visitor must not be eligible for loyalty rewards.';
+	end if;
+	update public.profiles set email_verified_at = now()
+	where id in (visitor_one, visitor_two, visitor_three, visitor_four);
 
 	begin
 		update public.profiles set country_code = 'FR' where id = visitor_four;

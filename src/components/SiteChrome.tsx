@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { connection } from "next/server";
-import { CircleUserRound, Compass, House, Menu, Search } from "lucide-react";
+import { CircleUserRound, Menu } from "lucide-react";
+import { DismissibleDetails } from "@/components/DismissibleDetails";
+import { NotificationBell } from "@/components/NotificationBell";
 import { informationPages } from "@/data/information";
+import { getViewer } from "@/lib/auth/viewer";
 import { formatNumber } from "@/lib/format";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export function SiteHeader() {
   return (
     <header className="site-header">
       <div className="site-header-inner page-shell">
-        <Link className="wordmark" href="/" aria-label="Rontab home">rontab<span>.</span></Link>
+        <Link className="wordmark" href="/products" aria-label="Rontab products">rontab<span>.</span></Link>
 
         <Suspense fallback={<AccountLinksFallback />}>
           <AccountLinks />
@@ -20,108 +21,90 @@ export function SiteHeader() {
   );
 }
 
-function AccountLinksFallback() {
+function AccountLinksFallback({ bell = null }: { bell?: React.ReactNode }) {
   return (
-    <HeaderActions accountHref="/account?next=%2Fvisitor" accountLabel="Sign in">
+    <HeaderActions accountHref="/account?next=%2Fvisitor" accountLabel="Sign in" bell={bell}>
+      <Link href="/account?mode=register&next=%2Fvisitor">Create an account</Link>
       <Link href="/seller/register">For sellers</Link>
     </HeaderActions>
   );
 }
 
 async function AccountLinks() {
-  await connection();
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const viewer = await getViewer();
+  const bell = <NotificationBell />;
 
-  if (!user?.email_confirmed_at) return <AccountLinksFallback />;
-
-  if (user.app_metadata?.role === "admin") {
+  if (viewer.role === "admin") {
     return (
-      <HeaderActions accountHref="/admin" accountLabel="Admin workspace">
+      <HeaderActions accountHref="/admin" accountLabel="Admin workspace" bell={bell}>
         <Link href="/seller/register">For sellers</Link>
       </HeaderActions>
     );
   }
 
-  const { data: seller } = await supabase
-    .from("seller_profiles")
-    .select("id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (seller) {
+  if (viewer.role === "seller") {
     return (
-      <HeaderActions accountHref="/seller/profile" accountLabel="Seller profile">
+      <HeaderActions accountHref="/seller/profile" accountLabel="Seller profile" bell={bell}>
         <Link href="/seller">Seller workspace</Link>
         <Link href="/seller/advertising">Advertising</Link>
       </HeaderActions>
     );
   }
 
-  const { data: points, error: pointsError } = await supabase.rpc("get_visitor_loyalty_points");
+  if (viewer.role === "visitor") {
+    return (
+      <HeaderActions accountHref="/visitor" accountLabel="My account" points={viewer.points} bell={bell}>
+        <Link href="/visitor/rewards">Points & rewards</Link>
+        <Link href="/seller/register">For sellers</Link>
+      </HeaderActions>
+    );
+  }
 
-  return (
-    <HeaderActions accountHref="/visitor" accountLabel="My account" points={pointsError ? null : Number(points)}>
-      <Link href="/visitor/rewards">Points & rewards</Link>
-      <Link href="/seller/register">For sellers</Link>
-    </HeaderActions>
-  );
+  return <AccountLinksFallback bell={bell} />;
 }
 
 function HeaderActions({
   accountHref,
   accountLabel,
   points = null,
+  bell,
   children,
 }: {
   accountHref: string;
   accountLabel: string;
   points?: number | null;
+  bell: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const menu = (
-    <>
-      <div className="site-menu-extras">
-        <Link className="site-menu-account" href={accountHref}>{accountLabel}</Link>
-      </div>
-      <div className="site-menu-extras">
-        {points !== null && (
-          <span className="visitor-points-badge" aria-label={`${points} Rontab points`}>Points <strong>{formatNumber(points)}</strong></span>
-        )}
-        {children}
-      </div>
-    </>
-  );
-
   return (
     <>
       <div className="header-actions">
-        <details className="site-menu">
+        <DismissibleDetails className="site-menu">
           <summary className="site-menu-trigger" aria-label="Open navigation menu" title="Menu">
             <Menu size={19} aria-hidden="true" />
             <span className="visually-hidden">Open navigation menu</span>
           </summary>
-          <div className="site-menu-panel">{menu}</div>
-        </details>
+          <div className="site-menu-panel">
+            <div className="site-menu-extras">
+              <Link className="site-menu-account" href={accountHref}>{accountLabel}</Link>
+            </div>
+            <div className="site-menu-extras">
+              {points !== null && (
+                <span className="visitor-points-badge" aria-label={`${points} Rontab points`}>Points <strong>{formatNumber(points)}</strong></span>
+              )}
+              {children}
+            </div>
+          </div>
+        </DismissibleDetails>
+        {bell}
       </div>
-      <Link className="header-account-link" href={accountHref}>
-        <CircleUserRound size={18} aria-hidden="true" />
-        <span>{accountLabel}</span>
-        {points !== null && <strong aria-label={`${points} Rontab points`}>{formatNumber(points)}</strong>}
-      </Link>
-      <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
-        <Link href="/" aria-label="Home" title="Home"><House size={22} aria-hidden="true" /></Link>
-        <details className="mobile-nav-menu">
-          <summary aria-label="Open menu" title="Menu">
-            <Menu size={22} aria-hidden="true" />
-            <span className="visually-hidden">Open menu</span>
-          </summary>
-          <div className="site-menu-panel mobile-nav-menu-panel">{menu}</div>
-        </details>
-        <Link href="/products#product-search" aria-label="Search" title="Search"><Search size={22} aria-hidden="true" /></Link>
-        <Link href="/products#discover" aria-label="Discover" title="Discover"><Compass size={22} aria-hidden="true" /></Link>
-        <Link href={accountHref} aria-label={accountLabel} title={accountLabel}><CircleUserRound size={22} aria-hidden="true" /></Link>
-      </nav>
+      <div className="header-end">
+        <Link className="header-account-link" href={accountHref}>
+          <CircleUserRound size={18} aria-hidden="true" />
+          <span>{accountLabel}</span>
+          {points !== null && <strong aria-label={`${points} Rontab points`}>{formatNumber(points)}</strong>}
+        </Link>
+      </div>
     </>
   );
 }
@@ -132,7 +115,7 @@ export function SiteFooter() {
       <div className="footer-inner page-shell">
         <div className="footer-top">
           <div className="footer-brand">
-            <Link className="wordmark wordmark-light" href="/">rontab<span>.</span></Link>
+            <Link className="wordmark wordmark-light" href="/products">rontab<span>.</span></Link>
             <p>Good things for the everyday home.</p>
           </div>
           <nav className="footer-links" aria-label="Information">

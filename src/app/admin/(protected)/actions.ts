@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin/access";
+import { FormError, runFormAction, type FormState } from "@/lib/form-state";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { isCityId, isHttpsUrl, isUuid } from "@/lib/validation";
 
@@ -346,4 +347,120 @@ export async function saveCategory(formData: FormData) {
 
   revalidatePath("/admin/categories");
   revalidatePath("/");
+}
+
+const TOP_VIDEO_AD_PATH = /^[0-9a-f-]{36}\.(mp4|webm|jpg|png|webp)$/;
+
+const ANNOUNCEMENT_AUDIENCES = ["everyone", "visitors", "sellers"] as const;
+
+export async function createAnnouncement(_state: FormState, formData: FormData): Promise<FormState> {
+  return runFormAction(async () => {
+    const title = String(formData.get("title") ?? "").trim();
+    const body = String(formData.get("body") ?? "").trim();
+    const linkUrl = String(formData.get("link_url") ?? "").trim();
+    const audience = String(formData.get("audience") ?? "") as (typeof ANNOUNCEMENT_AUDIENCES)[number];
+    const isValidLink = !linkUrl || isHttpsUrl(linkUrl) || /^\/[a-z0-9/_?=&#-]*$/i.test(linkUrl);
+
+    if (!title || title.length > 120 || !body || body.length > 500 || !isValidLink || !ANNOUNCEMENT_AUDIENCES.includes(audience)) {
+      throw new FormError("Enter a title (up to 120 characters), a message (up to 500), an HTTPS or on-site link, and an audience.");
+    }
+
+    const supabase = await requireAdminClient();
+    const { error } = await supabase.rpc("admin_create_announcement", {
+      p_title: title,
+      p_body: body,
+      p_link_url: linkUrl || null,
+      p_audience: audience,
+    });
+    if (error) throw new Error(error.message);
+
+    revalidatePath("/admin/notifications");
+    revalidatePath("/", "layout");
+  });
+}
+
+export async function setAnnouncementActive(formData: FormData) {
+  const announcementId = String(formData.get("announcement_id") ?? "");
+  if (!isUuid(announcementId)) throw new Error("Invalid announcement.");
+
+  const supabase = await requireAdminClient();
+  const { error } = await supabase.rpc("admin_set_announcement_active", {
+    p_announcement_id: announcementId,
+    p_is_active: formData.get("is_active") === "true",
+  });
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/notifications");
+  revalidatePath("/", "layout");
+}
+
+function parseTopVideoAdFields(formData: FormData) {
+  const title = String(formData.get("title") ?? "").trim();
+  const targetUrl = String(formData.get("target_url") ?? "").trim();
+  const sortOrder = Number(formData.get("sort_order") ?? 0);
+  const displaySeconds = Number(formData.get("display_seconds") ?? 8);
+  if (!title || title.length > 120 || !Number.isInteger(sortOrder) || (targetUrl && !isHttpsUrl(targetUrl))
+    || !Number.isInteger(displaySeconds) || displaySeconds < 3 || displaySeconds > 60) {
+    throw new FormError("Enter a title (up to 120 characters), a whole-number order, an image time of 3–60 seconds, and an HTTPS link if needed.");
+  }
+  return { title, targetUrl: targetUrl || null, sortOrder, displaySeconds, isActive: formData.get("is_active") === "on" };
+}
+
+export async function createTopVideoAd(_state: FormState, formData: FormData): Promise<FormState> {
+  return runFormAction(async () => {
+    const storagePath = String(formData.get("storage_path") ?? "");
+    if (!TOP_VIDEO_AD_PATH.test(storagePath)) throw new FormError("Upload a video (MP4, WebM) or an image (JPEG, PNG, WebP) first.");
+    const fields = parseTopVideoAdFields(formData);
+
+    const supabase = await requireAdminClient();
+    const { error } = await supabase.rpc("admin_create_top_video_ad", {
+      p_title: fields.title,
+      p_storage_path: storagePath,
+      p_media_type: /\.(mp4|webm)$/.test(storagePath) ? "video" : "image",
+      p_display_seconds: fields.displaySeconds,
+      p_target_url: fields.targetUrl,
+      p_is_active: fields.isActive,
+      p_sort_order: fields.sortOrder,
+    });
+    if (error) {
+      await supabase.storage.from("top-video-ads").remove([storagePath]);
+      throw new Error(error.message);
+    }
+
+    revalidatePath("/admin/video-ads");
+    revalidatePath("/products");
+  });
+}
+
+export async function updateTopVideoAd(formData: FormData) {
+  const adId = String(formData.get("ad_id") ?? "");
+  if (!isUuid(adId)) throw new Error("Invalid video ad.");
+  const fields = parseTopVideoAdFields(formData);
+
+  const supabase = await requireAdminClient();
+  const { error } = await supabase.rpc("admin_update_top_video_ad", {
+    p_ad_id: adId,
+    p_title: fields.title,
+    p_display_seconds: fields.displaySeconds,
+    p_target_url: fields.targetUrl,
+    p_is_active: fields.isActive,
+    p_sort_order: fields.sortOrder,
+  });
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/video-ads");
+  revalidatePath("/products");
+}
+
+export async function deleteTopVideoAd(formData: FormData) {
+  const adId = String(formData.get("ad_id") ?? "");
+  if (!isUuid(adId)) throw new Error("Invalid video ad.");
+
+  const supabase = await requireAdminClient();
+  const { data: storagePath, error } = await supabase.rpc("admin_delete_top_video_ad", { p_ad_id: adId });
+  if (error) throw new Error(error.message);
+  if (storagePath) await supabase.storage.from("top-video-ads").remove([storagePath]);
+
+  revalidatePath("/admin/video-ads");
+  revalidatePath("/products");
 }

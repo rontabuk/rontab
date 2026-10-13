@@ -20,7 +20,6 @@ async function ProtectedVisitorShell({ children }: { children: ReactNode }) {
   return (
     <WorkspaceShell
       area="VISITOR"
-      homeHref="/visitor"
       sectionLabel="YOUR ACCOUNT"
       navigation={<WorkspaceNavigation label="Visitor navigation" links={visitorLinks} />}
       accountLabel={user.email ?? ""}

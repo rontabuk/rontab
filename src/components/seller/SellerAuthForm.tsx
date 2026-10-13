@@ -31,7 +31,7 @@ export function SellerAuthForm({ mode }: { mode: "register" | "login" }) {
       const shopSlug = String(formData.get("shop_slug") ?? "").trim().toLowerCase();
 
       if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(shopSlug)) {
-        setMessage("Use lowercase letters, numbers, and hyphens for the shop URL.");
+        setMessage("Use lowercase letters, numbers, and hyphens for your shop handle.");
         setIsSubmitting(false);
         return;
       }
@@ -51,7 +51,7 @@ export function SellerAuthForm({ mode }: { mode: "register" | "login" }) {
       });
 
       if (error) {
-        setMessage("We could not create this seller account. Check the details or shop URL.");
+        setMessage("We could not create this seller account. Check your details, including your shop handle, and try again.");
         setIsSubmitting(false);
         return;
       }
@@ -99,14 +99,16 @@ export function SellerAuthForm({ mode }: { mode: "register" | "login" }) {
         <>
           <label htmlFor="shop-name">Shop name</label>
           <input id="shop-name" name="shop_name" autoComplete="organization" required />
-          <label htmlFor="shop-slug">Shop URL name</label>
-          <input id="shop-slug" name="shop_slug" pattern="[a-z0-9]+(-[a-z0-9]+)*" autoComplete="off" required />
+          <label htmlFor="shop-slug">Shop handle</label>
+          <input id="shop-slug" name="shop_slug" pattern="[a-z0-9]+(-[a-z0-9]+)*" autoComplete="off" placeholder="e.g. b2bmisr" aria-describedby="shop-handle-hint" required />
+          <small id="shop-handle-hint">Your unique shop identifier on Rontab, not a website address. Use lowercase letters, numbers or hyphens.</small>
         </>
       )}
       <label htmlFor="seller-email">Email</label>
       <input id="seller-email" name="email" type="email" autoComplete="email" required />
       <label htmlFor="seller-password">Password</label>
       <input id="seller-password" name="password" type="password" minLength={8} autoComplete={mode === "register" ? "new-password" : "current-password"} required />
+      {mode === "login" && <Link className="seller-auth-switch" href="/auth/forgot-password?returnTo=%2Fseller%2Flogin">Forgot password?</Link>}
       {message && <p className="seller-auth-message" role="status">{message}</p>}
       <button className="seller-auth-submit" type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Please wait…" : mode === "register" ? "Create seller account" : "Sign in"}

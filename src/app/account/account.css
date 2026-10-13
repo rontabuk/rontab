@@ -1,16 +1,56 @@
-.visitor-account-page { display: grid; min-height: 100vh; place-items: center; padding: 24px; background: radial-gradient(ellipse at top right, #e4ebe0, transparent 48%), #f5f2eb; }
-.visitor-account-panel { width: min(100%, 460px); padding: 34px; border: 1px solid #dce1d7; border-radius: 5px; background: rgb(255 253 248 / 96%); box-shadow: 0 18px 56px rgb(40 56 42 / 8%); }
-.visitor-account-wordmark { display: inline-block; margin-bottom: 35px; color: #29352c; font-family: var(--font-display), Georgia, serif; font-size: 32px; line-height: 1; }
-.visitor-account-wordmark span { color: #c77b5c; }
-.visitor-account-panel h1 { margin: 0; color: #28332a; font-family: var(--font-display), Georgia, serif; font-size: 34px; font-weight: 400; line-height: 1.12; }
-.visitor-account-intro { margin: 10px 0 22px; color: #6c756b; font-size: 13px; line-height: 1.65; }
-.visitor-account-notice { margin: -6px 0 18px; padding: 11px 13px; border-left: 3px solid #b08a4f; background: #f6f1e6; color: #65563e; font-size: 12px; line-height: 1.55; }
-.visitor-account-form { display: grid; gap: 8px; }
-.visitor-account-form label { margin-top: 7px; color: #465246; font-size: 11px; font-weight: 700; }
-.visitor-account-form input { width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid #d9ded5; border-radius: 3px; background: #fff; color: #29332a; font: inherit; font-size: 13px; }
-.visitor-account-submit { min-height: 44px; margin-top: 10px; padding-inline: 14px; border: 0; border-radius: 3px; background: #34483a; color: #fffdf8; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
-.visitor-account-submit:disabled { cursor: wait; opacity: .65; }
-.visitor-account-message { margin: 5px 0 0; color: #96503e; font-size: 12px; line-height: 1.55; }
-.visitor-account-mode, .visitor-account-back { display: block; width: fit-content; margin-top: 17px; padding: 0; border: 0; background: transparent; color: #415d43; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
-.visitor-account-back { margin-top: 21px; color: #737b72; font-weight: 500; }
-@media (max-width: 520px) { .visitor-account-panel { padding: 24px; } }
+.visitor-account-page { display: grid; min-height: 100svh; place-items: center; padding: 32px 20px; background: #f9f9f9; color: #0f0f0f; }
+.visitor-account-panel { width: min(100%, 440px); padding: 36px 34px 30px; border: 1px solid rgb(0 0 0 / 8%); border-radius: 5px; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 16px 40px rgb(0 0 0 / 6%); }
+.visitor-account-wordmark { display: inline-block; margin-bottom: 26px; color: #0f0f0f; font-family: var(--font-display), Georgia, serif; font-size: 30px; line-height: 1; }
+.visitor-account-wordmark span { color: #ff0000; }
+
+.visitor-account-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 26px; padding: 4px; border-radius: 5px; background: #f2f2f2; }
+.visitor-account-tabs button { min-height: 38px; border: 0; border-radius: 5px; background: transparent; color: #606060; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }
+.visitor-account-tabs button:hover { color: #0f0f0f; }
+.visitor-account-tabs button[aria-pressed="true"] { background: #fff; color: #0f0f0f; box-shadow: 0 1px 3px rgb(0 0 0 / 12%); }
+
+.visitor-account-panel h1 { margin: 0; color: #0f0f0f; font-family: var(--font-display), Georgia, serif; font-size: 30px; font-weight: 400; line-height: 1.15; }
+.visitor-account-intro { margin: 8px 0 0; color: #606060; font-size: 14px; line-height: 1.6; }
+.visitor-account-benefits { display: grid; gap: 9px; margin: 18px 0 0; padding: 14px 16px; border-radius: 5px; background: #f9f9f9; list-style: none; }
+.visitor-account-benefits li { display: flex; align-items: flex-start; gap: 10px; color: #0f0f0f; font-size: 13px; line-height: 1.45; }
+.visitor-account-benefits svg { flex: 0 0 auto; margin-top: 1px; color: #ff0000; }
+
+.visitor-account-form { display: grid; gap: 7px; margin-top: 22px; }
+.visitor-account-form label { margin-top: 8px; color: #0f0f0f; font-size: 13px; font-weight: 600; }
+.visitor-account-form label:first-child { margin-top: 0; }
+.visitor-account-form input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #cccccc; border-radius: 5px; background: #fff; color: #0f0f0f; font: inherit; font-size: 15px; transition: border-color 150ms ease, box-shadow 150ms ease; }
+.visitor-account-form input::placeholder { color: #909090; }
+.visitor-account-form input:focus { border-color: #065fd4; outline: 0; box-shadow: 0 0 0 3px rgb(6 95 212 / 16%); }
+.visitor-account-password { position: relative; }
+.visitor-account-password input { padding-right: 48px; }
+.visitor-account-password button { position: absolute; top: 50%; right: 5px; display: grid; width: 38px; height: 38px; place-items: center; border: 0; border-radius: 5px; background: transparent; color: #606060; cursor: pointer; transform: translateY(-50%); }
+.visitor-account-password button:hover { background: #f2f2f2; color: #0f0f0f; }
+.visitor-account-hint { color: #606060; font-size: 12px; }
+
+.visitor-account-alert { margin: 8px 0 0; padding: 11px 13px; border-radius: 5px; font-size: 13px; line-height: 1.5; }
+.visitor-account-alert[data-tone="error"] { background: #fdecea; color: #b3261e; }
+.visitor-account-alert[data-tone="success"] { background: #e7f4ea; color: #1e6b34; }
+.visitor-account-alert[data-tone="info"] { margin-top: 18px; background: #e8f0fe; color: #174ea6; }
+
+.visitor-account-submit { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; padding-inline: 16px; border: 0; border-radius: 5px; background: #0f0f0f; color: #fff; cursor: pointer; font: inherit; font-size: 14px; font-weight: 700; transition: background-color 150ms ease; }
+.visitor-account-submit:hover { background: #272727; }
+.visitor-account-submit:disabled { cursor: wait; opacity: .75; }
+.visitor-account-spinner { animation: visitor-account-spin 800ms linear infinite; }
+.visitor-account-legal { margin: 8px 0 0; color: #606060; font-size: 12px; line-height: 1.55; text-align: center; }
+.visitor-account-legal a { color: #065fd4; font-weight: 600; }
+
+.visitor-account-footer { display: grid; gap: 10px; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgb(0 0 0 / 8%); color: #606060; font-size: 13px; text-align: center; }
+.visitor-account-footer a { color: #065fd4; font-weight: 600; }
+.visitor-account-footer > a { color: #0f0f0f; }
+.visitor-account-footer a:hover { text-decoration: underline; }
+.password-recovery-link { justify-self: end; margin-top: 5px; color: #065fd4; font-size: 13px; font-weight: 600; }
+.password-recovery-link:hover { text-decoration: underline; }
+.password-recovery-icon { display: grid; width: 46px; height: 46px; margin-bottom: 18px; place-items: center; border-radius: 6px; background: #e8f0fe; color: #065fd4; }
+.password-recovery-retry { border: 0; background: transparent; color: #065fd4; font-size: 13px; font-weight: 600; cursor: pointer; }
+.visitor-account-footer > .password-recovery-back { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+
+@keyframes visitor-account-spin { to { transform: rotate(360deg); } }
+@media (max-width: 520px) {
+  .visitor-account-page { place-items: start center; padding: 0; background: #fff; }
+  .visitor-account-panel { padding: 26px 20px 28px; border: 0; box-shadow: none; }
+  .visitor-account-panel h1 { font-size: 27px; }
+}

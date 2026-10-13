@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import { CreditCard, Save, Search } from "lucide-react";
 import { saveSellerAdAllocations } from "@/app/seller/(protected)/actions";
+import { startTestCreditCheckout } from "@/app/seller/(protected)/advertising/payment-actions";
 import { ProductCard } from "@/components/ProductCard";
 import type { Product } from "@/data/products";
 import { formatNumber } from "@/lib/format";
@@ -20,6 +21,7 @@ export function SellerAdvertisingManager({
   products,
   initialAllocations,
   canManage,
+  canPurchase,
 }: {
   balance: number;
   clickPricePencePer1000: number;
@@ -29,8 +31,12 @@ export function SellerAdvertisingManager({
   products: AdvertisingProduct[];
   initialAllocations: Record<string, Allocation>;
   canManage: boolean;
+  canPurchase: boolean;
 }) {
   const [topUpClicks, setTopUpClicks] = useState(1_000);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [checkoutPending, startCheckoutTransition] = useTransition();
+  const checkoutRequest = useRef<{ clicks: number; rate: number; id: string } | null>(null);
   const [allocations, setAllocations] = useState(initialAllocations);
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -50,6 +56,27 @@ export function SellerAdvertisingManager({
     const matchesQuery = !normalizedQuery || `${product.name} ${product.categoryName}`.toLowerCase().includes(normalizedQuery);
     return matchesAllocation && matchesCategory && matchesQuery;
   });
+
+  function startCheckout() {
+    if (!canPurchase || checkoutPending) return;
+    if (checkoutRequest.current?.clicks !== topUpClicks || checkoutRequest.current?.rate !== clickPricePencePer1000) {
+      checkoutRequest.current = { clicks: topUpClicks, rate: clickPricePencePer1000, id: crypto.randomUUID() };
+    }
+    const formData = new FormData();
+    formData.set("clicks", String(topUpClicks));
+    formData.set("expectedRate", String(clickPricePencePer1000));
+    formData.set("requestId", checkoutRequest.current.id);
+    setCheckoutError(null);
+    startCheckoutTransition(async () => {
+      try {
+        const result = await startTestCreditCheckout(formData);
+        if (result.url) window.location.assign(result.url);
+        else setCheckoutError(result.error ?? "Test checkout is unavailable.");
+      } catch {
+        setCheckoutError("We couldn't start test checkout. Please try again.");
+      }
+    });
+  }
 
   function updateAllocation(productId: string, requestedClicks: number) {
     const allocatedElsewhere = totalAllocated - (allocations[productId]?.remaining ?? 0);
@@ -89,7 +116,7 @@ export function SellerAdvertisingManager({
         <div className="seller-ad-section-heading">
           <div>
             <h2 id="seller-ad-topup-title">Add click credits</h2>
-            <p>Choose an amount to see its price. Online payments are not active yet.</p>
+            <p>{canPurchase ? "Stripe test mode. No real payment will be taken." : "Online payments are not active. Prices are shown in GBP."}</p>
           </div>
           <CreditCard size={19} aria-hidden="true" />
         </div>
@@ -105,13 +132,15 @@ export function SellerAdvertisingManager({
           max="1000000"
           step="1000"
           value={topUpClicks}
+          disabled={checkoutPending}
           onChange={(event) => setTopUpClicks(Number(event.target.value))}
           aria-label="Choose the number of click credits to purchase"
         />
         <div className="seller-ad-slider-scale"><span>{formatGbp(1_000, clickPricePencePer1000)}</span><span>{formatGbp(1_000_000, clickPricePencePer1000)}</span></div>
-        <button className="seller-ad-topup-button" type="button" disabled>
-          <CreditCard size={15} aria-hidden="true" /> Payments unavailable
+        <button className="seller-ad-topup-button" type="button" disabled={!canPurchase || checkoutPending} onClick={startCheckout}>
+          <CreditCard size={15} aria-hidden="true" /> {checkoutPending ? "Opening test checkout..." : canPurchase ? "Test checkout" : "Payments unavailable"}
         </button>
+        {checkoutError && <p className="seller-checkout-error" role="alert">{checkoutError}</p>}
         <div className="seller-ad-credit-balances" aria-label="Credit balance breakdown">
           <div><span>Welcome gift</span><strong>{formatNumber(welcomeClicks)} clicks</strong><small>Free once on registration</small></div>
           <div><span>Admin gifts</span><strong>{formatNumber(adminClicks)} clicks</strong><small>Used before the welcome gift</small></div>

@@ -6,6 +6,28 @@ import { getSafeVisitorPath } from "@/lib/visitor/paths";
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const flow = request.nextUrl.searchParams.get("flow");
+  if (flow === "recovery") {
+    const requestedReturn = request.nextUrl.searchParams.get("returnTo");
+    const returnTo = requestedReturn === "/seller/login" || requestedReturn === "/admin/login" ? requestedReturn : "/account";
+    const tokenHash = request.nextUrl.searchParams.get("token_hash");
+    const supabase = await createSupabaseServerClient();
+    const { error } = tokenHash
+      ? await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" })
+      : code ? await supabase.auth.exchangeCodeForSession(code) : { error: true };
+    const resultUrl = new URL(error ? "/auth/forgot-password" : "/auth/reset-password", request.nextUrl.origin);
+    resultUrl.searchParams.set("returnTo", returnTo);
+    if (error) resultUrl.searchParams.set("expired", "1");
+    return NextResponse.redirect(resultUrl);
+  }
+  if (flow === "verify-email") {
+    const resultUrl = new URL("/products", request.nextUrl.origin);
+    const supabase = await createSupabaseServerClient();
+    const { error } = code ? await supabase.auth.exchangeCodeForSession(code) : { error: true };
+    const { error: verifyError } = error ? { error } : await supabase.rpc("visitor_mark_email_verified", {});
+    resultUrl.searchParams.set("emailVerified", verifyError ? "0" : "1");
+    revalidatePath("/", "layout");
+    return NextResponse.redirect(resultUrl);
+  }
   if (flow === "visitor") {
     const nextPath = getSafeVisitorPath(request.nextUrl.searchParams.get("next"));
     const nextUrl = new URL("/", request.nextUrl.origin);
@@ -21,6 +43,8 @@ export async function GET(request: NextRequest) {
       accountUrl.searchParams.set("confirmationError", "1");
       return NextResponse.redirect(accountUrl);
     }
+    // Older sign-up confirmation links also prove the visitor owns the inbox.
+    await supabase.rpc("visitor_mark_email_verified", {});
     return NextResponse.redirect(nextUrl);
   }
 

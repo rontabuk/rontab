@@ -19,7 +19,6 @@ async function ProtectedAdminShell({ children }: { children: ReactNode }) {
   return (
     <WorkspaceShell
       area="ADMIN"
-      homeHref="/admin"
       sectionLabel="WORKSPACE"
       navigation={<WorkspaceNavigation label="Admin navigation" links={adminLinks} />}
       accountLabel={admin.email}

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Image as ImageIcon, Volume2, VolumeX } from "lucide-react";
+import { ArrowUpRight, Image as ImageIcon, Play, Volume2, VolumeX } from "lucide-react";
 import type { Product } from "@/data/products";
 import { ShopVisitLink } from "@/components/ShopVisitLink";
 import { formatCompactNumber, formatPrice } from "@/lib/format";
@@ -155,6 +155,12 @@ export function ProductCard({
             {mediaElement}
           </Link>
         )}
+        {product.image && (
+          <span className="product-media-badge">
+            {product.mediaType === "video" ? <Play size={11} fill="currentColor" aria-hidden="true" /> : <ImageIcon size={12} aria-hidden="true" />}
+            {product.mediaType === "video" ? "Reel" : "Image"}
+          </span>
+        )}
         {isFeatured && <span className="product-featured-badge">Featured</span>}
         {previewOnly && product.mediaType === "video" && (
           <button
@@ -203,7 +209,8 @@ export function ProductCard({
             onClick={toggleDescription}
             onPointerEnter={() => descriptionOpen && resetCloseTimer()}
           >
-            {product.name}
+            <span className="product-description-name">{product.name}</span>
+            <span className="product-description-maker">{product.maker}</span>
           </button>
           {previewOnly ? (
             <span className="product-visit-button">{visitLabel}</span>
