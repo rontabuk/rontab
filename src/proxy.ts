@@ -7,5 +7,5 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   // Visitors, sellers and admins all hold Supabase sessions, so every page refreshes them.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp4|webm)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|pwa-icon|apple-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp4|webm)$).*)"],
 };
