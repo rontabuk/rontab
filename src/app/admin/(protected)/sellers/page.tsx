@@ -1,21 +1,42 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { requireAdmin } from "@/lib/admin/access";
 import { formatNumber } from "@/lib/format";
+import { ADMIN_LIST_PAGE_SIZE, buildAdminListHref, normalizeAdminSearch, parseAdminListPage } from "@/lib/admin/listing";
+import { AdminListPagination } from "@/components/admin/AdminListPagination";
 import { grantSellerAdCredits, setSellerStatus } from "@/app/admin/(protected)/actions";
 
 export const metadata: Metadata = { title: "Sellers", robots: { index: false, follow: false } };
 export const instant = false;
 
-export default async function AdminSellersPage() {
+export default async function AdminSellersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; status?: string; visibility?: string; page?: string }>;
+}) {
   await connection();
-  const { supabase } = await requireAdmin();
-  const { data: sellers, error } = await supabase
+  const [{ q: rawQuery, status: rawStatus, visibility: rawVisibility, page: rawPage }, { supabase }] = await Promise.all([searchParams, requireAdmin()]);
+  const query = normalizeAdminSearch(rawQuery);
+  const status = ["pending", "active", "suspended"].includes(rawStatus ?? "") ? rawStatus! : "all";
+  const visibility = ["public", "hidden"].includes(rawVisibility ?? "") ? rawVisibility! : "all";
+  const page = parseAdminListPage(rawPage);
+  let sellerQuery = supabase
     .from("seller_profiles")
-    .select("id,shop_name,slug,shop_url,status,is_public,created_at")
-    .order("created_at", { ascending: false });
+    .select("id,shop_name,slug,shop_url,status,is_public,created_at", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range((page - 1) * ADMIN_LIST_PAGE_SIZE, page * ADMIN_LIST_PAGE_SIZE - 1);
+  if (query) sellerQuery = sellerQuery.ilike("shop_name", `%${query}%`);
+  if (status !== "all") sellerQuery = sellerQuery.eq("status", status as "pending" | "active" | "suspended");
+  if (visibility !== "all") sellerQuery = sellerQuery.eq("is_public", visibility === "public");
+  const { data: sellers, count, error } = await sellerQuery;
 
   if (error) throw new Error(error.message);
+  const totalCount = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / ADMIN_LIST_PAGE_SIZE));
+  const filters = { q: query || undefined, status: status === "all" ? undefined : status, visibility: visibility === "all" ? undefined : visibility };
+  if (page > totalPages) redirect(buildAdminListHref("/admin/sellers", filters, totalPages));
 
   const sellerIds = (sellers ?? []).map((seller) => seller.id);
   const [{ data: contactDetails, error: contactError }, { data: adAccounts, error: adAccountsError }] = sellerIds.length
@@ -42,8 +63,15 @@ export default async function AdminSellersPage() {
       <header className="admin-page-heading">
         <p className="admin-eyebrow">ACCOUNTS</p>
         <h1>Sellers</h1>
-        <p>Approve seller accounts and control public shop visibility.</p>
+        <p>Approve seller accounts and control public shop visibility. {formatNumber(totalCount)} matching shops.</p>
       </header>
+      <form className="admin-list-filters" method="get">
+        <label>Search shops<input name="q" defaultValue={query} maxLength={100} placeholder="Shop name" /></label>
+        <label>Status<select name="status" defaultValue={status}><option value="all">All statuses</option><option value="pending">Pending</option><option value="active">Active</option><option value="suspended">Suspended</option></select></label>
+        <label>Visibility<select name="visibility" defaultValue={visibility}><option value="all">All shops</option><option value="public">Public</option><option value="hidden">Hidden</option></select></label>
+        <button className="admin-approve-button" type="submit">Filter shops</button>
+        {(query || status !== "all" || visibility !== "all") && <Link href="/admin/sellers">Clear filters</Link>}
+      </form>
       {sellers?.length ? (
         <div className="admin-table-wrap">
           <table className="admin-table">
@@ -114,8 +142,9 @@ export default async function AdminSellersPage() {
           </table>
         </div>
       ) : (
-        <div className="admin-empty-state"><h2>No seller applications</h2><p>New seller registrations will appear here for review.</p></div>
+        <div className="admin-empty-state"><h2>No matching sellers</h2><p>Try another search or filter.</p></div>
       )}
+      <AdminListPagination path="/admin/sellers" filters={filters} page={page} totalPages={totalPages} totalCount={totalCount} pageSize={ADMIN_LIST_PAGE_SIZE} label="Seller" />
     </main>
   );
 }

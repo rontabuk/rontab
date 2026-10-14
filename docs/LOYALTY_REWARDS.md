@@ -87,6 +87,28 @@ English to match Rontab's current launch language.
   publication, pause/cancellation, random-draw toggle, and draw execution.
 - Do not delete published offers or point transactions; preserve history.
 
+## Outcomes, fulfilment, and support
+
+- Notify each visitor when a participation result is final or a guaranteed reward
+  is successfully claimed. Result notifications are per claim and have an
+  independent read state.
+- Selected and redeemed rewards remain pending fulfilment until an administrator
+  records a delivery note. An optional receipt, shipment, or case reference can
+  be recorded with the administrator and timestamp in the audit history.
+- Administrators may attach a PDF, JPEG, PNG, or WebP delivery proof up to 10 MB.
+  Evidence files are private; only administrators can read them through a
+  short-lived signed link in the reward record.
+- A visitor may submit one support report for a selected or redeemed reward.
+  Reports are limited to delivery or reward-quality issues and are visible to
+  that visitor and administrators only.
+- Administrators move reports through open, in-review, and resolved states.
+  Resolution requires a note and is audited. Resolving a support report does not
+  mark a gift delivered, alter a claim result, refund points, or modify the
+  points ledger.
+- No automatic points refund or compensation is provided for support reports.
+  Any future compensation policy must define eligibility, limits, authorization,
+  and a separately audited points-ledger operation before implementation.
+
 ## Visitor experience
 
 - Add a dedicated Points & Rewards view under the visitor account.

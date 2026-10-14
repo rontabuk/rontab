@@ -103,6 +103,7 @@ export const getPublicCatalog = cache(async (): Promise<{
 
       return {
         id: row.id,
+        sellerProfileId: row.seller_profile_id,
         slug: row.slug,
         name: row.name,
         category: category?.slug ?? "home",

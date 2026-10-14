@@ -3,13 +3,14 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSafeVisitorPath } from "@/lib/visitor/paths";
 
-export const getVisitorAccount = cache(async () => {
+export const getVisitorAccount = cache(async (returnPath = "/visitor") => {
   const supabase = await createSupabaseServerClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
 
   if (authError || !authData.user?.email_confirmed_at) {
-    redirect(`/account?next=${encodeURIComponent("/visitor")}`);
+    redirect(`/account?next=${encodeURIComponent(getSafeVisitorPath(returnPath))}`);
   }
   if (authData.user.app_metadata?.role === "admin") redirect("/admin");
 

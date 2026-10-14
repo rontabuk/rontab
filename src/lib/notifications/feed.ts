@@ -6,7 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type SiteNotification = {
   id: string;
-  kind: "verify-email" | "announcement" | "new-product" | "loyalty-offer";
+  kind: "verify-email" | "announcement" | "new-product" | "loyalty-offer" | "reward-result" | "support-case";
   title: string;
   body: string;
   href: string | null;
@@ -23,7 +23,7 @@ export const getNotificationFeed = cache(async () => {
   const now = Date.now();
   const signedIn = viewer.role !== "guest";
 
-  const [announcements, products, reads, offers] = await Promise.all([
+  const [announcements, products, reads, offers, rewardResults, supportUpdates] = await Promise.all([
     supabase
       .from("site_announcements")
       .select("id,title,body,link_url,audience,created_at")
@@ -43,6 +43,12 @@ export const getNotificationFeed = cache(async () => {
       : Promise.resolve({ data: null }),
     viewer.role === "visitor" && viewer.emailVerifiedAt
       ? supabase.rpc("get_visitor_loyalty_offers")
+      : Promise.resolve({ data: null, error: null }),
+    viewer.role === "visitor" && viewer.emailVerifiedAt
+      ? supabase.rpc("get_visitor_loyalty_result_notifications")
+      : Promise.resolve({ data: null, error: null }),
+    viewer.role === "visitor" && viewer.emailVerifiedAt
+      ? supabase.rpc("get_visitor_marketplace_support_notifications")
       : Promise.resolve({ data: null, error: null }),
   ]);
 
@@ -79,6 +85,28 @@ export const getNotificationFeed = cache(async () => {
       href: `/visitor/rewards#offer-${offer.id}`,
       createdAt: offer.starts_at,
     })),
+    ...(rewardResults?.data ?? []).map((result) => ({
+      id: `result-${result.claim_id}`,
+      kind: "reward-result" as const,
+      title: result.claim_status === "won" ? "You were selected" : result.claim_status === "lost" ? "Draw result" : "Reward claimed",
+      body: result.claim_status === "won"
+        ? result.offer_title
+        : result.claim_status === "lost"
+          ? `The draw for ${result.offer_title} is complete.`
+          : `${result.offer_title} was successfully redeemed.`,
+      href: "/visitor/rewards?history=offers",
+      createdAt: result.result_at ?? new Date(now).toISOString(),
+    })),
+    ...(supportUpdates?.data ?? []).map((update) => ({
+      id: update.notification_id,
+      kind: "support-case" as const,
+      title: update.status === "resolved" ? "Your report was resolved" : "Your report is being reviewed",
+      body: update.resolution_note
+        ? `${update.target_name}: ${update.resolution_note}`
+        : `${update.target_name}: ${update.status.replaceAll("_", " ")}.`,
+      href: "/visitor/support",
+      createdAt: update.updated_at,
+    })),
   ].sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt));
 
   if (viewer.role === "visitor" && !viewer.emailVerifiedAt) {
@@ -100,5 +128,7 @@ export const getNotificationFeed = cache(async () => {
     : { data: null, error: null };
   if (itemReads.error) throw new Error("Notification read status is temporarily unavailable.");
   if (offers?.error) throw new Error("Offer notifications are temporarily unavailable.");
+  if (rewardResults?.error) throw new Error("Reward result notifications are temporarily unavailable.");
+  if (supportUpdates?.error && supportUpdates.error.code !== "PGRST202") throw new Error("Support case notifications are temporarily unavailable.");
   return { items, signedIn, userId: viewer.role === "guest" ? null : viewer.userId, readIds: (itemReads.data ?? []).map((item) => item.notification_id), lastSeenAt: reads.data?.last_seen_at ?? null };
 });

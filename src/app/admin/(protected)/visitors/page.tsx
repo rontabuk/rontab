@@ -1,47 +1,51 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { requireAdmin } from "@/lib/admin/access";
-import { formatDate } from "@/lib/format";
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { formatDate, formatNumber } from "@/lib/format";
+import { ADMIN_LIST_PAGE_SIZE, buildAdminListHref, normalizeAdminSearch, parseAdminListPage } from "@/lib/admin/listing";
+import { AdminListPagination } from "@/components/admin/AdminListPagination";
 import { setVisitorAccountStatus } from "@/app/admin/(protected)/actions";
 
 export const metadata: Metadata = { title: "Visitors", robots: { index: false, follow: false } };
 export const instant = false;
 
-export default async function AdminVisitorsPage() {
+export default async function AdminVisitorsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; status?: string; page?: string }>;
+}) {
   await connection();
-  // The service-role client bypasses RLS, so admin access must be verified first.
-  await requireAdmin();
-  const supabase = createSupabaseServiceRoleClient();
-  const authUsers = [];
-  let page = 1;
-
-  while (true) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
-    if (error) throw new Error(error.message);
-    authUsers.push(...data.users);
-    if (data.users.length < 1000) break;
-    page += 1;
-  }
-
-  const visitorUsers = authUsers.filter((user) => user.app_metadata?.role !== "admin");
-  const { data: sellers, error: sellerError } = visitorUsers.length
-    ? await supabase.from("seller_profiles").select("user_id")
-    : { data: [], error: null };
-  if (sellerError) throw new Error(sellerError.message);
-
-  const sellerIds = new Set((sellers ?? []).map((seller) => seller.user_id));
-  const visitors = visitorUsers
-    .filter((user) => !sellerIds.has(user.id))
-    .sort((first, second) => Date.parse(second.created_at) - Date.parse(first.created_at));
+  const [{ q: rawQuery, status: rawStatus, page: rawPage }, { supabase }] = await Promise.all([searchParams, requireAdmin()]);
+  const query = normalizeAdminSearch(rawQuery);
+  const status = rawStatus === "active" || rawStatus === "suspended" ? rawStatus : "all";
+  const page = parseAdminListPage(rawPage);
+  const { data: visitors, error } = await supabase.rpc("admin_get_visitor_directory", {
+    p_query: query,
+    p_status: status,
+    p_limit: ADMIN_LIST_PAGE_SIZE,
+    p_offset: (page - 1) * ADMIN_LIST_PAGE_SIZE,
+  });
+  if (error) throw new Error(error.message);
+  const totalCount = visitors[0]?.total_count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / ADMIN_LIST_PAGE_SIZE));
+  const filters = { q: query || undefined, status: status === "all" ? undefined : status };
+  if (page > totalPages) redirect(buildAdminListHref("/admin/visitors", filters, totalPages));
 
   return (
     <main className="admin-overview">
       <header className="admin-page-heading">
         <p className="admin-eyebrow">ACCOUNTS</p>
         <h1>Registered visitors</h1>
-        <p>Review registered visitor accounts and suspend or restore their access.</p>
+        <p>Review registered visitor accounts and suspend or restore their access. {formatNumber(totalCount)} matching visitors.</p>
       </header>
+      <form className="admin-list-filters" method="get">
+        <label>Search visitors<input name="q" defaultValue={query} maxLength={100} placeholder="Name, email, or account ID" /></label>
+        <label>Status<select name="status" defaultValue={status}><option value="all">All statuses</option><option value="active">Active</option><option value="suspended">Suspended</option></select></label>
+        <button className="admin-approve-button" type="submit">Filter visitors</button>
+        {(query || status !== "all") && <Link href="/admin/visitors">Clear filters</Link>}
+      </form>
       {visitors.length ? (
         <div className="admin-table-wrap">
           <table className="admin-table">
@@ -50,10 +54,10 @@ export default async function AdminVisitorsPage() {
               {visitors.map((visitor) => {
                 const isSuspended = Boolean(visitor.banned_until);
                 return (
-                  <tr key={visitor.id}>
-                    <td><strong>{visitor.user_metadata?.display_name || visitor.email || "Visitor"}</strong><small>{visitor.id}</small></td>
+                  <tr key={visitor.visitor_id}>
+                    <td><strong>{visitor.visitor_name || visitor.visitor_email || "Visitor"}</strong><small>{visitor.visitor_id}</small></td>
                     <td>
-                      <span>{visitor.email || "No email"}</span>
+                      <span>{visitor.visitor_email || "No email"}</span>
                       <small className={visitor.email_confirmed_at ? "admin-email-confirmed" : "admin-email-unconfirmed"}>
                         {visitor.email_confirmed_at ? "Email confirmed" : "Email not confirmed"}
                       </small>
@@ -63,7 +67,7 @@ export default async function AdminVisitorsPage() {
                     <td><span className={`admin-status admin-status-${isSuspended ? "suspended" : "active"}`}>{isSuspended ? "Suspended" : "Active"}</span></td>
                     <td>
                       <form className="admin-inline-form" action={setVisitorAccountStatus}>
-                        <input type="hidden" name="visitor_id" value={visitor.id} />
+                        <input type="hidden" name="visitor_id" value={visitor.visitor_id} />
                         <input type="hidden" name="status" value={isSuspended ? "active" : "suspended"} />
                         <button className={isSuspended ? "admin-approve-button" : "admin-reject-button"} type="submit">
                           {isSuspended ? "Restore access" : "Suspend account"}
@@ -77,8 +81,9 @@ export default async function AdminVisitorsPage() {
           </table>
         </div>
       ) : (
-        <div className="admin-empty-state"><h2>No registered visitors</h2><p>Visitor accounts will appear here after registration.</p></div>
+        <div className="admin-empty-state"><h2>No matching visitors</h2><p>Try another search or filter.</p></div>
       )}
+      <AdminListPagination path="/admin/visitors" filters={filters} page={page} totalPages={totalPages} totalCount={totalCount} pageSize={ADMIN_LIST_PAGE_SIZE} label="Visitor" />
     </main>
   );
 }

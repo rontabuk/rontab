@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { io } from "next/cache";
 import { ArrowLeft, ArrowUpRight, Image as ImageIcon } from "lucide-react";
 import { notFound } from "next/navigation";
+import { reportMarketplaceItem } from "@/app/visitor/actions";
 import { ProductCard } from "@/components/ProductCard";
 import { BrowserSpeechPlayer } from "@/components/BrowserSpeechPlayer";
 import { ShopVisitLink } from "@/components/ShopVisitLink";
@@ -12,7 +13,7 @@ import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { formatPrice } from "@/lib/format";
 import { getPublicCatalog } from "@/lib/supabase/catalog";
 
-type ProductPageProps = { params: Promise<{ slug: string }> };
+type ProductPageProps = { params: Promise<{ slug: string }>; searchParams: Promise<{ report?: string }> };
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
@@ -23,8 +24,8 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     : { title: "Product not found" };
 }
 
-async function ProductPageContent({ params }: ProductPageProps) {
-  const { slug } = await params;
+async function ProductPageContent({ params, searchParams }: ProductPageProps) {
+  const [{ slug }, { report }] = await Promise.all([params, searchParams]);
   await io();
   const catalog = await getPublicCatalog();
 
@@ -75,6 +76,39 @@ async function ProductPageContent({ params }: ProductPageProps) {
               )}
             </div>
             <p className="detail-note">Prices and availability are set by the shop and may change. Purchases are completed on the seller&apos;s website, not on Rontab.</p>
+            {product.id && product.sellerProfileId && (
+              <section className="marketplace-report" id="report" aria-labelledby="marketplace-report-title">
+                <h2 id="marketplace-report-title">Something wrong?</h2>
+                <details>
+                  <summary>Report this product or seller</summary>
+                  <p>Reports are reviewed by the Rontab team. Sign in with a verified visitor account to submit one.</p>
+                  {report === "sent" && <p className="marketplace-report-feedback" role="status">Thank you. Your report was sent for review. <Link href="/visitor/support">View my reports</Link></p>}
+                  {report === "verification" && <p className="marketplace-report-feedback is-error" role="alert">Confirm your email from the notification bell before sending a report.</p>}
+                  {report === "invalid" && <p className="marketplace-report-feedback is-error" role="alert">Choose a reason and add a description of at least 10 characters.</p>}
+                  {report === "unavailable" && <p className="marketplace-report-feedback is-error" role="alert">This item is no longer available to report.</p>}
+                  {report === "failed" && <p className="marketplace-report-feedback is-error" role="alert">We could not send your report. Please try again.</p>}
+                  <form action={reportMarketplaceItem}>
+                    <input type="hidden" name="product_id" value={product.id} />
+                    <input type="hidden" name="seller_profile_id" value={product.sellerProfileId} />
+                    <input type="hidden" name="return_path" value={`/products/${product.slug}`} />
+                    <label>Report target<select name="target_type" defaultValue="product">
+                      <option value="product">Product: {product.name}</option>
+                      <option value="seller_account">Seller account: {product.maker}</option>
+                    </select></label>
+                    <label>Reason<select name="issue_type" defaultValue="" required>
+                      <option value="" disabled>Choose a reason</option>
+                      <option value="misleading">Misleading information</option>
+                      <option value="prohibited">Prohibited item or content</option>
+                      <option value="counterfeit">Suspected counterfeit</option>
+                      <option value="seller_conduct">Seller account conduct</option>
+                      <option value="other">Other concern</option>
+                    </select></label>
+                    <label>Description<textarea name="description" minLength={10} maxLength={2000} rows={4} required /></label>
+                    <button className="button button-dark" type="submit">Send report</button>
+                  </form>
+                </details>
+              </section>
+            )}
             <Link className="back-link" href="/products#discover"><ArrowLeft size={15} aria-hidden="true" /> Back to all finds</Link>
           </div>
         </div>
@@ -92,10 +126,10 @@ async function ProductPageContent({ params }: ProductPageProps) {
   );
 }
 
-export default function ProductPage({ params }: ProductPageProps) {
+export default function ProductPage({ params, searchParams }: ProductPageProps) {
   return (
-    <Suspense fallback={<main className="product-detail page-shell" aria-busy="true" />}>
-      <ProductPageContent params={params} />
+      <Suspense fallback={<main className="product-detail page-shell" aria-busy="true" />}>
+        <ProductPageContent params={params} searchParams={searchParams} />
     </Suspense>
   );
 }

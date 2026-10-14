@@ -40,6 +40,10 @@ export default async function SellerOfferRequestsPage({
     );
   }
   if (error) throw new Error(error.message);
+  const registrationCountsResult = seller.status === "active"
+    ? await supabase.rpc("seller_get_location_registration_counts")
+    : { data: [], error: null };
+  if (registrationCountsResult.error) throw new Error(registrationCountsResult.error.message);
   const audienceResult = seller.status === "active"
     ? await supabase.rpc("seller_get_offer_audience_estimates")
     : { data: [], error: null };
@@ -101,7 +105,7 @@ export default async function SellerOfferRequestsPage({
       ) : (
         <>
           {editableRequest && <p className="seller-account-notice" role="status">Update the requested details and resubmit this offer for review.</p>}
-          <SellerOfferRequestForm key={editableRequest?.id ?? "new-offer"} requestId={editableRequest?.id ?? crypto.randomUUID()} sellerId={seller.id} initialRequest={initialRequest} countries={countries} cities={cities} tomorrow={tomorrow} endDate={endDate} />
+          <SellerOfferRequestForm key={editableRequest?.id ?? "new-offer"} requestId={editableRequest?.id ?? crypto.randomUUID()} sellerId={seller.id} initialRequest={initialRequest} countries={countries} cities={cities} registrationCounts={registrationCountsResult.data ?? []} tomorrow={tomorrow} endDate={endDate} />
           <section className="seller-offer-request-history" aria-labelledby="seller-offer-history-title">
             <div className="seller-profile-section-heading"><h2 id="seller-offer-history-title">Your requests</h2></div>
             {requests.length ? (

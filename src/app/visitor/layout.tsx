@@ -10,6 +10,7 @@ export const instant = false;
 
 const visitorLinks = [
   { href: "/visitor", label: "My profile", exact: true },
+  { href: "/visitor/support", label: "My reports" },
   { href: "/visitor/rewards", label: "Points & rewards" },
   { href: "/products", label: "Discover products" },
 ];

@@ -233,15 +233,67 @@ export async function runLoyaltyOfferDraw(formData: FormData) {
 export async function markLoyaltyClaimFulfilled(formData: FormData) {
   const claimId = String(formData.get("claim_id") ?? "");
   const offerId = String(formData.get("offer_id") ?? "");
-  if (!isUuid(claimId) || !isUuid(offerId)) throw new Error("Invalid fulfilment request.");
+  const note = String(formData.get("fulfillment_note") ?? "").trim();
+  const reference = String(formData.get("fulfillment_reference") ?? "").trim();
+  const evidencePath = String(formData.get("fulfillment_evidence_path") ?? "").trim() || null;
+  const fromQueue = formData.get("from_queue") === "true";
+  const fulfillmentPage = Number(formData.get("fulfillment_page"));
+  const evidenceName = evidencePath?.startsWith(`${claimId}/`) ? evidencePath.slice(claimId.length + 1) : "";
+  if (!isUuid(claimId) || !isUuid(offerId) || note.length < 5 || note.length > 1000 || reference.length > 500
+    || (evidencePath !== null && !/^[0-9a-f-]{36}\.(pdf|jpg|jpeg|png|webp)$/i.test(evidenceName))
+    || (fromQueue && (!Number.isSafeInteger(fulfillmentPage) || fulfillmentPage < 1))) {
+    throw new FormError("Add a delivery note and check the fulfilment reference.");
+  }
 
   const supabase = await requireAdminClient();
-  const { error } = await supabase.rpc("admin_set_loyalty_claim_fulfilled", { p_claim_id: claimId });
+  const { error } = await supabase.rpc("admin_set_loyalty_claim_fulfilled", {
+    p_claim_id: claimId,
+    p_note: note,
+    p_reference: reference || null,
+    p_evidence_path: evidencePath,
+  });
+  if (error?.code === "22023" || error?.code === "55000") throw new FormError(error.message);
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/rewards");
   revalidatePath("/visitor/rewards");
+  if (fromQueue) {
+    const { data: pending, error: queueError } = await supabase.rpc("admin_get_loyalty_pending_fulfillments", {
+      p_limit: 1,
+      p_offset: 0,
+    });
+    if (queueError) throw new Error(queueError.message);
+    const pendingCount = pending?.[0]?.total_pending_count ?? 0;
+    const lastPage = Math.max(1, Math.ceil(pendingCount / 50));
+    redirect(`/admin/rewards?fulfilled=1&fulfillmentPage=${Math.min(fulfillmentPage, lastPage)}#fulfilment-queue`);
+  }
   redirect(`/admin/rewards?claims=${offerId}&fulfilled=1#recipient-details`);
+}
+
+export async function updateLoyaltyClaimSupportCase(formData: FormData) {
+  const caseId = String(formData.get("case_id") ?? "");
+  const status = String(formData.get("status") ?? "");
+  const resolutionNote = String(formData.get("resolution_note") ?? "").trim();
+  const returnToSupport = formData.get("return_to") === "support";
+  if (!isUuid(caseId) || !["open", "in_review", "resolved"].includes(status)
+    || resolutionNote.length > 1000 || (status === "resolved" && resolutionNote.length < 5)) {
+    throw new FormError("Add a resolution note when resolving a case.");
+  }
+
+  const supabase = await requireAdminClient();
+  const { error } = await supabase.rpc("admin_update_loyalty_claim_support_case", {
+    p_case_id: caseId,
+    p_status: status,
+    p_resolution_note: resolutionNote,
+  });
+  if (error?.code === "22023" || error?.code === "P0002") throw new FormError(error.message);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/rewards");
+  revalidatePath("/admin/support");
+  revalidatePath("/visitor/rewards");
+  if (returnToSupport) redirect("/admin/support?updated=reward#reward-cases");
+  redirect("/admin/rewards?supportUpdated=1#support-cases");
 }
 
 export async function setSellerStatus(formData: FormData) {
@@ -261,6 +313,8 @@ export async function setSellerStatus(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/sellers");
+  revalidatePath("/admin/seller-offers");
+  revalidatePath("/visitor/offers");
 }
 
 export async function setVisitorAccountStatus(formData: FormData) {
@@ -476,15 +530,20 @@ export async function decideSellerOfferRequest(formData: FormData) {
   const reviewNote = String(formData.get("review_note") ?? "").trim();
   const pointsCost = Number(formData.get("points_cost"));
   const finalTerms = String(formData.get("final_terms") ?? "").trim();
-  const dailyCapacity = Number(formData.get("daily_capacity"));
+  const scheduleCapacities = [...formData.entries()]
+    .filter(([name]) => name.startsWith("schedule_capacity_"))
+    .map(([name, value]) => ({ schedule_id: name.slice("schedule_capacity_".length), daily_capacity: Number(value) }));
   if (!isUuid(requestId) || !["approve", "changes_requested", "reject"].includes(decision)) {
     throw new FormError("Invalid offer review request.");
   }
   if (decision === "approve") {
     if (!Number.isSafeInteger(pointsCost) || pointsCost < 1 || pointsCost > 1_000_000
       || finalTerms.length < 10 || finalTerms.length > 5000
-      || !Number.isSafeInteger(dailyCapacity) || dailyCapacity < 1 || dailyCapacity > 1000) {
-      throw new FormError("Set valid points, terms, and a daily voucher capacity before approval.");
+      || scheduleCapacities.length < 1 || scheduleCapacities.length > 140
+      || scheduleCapacities.some((schedule) => !isUuid(schedule.schedule_id)
+        || !Number.isSafeInteger(schedule.daily_capacity) || schedule.daily_capacity < 1 || schedule.daily_capacity > 1000)
+      || new Set(scheduleCapacities.map((schedule) => schedule.schedule_id)).size !== scheduleCapacities.length) {
+      throw new FormError("Set valid points, terms, and a capacity for every scheduled time before approval.");
     }
   } else if (!reviewNote || reviewNote.length > 2000) {
     throw new FormError("Add a review note when requesting changes or rejecting an offer.");
@@ -497,7 +556,7 @@ export async function decideSellerOfferRequest(formData: FormData) {
     p_review_note: reviewNote || null,
     p_points_cost: pointsCost || 0,
     p_final_terms: finalTerms,
-    p_daily_capacity: dailyCapacity || 0,
+    p_schedule_capacities: scheduleCapacities,
   });
   if (error?.code === "22023" || error?.code === "55000") throw new FormError(error.message);
   if (error) throw new Error(error.message);
@@ -526,4 +585,53 @@ export async function setSellerOfferStatus(formData: FormData) {
   revalidatePath("/admin/seller-offers");
   revalidatePath("/visitor/offers");
   redirect("/admin/seller-offers?changed=1");
+}
+
+export async function updateSellerVoucherSupportCase(formData: FormData) {
+  const caseId = String(formData.get("case_id") ?? "");
+  const status = String(formData.get("status") ?? "");
+  const resolutionNote = String(formData.get("resolution_note") ?? "").trim();
+  const returnToSupport = formData.get("return_to") === "support";
+  if (!isUuid(caseId) || !["open", "in_review", "resolved"].includes(status)
+    || resolutionNote.length > 1000 || (status === "resolved" && resolutionNote.length < 5)) {
+    throw new FormError("Add a resolution note when resolving a voucher report.");
+  }
+
+  const supabase = await requireAdminClient();
+  const { error } = await supabase.rpc("admin_update_seller_voucher_support_case", {
+    p_case_id: caseId,
+    p_status: status,
+    p_resolution_note: resolutionNote,
+  });
+  if (error?.code === "22023" || error?.code === "P0002") throw new FormError(error.message);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/seller-offers");
+  revalidatePath("/admin/support");
+  revalidatePath("/visitor/offers");
+  if (returnToSupport) redirect("/admin/support?updated=voucher#voucher-cases");
+  redirect("/admin/seller-offers?supportUpdated=1#seller-voucher-support");
+}
+
+export async function updateMarketplaceSupportCase(formData: FormData) {
+  const caseId = String(formData.get("case_id") ?? "");
+  const status = String(formData.get("status") ?? "");
+  const resolutionNote = String(formData.get("resolution_note") ?? "").trim();
+  if (!isUuid(caseId) || !["open", "in_review", "resolved"].includes(status)
+    || resolutionNote.length > 1000 || (status === "resolved" && resolutionNote.length < 5)) {
+    throw new FormError("Add a resolution note when resolving a marketplace report.");
+  }
+
+  const supabase = await requireAdminClient();
+  const { error } = await supabase.rpc("admin_update_marketplace_support_case", {
+    p_case_id: caseId,
+    p_status: status,
+    p_resolution_note: resolutionNote,
+  });
+  if (error?.code === "22023" || error?.code === "P0002") throw new FormError(error.message);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/support");
+  revalidatePath("/admin/audit-log");
+  redirect("/admin/support?updated=marketplace#marketplace-cases");
 }

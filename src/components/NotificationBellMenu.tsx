@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
-import { Bell, CheckCheck, Gift, MailWarning, Megaphone, Sparkles, Volume2, VolumeX } from "lucide-react";
+import { BadgeCheck, Bell, CheckCheck, Gift, LifeBuoy, MailWarning, Megaphone, Sparkles, Volume2, VolumeX } from "lucide-react";
 import { sendVisitorEmailVerification } from "@/app/account/actions";
 import { useNotificationReads } from "@/lib/notifications/read-state";
 import type { SiteNotification } from "@/lib/notifications/feed";
 
-const icons = { "verify-email": MailWarning, announcement: Megaphone, "new-product": Sparkles, "loyalty-offer": Gift };
+const icons = { "verify-email": MailWarning, announcement: Megaphone, "new-product": Sparkles, "loyalty-offer": Gift, "reward-result": BadgeCheck, "support-case": LifeBuoy };
 const soundChangedEvent = "rontab:notification-sound-changed";
 const volatileSoundPreferences = new Set<string>();
 

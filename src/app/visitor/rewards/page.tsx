@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
 import { CalendarDays, Gift, MapPin, Ticket } from "lucide-react";
-import { joinLoyaltyOffer } from "@/app/visitor/actions";
+import { joinLoyaltyOffer, reportLoyaltyClaimIssue } from "@/app/visitor/actions";
 import { OfferNotificationReadMarker } from "@/components/OfferNotificationReadMarker";
 import { formatDateTime, formatNumber as formatPoints } from "@/lib/format";
 import { getNotificationFeed } from "@/lib/notifications/feed";
@@ -23,10 +23,10 @@ type OfferClaim = Pick<
 export default async function VisitorRewardsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ offerError?: string; offerMessage?: string; history?: string; activityPage?: string; offerPage?: string }>;
+  searchParams: Promise<{ offerError?: string; offerMessage?: string; history?: string; activityPage?: string; offerPage?: string; supportError?: string; supportReported?: string }>;
 }) {
   await connection();
-  const [{ offerError, offerMessage, history, activityPage: activityPageValue, offerPage: offerPageValue }, { supabase, user }] = await Promise.all([searchParams, getVisitorAccount()]);
+  const [{ offerError, offerMessage, history, activityPage: activityPageValue, offerPage: offerPageValue, supportError, supportReported }, { supabase, user }] = await Promise.all([searchParams, getVisitorAccount()]);
   const notificationFeed = await getNotificationFeed();
   const unreadOfferNotificationIds = notificationFeed.items
     .filter((item) => item.kind === "loyalty-offer" && !notificationFeed.readIds.includes(item.id)
@@ -36,13 +36,14 @@ export default async function VisitorRewardsPage({
   const pageSize = 25;
   const activityPage = parsePage(activityPageValue);
   const offerPage = parsePage(offerPageValue);
-  const [summaryResult, offersResult, transactionsResult, claimsResult, profileResult, dailyStatusResult] = await Promise.all([
+  const [summaryResult, offersResult, transactionsResult, claimsResult, profileResult, dailyStatusResult, supportCasesResult] = await Promise.all([
     supabase.rpc("get_visitor_loyalty_summary"),
     supabase.rpc("get_visitor_loyalty_offers"),
     supabase.rpc("get_visitor_loyalty_activity", { p_limit: pageSize + 1, p_offset: activityPage * pageSize }),
     supabase.rpc("get_visitor_offer_history", { p_limit: pageSize + 1, p_offset: offerPage * pageSize }),
     supabase.from("profiles").select("city,country_code").eq("id", user.id).single(),
     supabase.rpc("get_visitor_daily_visit_points_status"),
+    supabase.from("loyalty_claim_support_cases").select("id,claim_id,issue_type,status,resolution_note,created_at,updated_at").order("created_at", { ascending: false }),
   ]);
 
   if (summaryResult.error) throw new Error(summaryResult.error.message);
@@ -51,11 +52,13 @@ export default async function VisitorRewardsPage({
   if (claimsResult.error) throw new Error(claimsResult.error.message);
   if (profileResult.error) throw new Error(profileResult.error.message);
   if (dailyStatusResult.error) throw new Error(dailyStatusResult.error.message);
+  if (supportCasesResult.error) throw new Error(supportCasesResult.error.message);
 
   const summary = summaryResult.data?.[0] ?? { points_balance: 0, points_earned: 0, points_spent: 0 };
   const offers = offersResult.data ?? [];
   const transactions = ((transactionsResult.data ?? []) as PointTransaction[]);
   const claims = ((claimsResult.data ?? []) as (OfferClaim & { title: string })[]);
+  const supportCasesByClaim = new Map((supportCasesResult.data ?? []).map((supportCase) => [supportCase.claim_id, supportCase]));
   const dailyStatus = dailyStatusResult.data?.[0];
   if (!dailyStatus) throw new Error("Daily points status is temporarily unavailable.");
   const dailyProgress = Math.min(100, dailyStatus.points_earned / dailyStatus.daily_cap * 100);
@@ -91,6 +94,10 @@ export default async function VisitorRewardsPage({
       {offerError === "points" && <p className="visitor-rewards-error" role="alert">You do not have enough points for this offer.</p>}
       {offerError === "location" && <p className="visitor-rewards-error" role="alert">This offer is only available in the city shown on your profile.</p>}
       {offerError === "unavailable" && <p className="visitor-rewards-error" role="alert">This offer is no longer available. Your points were not changed.</p>}
+      {supportReported === "1" && <p className="admin-save-success" role="status">Your reward issue was sent to the Rontab team. No points were changed automatically.</p>}
+      {supportError === "details" && <p className="visitor-rewards-error" role="alert">Choose an issue and describe it in at least 10 characters.</p>}
+      {supportError === "unavailable" && <p className="visitor-rewards-error" role="alert">This reward cannot be reported right now. Your points were not changed.</p>}
+      {supportError === "submit" && <p className="visitor-rewards-error" role="alert">We could not submit your report. Please try again.</p>}
 
       <section className="visitor-rewards-overview" aria-label="Points summary">
         <div className="visitor-points-gauge" style={{ "--points-progress": `${progress}%` } as React.CSSProperties}>
@@ -183,7 +190,25 @@ export default async function VisitorRewardsPage({
             <ol className="visitor-claim-list">
               {visibleClaims.map((claim) => (
                 <li key={claim.id}>
-                  <span><strong>{claim.title}</strong><small>{claim.claim_type === "redemption" ? "Redemption" : "Participation"} · {formatDateTime(claim.created_at)} · {formatPoints(claim.points_spent)} points</small></span>
+                  <span className="visitor-claim-copy"><span><strong>{claim.title}</strong><small>{claim.claim_type === "redemption" ? "Redemption" : "Participation"} · {formatDateTime(claim.created_at)} · {formatPoints(claim.points_spent)} points</small></span>
+                    {supportCasesByClaim.has(claim.id) ? (() => {
+                      const supportCase = supportCasesByClaim.get(claim.id)!;
+                      return <span className="visitor-claim-support-status"><strong>Reward support: {supportCase.status.replaceAll("_", " ")}</strong>{supportCase.resolution_note && <small>{supportCase.resolution_note}</small>}</span>;
+                    })() : (claim.status === "won" || claim.status === "redeemed") && <details className="visitor-claim-issue-form">
+                      <summary>Report a reward problem</summary>
+                      <form action={reportLoyaltyClaimIssue}>
+                        <input type="hidden" name="claim_id" value={claim.id} />
+                        <label>Issue type<select name="issue_type" defaultValue="not_received">
+                          <option value="not_received">Reward not received</option>
+                          <option value="incorrect_reward">Received the wrong reward</option>
+                          <option value="damaged">Reward arrived damaged</option>
+                          <option value="other">Other problem</option>
+                        </select></label>
+                        <label>What happened?<textarea name="description" minLength={10} maxLength={2000} rows={3} required /></label>
+                        <button type="submit">Send report</button>
+                      </form>
+                    </details>}
+                  </span>
                   <span className={`visitor-claim-status is-${claim.status}`}>{claimStatusLabel(claim.status)}</span>
                 </li>
               ))}

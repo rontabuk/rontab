@@ -31,6 +31,7 @@ export function BrowserSpeechPlayer({ text, preview = false }: { text: string; p
   const [voiceUri, setVoiceUri] = useState("");
   const supported = useSyncExternalStore(subscribeToSpeechSupport, hasSpeechSynthesis, () => true);
   const [playing, setPlaying] = useState(false);
+  const [speechError, setSpeechError] = useState("");
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -63,6 +64,7 @@ export function BrowserSpeechPlayer({ text, preview = false }: { text: string; p
     const spokenText = text.trim();
     if (!spokenText || !supported || !("speechSynthesis" in window)) return;
 
+    setSpeechError("");
     const synthesis = window.speechSynthesis;
     synthesis.cancel();
     if (timerRef.current !== null) window.clearTimeout(timerRef.current);
@@ -78,7 +80,12 @@ export function BrowserSpeechPlayer({ text, preview = false }: { text: string; p
       timerRef.current = window.setTimeout(stop, 30_000);
     };
     utterance.onend = stop;
-    utterance.onerror = stop;
+    utterance.onerror = (event) => {
+      if (event.error !== "canceled" && event.error !== "interrupted") {
+        setSpeechError(`Speech playback failed (${event.error}). Check device audio or choose another voice.`);
+      }
+      stop();
+    };
     synthesis.speak(utterance);
   }
 
@@ -108,7 +115,9 @@ export function BrowserSpeechPlayer({ text, preview = false }: { text: string; p
         )}
       </div>
       <p className="browser-speech-note" role="status">
-        {!supported
+        {speechError
+          ? speechError
+          : !supported
           ? "Speech playback is not supported by this browser."
           : !voicesReady
             ? "Checking for an installed local voice…"

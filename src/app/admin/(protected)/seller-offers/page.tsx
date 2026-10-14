@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
 import { CalendarDays, Check, MapPin, Pause, Play, Ticket, X } from "lucide-react";
 import { decideSellerOfferRequest, setSellerOfferStatus } from "@/app/admin/(protected)/actions";
@@ -12,13 +13,19 @@ export const instant = false;
 export default async function AdminSellerOffersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ reviewed?: string; changed?: string }>;
+  searchParams: Promise<{ reviewed?: string; changed?: string; history?: string }>;
 }) {
   await connection();
-  const [{ reviewed, changed }, { supabase }] = await Promise.all([searchParams, requireAdmin()]);
+  const [{ reviewed, changed, history: requestedHistory }, { supabase }] = await Promise.all([searchParams, requireAdmin()]);
+  const history = requestedHistory === "ended" || requestedHistory === "all" ? requestedHistory : "current";
+  const offerStatuses = history === "ended"
+    ? ["ended"]
+    : history === "all"
+      ? ["approved", "published", "paused", "ended"]
+      : ["approved", "published", "paused"];
   const [requestsResult, offersResult] = await Promise.all([
     supabase.from("seller_offer_requests").select("*").eq("status", "submitted").order("submitted_at", { ascending: true }),
-    supabase.from("seller_offers").select("*").in("status", ["approved", "published", "paused"]).order("created_at", { ascending: false }),
+    supabase.from("seller_offers").select("*").in("status", offerStatuses).order("created_at", { ascending: false }),
   ]);
   if (isSellerOfferSchemaUnavailable(requestsResult.error) || isSellerOfferSchemaUnavailable(offersResult.error)) {
     return (
@@ -61,9 +68,9 @@ export default async function AdminSellerOffersPage({
   const requestLocationIds = requestLocationsResult.data.map((location) => location.id);
   const offerLocationIds = offerLocationsResult.data.map((location) => location.id);
   const cityIds = [...new Set([...requestLocationsResult.data.map((location) => location.city_id), ...offerLocationsResult.data.map((location) => location.city_id)])];
-  const [requestSchedulesResult, offerQuotasResult, citiesResult] = await Promise.all([
+  const [requestSchedulesResult, offerQuotasResult, citiesResult, voucherStatusMetricsResult] = await Promise.all([
     requestLocationIds.length
-      ? supabase.from("seller_offer_request_schedules").select("location_id,weekday,starts_at,ends_at,requested_daily_capacity").in("location_id", requestLocationIds)
+      ? supabase.from("seller_offer_request_schedules").select("id,location_id,weekday,starts_at,ends_at,requested_daily_capacity").in("location_id", requestLocationIds)
       : Promise.resolve({ data: [], error: null }),
     offerLocationIds.length
       ? supabase.from("seller_offer_daily_quotas").select("location_id,capacity,reserved_count").in("location_id", offerLocationIds)
@@ -71,17 +78,24 @@ export default async function AdminSellerOffersPage({
     cityIds.length
       ? supabase.from("supported_cities").select("city_id,city_name,country_code").in("city_id", cityIds)
       : Promise.resolve({ data: [], error: null }),
+    offerIds.length
+      ? supabase.rpc("admin_get_seller_offer_voucher_status_metrics")
+      : Promise.resolve({ data: [], error: null }),
   ]);
   if (requestSchedulesResult.error) throw new Error(requestSchedulesResult.error.message);
   if (offerQuotasResult.error) throw new Error(offerQuotasResult.error.message);
   if (citiesResult.error) throw new Error(citiesResult.error.message);
+  const voucherStatusMetricsUnavailable = voucherStatusMetricsResult.error?.code === "PGRST202";
+  if (voucherStatusMetricsResult.error && !voucherStatusMetricsUnavailable) throw new Error(voucherStatusMetricsResult.error.message);
 
   const sellersById = new Map(sellersResult.data.map((seller) => [seller.id, seller.shop_name]));
   const citiesById = new Map(citiesResult.data.map((city) => [city.city_id, `${city.city_name}, ${city.country_code}`]));
   const schedulesByLocation = groupBy(requestSchedulesResult.data, (schedule) => schedule.location_id);
   const requestLocationsByRequest = groupBy(requestLocationsResult.data, (location) => location.request_id);
+  const requestLocationsById = new Map(requestLocationsResult.data.map((location) => [location.id, location]));
   const offerLocationsByOffer = groupBy(offerLocationsResult.data, (location) => location.offer_id);
   const quotasByLocation = groupBy(offerQuotasResult.data, (quota) => quota.location_id);
+  const voucherMetricsByLocation = new Map((voucherStatusMetricsResult.data ?? []).map((metric) => [metric.location_id, metric]));
 
   return (
     <main className="admin-overview admin-seller-offers-page">
@@ -124,7 +138,13 @@ export default async function AdminSellerOffersPage({
                       <input type="hidden" name="request_id" value={request.id} />
                       <input type="hidden" name="decision" value="approve" />
                       <label>Final points cost<input name="points_cost" type="number" min="1" max="1000000" defaultValue="10" required /></label>
-                      <label>Final daily capacity<input name="daily_capacity" type="number" min="1" max="1000" defaultValue={requestedSchedules[0]?.requested_daily_capacity ?? 5} required /></label>
+                      {requestedSchedules.map((schedule) => {
+                        const location = requestLocationsById.get(schedule.location_id);
+                        return <label key={schedule.id}>
+                          Final capacity · {location?.branch_name ?? "Branch"} · {weekdayLabel(schedule.weekday)} {schedule.starts_at.slice(0, 5)}–{schedule.ends_at.slice(0, 5)}
+                          <input name={`schedule_capacity_${schedule.id}`} type="number" min="1" max="1000" defaultValue={schedule.requested_daily_capacity} required />
+                        </label>;
+                      })}
                       <label>Final terms<textarea name="final_terms" minLength={10} maxLength={5000} defaultValue={`Show this non-transferable voucher at ${locations[0]?.branch_name ?? "the listed branch"}. Valid only during the published offer hours. Cancel before the offer window opens for a points and quota refund. Unused vouchers expire without a refund.`} required /></label>
                       <button className="admin-approve-button" type="submit"><Check size={14} aria-hidden="true" />Approve</button>
                     </form>
@@ -148,13 +168,31 @@ export default async function AdminSellerOffersPage({
         ) : <div className="admin-empty-state"><h2>No offers awaiting review</h2><p>New seller requests will appear here.</p></div>}
       </section>
 
+      <section className="admin-dashboard-section" aria-labelledby="seller-voucher-support-title">
+        <div className="admin-loyalty-list-heading">
+          <div><p className="admin-eyebrow">VISITOR SUPPORT</p><h2 id="seller-voucher-support-title">Voucher issues</h2></div>
+          <Link href="/admin/support#voucher-cases">Open support center</Link>
+        </div>
+        <p className="admin-loyalty-location-disclaimer">Review voucher reports and record resolutions in the central support queue.</p>
+      </section>
+
       <section className="admin-seller-offer-live-section" aria-labelledby="seller-offer-live-title">
-        <div className="admin-loyalty-list-heading"><div><p className="admin-eyebrow">APPROVED PROMOTIONS</p><h2 id="seller-offer-live-title">Publication</h2></div><span>{offers.length} offers</span></div>
+        <div className="admin-loyalty-list-heading">
+          <div><p className="admin-eyebrow">APPROVED PROMOTIONS</p><h2 id="seller-offer-live-title">Publication</h2></div>
+          <form className="admin-seller-offer-filter" method="get">
+            <label className="visually-hidden" htmlFor="seller-offer-history">Offer history</label>
+            <select id="seller-offer-history" name="history" defaultValue={history}>
+              <option value="current">Current and paused</option>
+              <option value="ended">Ended</option>
+              <option value="all">All offers</option>
+            </select>
+            <button className="admin-approve-button" type="submit">Show</button>
+          </form>
+        </div>
         {offers.length ? (
           <div className="admin-loyalty-offer-list">
             {offers.map((offer) => {
               const locations = offerLocationsByOffer.get(offer.id) ?? [];
-              const quotas = locations.flatMap((location) => quotasByLocation.get(location.id) ?? []);
               return (
                 <article className="admin-loyalty-offer-item" key={offer.id}>
                   <div className="admin-loyalty-offer-main">
@@ -164,7 +202,18 @@ export default async function AdminSellerOffersPage({
                     <div className="admin-loyalty-offer-details">
                       <span><Ticket size={13} aria-hidden="true" />{formatNumber(offer.points_cost)} points</span>
                       <span><CalendarDays size={13} aria-hidden="true" />{formatDate(offer.valid_from)} – {formatDate(offer.valid_until)}</span>
-                      <span>{formatNumber(quotas.reduce((total, quota) => total + quota.reserved_count, 0))} reserved · {formatNumber(quotas.reduce((total, quota) => total + quota.capacity, 0))} capacity</span>
+                      {locations.map((location) => {
+                        const quotas = quotasByLocation.get(location.id) ?? [];
+                        const capacity = quotas.reduce((total, quota) => total + quota.capacity, 0);
+                        const voucherMetrics = voucherMetricsByLocation.get(location.id);
+                        const city = citiesById.get(location.city_id) ?? location.city_id;
+                        return <span className="admin-seller-offer-location-capacity" key={location.id}>
+                          <MapPin size={13} aria-hidden="true" />
+                          <span><strong>{location.branch_name}</strong> · {city}<small>{formatNumber(capacity)} total capacity across scheduled dates</small>
+                            <small>{voucherStatusMetricsUnavailable ? "Voucher status metrics unavailable" : `${formatNumber(voucherMetrics?.reserved_count ?? 0)} reserved · ${formatNumber(voucherMetrics?.redeemed_count ?? 0)} redeemed · ${formatNumber(voucherMetrics?.cancelled_count ?? 0)} cancelled · ${formatNumber(voucherMetrics?.expired_count ?? 0)} expired`}</small>
+                          </span>
+                        </span>;
+                      })}
                     </div>
                   </div>
                   <div className="admin-loyalty-offer-actions">

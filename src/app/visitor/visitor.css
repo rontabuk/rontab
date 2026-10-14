@@ -6,6 +6,13 @@
 .visitor-points-summary > strong { display: block; margin-top: 12px; color: #34483a; font-family: var(--font-display), Georgia, serif; font-size: 54px; font-weight: 400; line-height: 1; font-variant-numeric: tabular-nums; }
 .visitor-points-summary > p:last-child { margin: 14px 0 0; color: #6c756b; font-size: 12px; line-height: 1.65; }
 .visitor-profile-section { min-width: 0; }
+.visitor-support-list { display: grid; border-top: 1px solid #e1e5de; }
+.visitor-support-item { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 15px 8px; border-bottom: 1px solid #e1e5de; }
+.visitor-support-item h3 { margin: 8px 0 4px; color: #354137; font-family: var(--font-display), Georgia, serif; font-size: 19px; font-weight: 400; }
+.visitor-support-item p { margin: 5px 0; color: #626c61; font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }
+.visitor-support-item small { color: #788176; font-size: 10px; }
+.visitor-support-resolution { display: grid; gap: 3px; margin-top: 9px !important; padding: 9px 11px; border-left: 2px solid #71896c; background: #f0f4ed; }
+.visitor-support-resolution strong { color: #405745; font-size: 11px; }
 .visitor-profile-heading { padding-bottom: 15px; border-bottom: 1px solid #dde2d9; }
 .visitor-profile-heading .admin-eyebrow { margin-bottom: 7px; }
 .visitor-profile-form { display: grid; gap: 17px; max-width: 580px; padding-top: 18px; }
@@ -149,10 +156,19 @@
 .visitor-activity-list time { color: #788076; font-size: 11px; white-space: nowrap; }
 .visitor-activity-list li > strong { color: #3d6844; font-size: 13px; font-variant-numeric: tabular-nums; }
 .visitor-activity-list li > strong.is-spent { color: #8b583e; }
-.visitor-claim-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 49px; border-bottom: 1px solid #e6eae3; }
-.visitor-claim-list li > span:first-child { display: grid; gap: 3px; min-width: 0; }
+.visitor-claim-list li { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; min-height: 49px; padding-block: 10px; border-bottom: 1px solid #e6eae3; }
+.visitor-claim-list li > .visitor-claim-copy { display: grid; gap: 8px; min-width: 0; }
+.visitor-claim-copy > span:first-child { display: grid; gap: 3px; min-width: 0; }
 .visitor-claim-list strong { overflow: hidden; color: #536154; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .visitor-claim-list small { color: #788076; font-size: 11px; }
+.visitor-claim-issue-form summary { width: fit-content; color: #405f45; cursor: pointer; font-size: 11px; text-decoration: underline; text-underline-offset: 2px; }
+.visitor-claim-issue-form form { display: grid; max-width: 440px; gap: 8px; margin-top: 9px; padding: 11px; border: 1px solid #dce2d8; background: #fafbf7; }
+.visitor-claim-issue-form label { display: grid; gap: 4px; color: #586258; font-size: 10px; font-weight: 700; }
+.visitor-claim-issue-form select, .visitor-claim-issue-form textarea { width: 100%; min-height: 34px; padding: 7px 8px; border: 1px solid #d9ded5; border-radius: 2px; background: #fff; color: #374239; font: inherit; font-size: 11px; }
+.visitor-claim-issue-form textarea { min-height: 70px; resize: vertical; }
+.visitor-claim-issue-form button { justify-self: start; min-height: 32px; padding: 0 10px; border: 1px solid #d3ddd0; background: #edf3e9; color: #3d6043; cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; }
+.visitor-claim-support-status { display: grid; gap: 3px; color: #526251; font-size: 11px; }
+.visitor-claim-support-status strong { color: #3d6043; font-size: 11px; text-transform: capitalize; }
 .visitor-claim-status { flex: 0 0 auto; color: #6f786d; font-size: 11px; }
 .visitor-claim-status.is-won, .visitor-claim-status.is-redeemed { color: #3d6844; font-weight: 700; }
 .visitor-claim-status.is-lost { color: #8b583e; }

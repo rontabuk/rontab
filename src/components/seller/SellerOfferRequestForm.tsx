@@ -4,7 +4,7 @@ import { useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
-import { CityPicker, type SupportedCity, type SupportedCountry } from "@/components/CityPicker";
+import { CityPicker, type LocationRegistrationCount, type SupportedCity, type SupportedCountry } from "@/components/CityPicker";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isCityId, isHttpsUrl, isUuid } from "@/lib/validation";
 
@@ -44,6 +44,7 @@ export function SellerOfferRequestForm({
   initialRequest,
   countries,
   cities,
+  registrationCounts,
   tomorrow,
   endDate,
 }: {
@@ -52,6 +53,7 @@ export function SellerOfferRequestForm({
   initialRequest: EditableRequest | null;
   countries: SupportedCountry[];
   cities: SupportedCity[];
+  registrationCounts: LocationRegistrationCount[];
   tomorrow: string;
   endDate: string;
 }) {
@@ -336,6 +338,7 @@ export function SellerOfferRequestForm({
               name={`branch-${branch.id}-city`}
               countries={countries}
               cities={cities}
+              userCounts={registrationCounts}
               initialCity={null}
               initialCountryCode="GB"
               required

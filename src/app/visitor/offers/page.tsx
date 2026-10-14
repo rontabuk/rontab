@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
 import { CalendarDays, Clock3, MapPin, Ticket, X } from "lucide-react";
-import { cancelSellerOfferCoupon, reserveSellerOfferCoupon } from "@/app/visitor/actions";
+import { cancelSellerOfferCoupon, reportSellerVoucherIssue, reserveSellerOfferCoupon } from "@/app/visitor/actions";
 import { getVisitorAccount } from "@/lib/visitor/access";
 import { formatNumber } from "@/lib/format";
 import { isSellerOfferSchemaUnavailable } from "@/lib/seller/offer-schema";
@@ -14,18 +14,19 @@ export const instant = false;
 export default async function VisitorOfferGalleryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; error?: string; reserved?: string; cancelled?: string }>;
+  searchParams: Promise<{ view?: string; error?: string; reserved?: string; cancelled?: string; reported?: string }>;
 }) {
   await connection();
-  const [{ view: requestedView, error: pageError, reserved, cancelled }, { supabase, user }] = await Promise.all([searchParams, getVisitorAccount()]);
+  const [{ view: requestedView, error: pageError, reserved, cancelled, reported }, { supabase, user }] = await Promise.all([searchParams, getVisitorAccount()]);
   const view = requestedView === "vouchers" ? "vouchers" : "offers";
   const today = londonDate(0);
-  const [profileResult, summaryResult, offersResult, couponsResult] = await Promise.all([
+  const [profileResult, summaryResult, offersResult, couponsResult, supportCasesResult] = await Promise.all([
     supabase.from("profiles").select("city_id").eq("id", user.id).single(),
     supabase.rpc("get_visitor_loyalty_summary"),
     supabase.from("seller_offers").select("id,title,offer_kind,description,benefit_details,discount_percent,media_url,media_storage_path,media_type,points_cost,terms,valid_from,valid_until,seller_profile_id")
       .eq("status", "published").gte("valid_until", today).order("valid_from", { ascending: true }).limit(60),
     supabase.rpc("get_visitor_seller_offer_coupons"),
+    supabase.from("seller_voucher_support_cases").select("coupon_id,issue_type,status,resolution_note,created_at,updated_at").eq("visitor_id", user.id),
   ]);
   if ([summaryResult.error, offersResult.error, couponsResult.error].some(isSellerOfferSchemaUnavailable)) {
     return (
@@ -39,6 +40,7 @@ export default async function VisitorOfferGalleryPage({
   if (summaryResult.error) throw new Error(summaryResult.error.message);
   if (offersResult.error) throw new Error(offersResult.error.message);
   if (couponsResult.error) throw new Error(couponsResult.error.message);
+  if (supportCasesResult.error) throw new Error(supportCasesResult.error.message);
 
   const offers = offersResult.data ?? [];
   const displayOffers = await Promise.all(offers.map(async (offer) => {
@@ -70,6 +72,7 @@ export default async function VisitorOfferGalleryPage({
   const quotasByLocation = groupBy(quotasResult.data ?? [], (quota) => quota.location_id);
   const citiesById = new Map((citiesResult.data ?? []).map((city) => [city.city_id, `${city.city_name}, ${city.country_code}`]));
   const coupons = couponsResult.data ?? [];
+  const supportCasesByCouponId = new Map((supportCasesResult.data ?? []).map((supportCase) => [supportCase.coupon_id, supportCase]));
   const couponsByOfferDate = new Map(coupons.map((coupon) => [`${coupon.offer_id}:${coupon.offer_date}`, coupon]));
   const summary = summaryResult.data?.[0] ?? { points_balance: 0, points_earned: 0, points_spent: 0 };
   const cityId = profileResult.data.city_id;
@@ -87,7 +90,11 @@ export default async function VisitorOfferGalleryPage({
       {pageError === "confirmation" && <p className="visitor-rewards-error" role="alert">Confirm the points cost and voucher conditions before reserving.</p>}
       {pageError === "unavailable" && <p className="visitor-rewards-error" role="alert">That offer time is no longer available. Your points were not changed.</p>}
       {cancelled === "1" && <p className="admin-save-success" role="status">Reservation cancelled. Your points and the daily place were returned.</p>}
+      {reported === "1" && <p className="admin-save-success" role="status">Your voucher issue was sent to the Rontab team. Your points were not changed.</p>}
       {pageError === "cancellationClosed" && <p className="visitor-rewards-error" role="alert">The offer window has started, so this voucher can no longer be cancelled.</p>}
+      {pageError === "reportDetails" && <p className="visitor-rewards-error" role="alert">Choose an issue and describe it in at least 10 characters.</p>}
+      {pageError === "reportUnavailable" && <p className="visitor-rewards-error" role="alert">This voucher cannot be reported right now. Your points were not changed.</p>}
+      {pageError === "reportFailed" && <p className="visitor-rewards-error" role="alert">We could not submit the issue. Please try again.</p>}
       {highlightedCoupon && <p className="admin-save-success" role="status">Reservation confirmed for {highlightedCoupon.title}. Your voucher is in My vouchers.</p>}
 
       <section className="seller-offer-gallery-summary" aria-label="Points and location">
@@ -178,6 +185,25 @@ export default async function VisitorOfferGalleryPage({
                 <input type="hidden" name="coupon_id" value={coupon.id} />
                 <button type="submit"><X size={14} aria-hidden="true" />Cancel and return points</button>
               </form>}
+              {(() => {
+                const supportCase = supportCasesByCouponId.get(coupon.id);
+                if (supportCase) return <p className="seller-offer-voucher-note">Support case: {supportCase.status.replaceAll("_", " ")}{supportCase.resolution_note && ` · ${supportCase.resolution_note}`}</p>;
+                if (coupon.status === "cancelled" || coupon.can_cancel) return null;
+                return <details className="seller-offer-voucher-report">
+                  <summary>Report a voucher problem</summary>
+                  <form action={reportSellerVoucherIssue}>
+                    <input type="hidden" name="coupon_id" value={coupon.id} />
+                    <label>Issue type<select name="issue_type" defaultValue="not_honored">
+                      <option value="not_honored">Shop did not honor the voucher</option>
+                      <option value="incorrect_offer">Offer details were incorrect</option>
+                      <option value="quality_issue">Problem with the product or service</option>
+                      <option value="other">Other problem</option>
+                    </select></label>
+                    <label>What happened?<textarea name="description" minLength={10} maxLength={2000} rows={3} required /></label>
+                    <button type="submit">Send report</button>
+                  </form>
+                </details>;
+              })()}
               {coupon.status === "reserved" && !coupon.can_cancel && <p className="seller-offer-voucher-note"><Clock3 size={13} aria-hidden="true" />Cancellation closes when the offer window begins.</p>}
             </article>
           )) : <div className="visitor-rewards-empty"><Ticket size={23} aria-hidden="true" /><h2>No vouchers yet</h2><p>Confirmed reservations will appear here with their unique codes.</p><Link href="/visitor/offers">Browse offers</Link></div>}

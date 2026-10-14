@@ -21,6 +21,11 @@ declare
 	winner_count integer;
 	won_count integer;
 	lost_count integer;
+	fulfillment_claim_id uuid;
+	fulfillment_visitor_id uuid;
+	support_case_id uuid;
+	duplicate_support_case_id uuid;
+	evidence_path_value text;
 begin
 	begin
 	select city_id into doncaster_id from public.supported_cities where city_name = 'Doncaster' and admin_name = 'Doncaster' limit 1;
@@ -190,6 +195,65 @@ begin
 
 	perform set_config('request.jwt.claim.sub', admin_user::text, true);
 	perform set_config('request.jwt.claims', jsonb_build_object('sub', admin_user::text, 'role', 'authenticated', 'app_metadata', '{"role":"admin"}'::jsonb)::text, true);
+	if not exists (
+		select 1 from public.admin_get_loyalty_location_metrics() metrics
+		where metrics.country_code = 'GB' and metrics.city_id is null
+	) then
+		raise exception 'The location metrics should include an enabled country total.';
+	end if;
+	if (select metrics.registered_visitor_count from public.admin_get_loyalty_country_metrics() metrics where metrics.country_code = 'GB')
+		is distinct from (
+			select count(profile.id)::bigint
+			from public.profiles profile
+			left join public.supported_cities city on city.city_id = profile.city_id
+			left join auth.users account on account.id = profile.id
+			left join public.seller_profiles seller on seller.user_id = profile.id
+			where coalesce(city.country_code, profile.country_code) = 'GB'
+				and not coalesce(account.raw_app_meta_data ->> 'role' = 'admin', false)
+				and seller.user_id is null
+		) then
+		raise exception 'Country visitor totals should include visitors assigned through their canonical city ID.';
+	end if;
+	if not exists (
+		select 1 from public.admin_get_loyalty_location_metrics() metrics
+		where metrics.city_id = doncaster_id and metrics.eligible_point_holder_count >= 2
+	) then
+		raise exception 'The city metrics should count verified point holders in that city.';
+	end if;
+	if not exists (
+		select 1 from public.admin_get_loyalty_offer_audience_counts(10, 8) counts
+		where counts.country_code = 'GB' and counts.city_id is null and counts.eligible_visitor_count = 2
+	) then
+		raise exception 'Offer audience counts should apply the current points threshold to the country total.';
+	end if;
+	select counts.eligible_visitor_count into city_capacity
+	from public.admin_get_loyalty_offer_audience_counts(10, 8) counts
+	where counts.city_id = doncaster_id;
+	if city_capacity is distinct from 1 then
+		raise exception 'Offer audience counts should apply the points threshold to Doncaster; got %.', city_capacity;
+	end if;
+	if not exists (
+		select 1 from public.admin_get_loyalty_offer_audience_counts(13, 8) counts
+		where counts.city_id = doncaster_id and counts.eligible_visitor_count = 0
+	) then
+		raise exception 'Increasing the minimum points should reduce the eligible city audience.';
+	end if;
+	perform set_config('request.jwt.claim.sub', visitor_one::text, true);
+	perform set_config('request.jwt.claims', jsonb_build_object('sub', visitor_one::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+	begin
+		perform count(*) from public.admin_get_loyalty_location_metrics();
+		raise exception using errcode = 'P0001', message = 'A visitor must not read admin location metrics.';
+	exception when sqlstate '42501' then
+		null;
+	end;
+	begin
+		perform count(*) from public.admin_get_loyalty_offer_audience_counts(10, 8);
+		raise exception using errcode = 'P0001', message = 'A visitor must not read offer audience counts.';
+	exception when sqlstate '42501' then
+		null;
+	end;
+	perform set_config('request.jwt.claim.sub', admin_user::text, true);
+	perform set_config('request.jwt.claims', jsonb_build_object('sub', admin_user::text, 'role', 'authenticated', 'app_metadata', '{"role":"admin"}'::jsonb)::text, true);
 	perform public.admin_set_loyalty_random_draws_enabled(true);
 
 	perform set_config('request.jwt.claim.sub', visitor_one::text, true);
@@ -214,6 +278,90 @@ begin
 	if won_count <> 2 or lost_count <> 1 then
 		raise exception 'Per-city draw counts were incorrect: % selected, % not selected.', won_count, lost_count;
 	end if;
+	select id into fulfillment_claim_id
+	from public.loyalty_offer_claims
+	where offer_id = random_offer and status = 'won'
+	order by created_at, id
+	limit 1;
+	select visitor_id into fulfillment_visitor_id
+	from public.loyalty_offer_claims where id = fulfillment_claim_id;
+	perform set_config('request.jwt.claim.sub', fulfillment_visitor_id::text, true);
+	perform set_config('request.jwt.claims', jsonb_build_object('sub', fulfillment_visitor_id::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+	if not exists (
+		select 1 from public.get_visitor_loyalty_result_notifications() result
+		where result.claim_id = fulfillment_claim_id and result.claim_status = 'won' and result.result_at is not null
+	) then
+		raise exception 'A selected visitor should receive a timestamped result notification.';
+	end if;
+	perform public.mark_notification_items_read(array['result-' || fulfillment_claim_id::text]);
+	if not exists (
+		select 1 from public.notification_item_reads read
+		where read.user_id = fulfillment_visitor_id and read.notification_id = 'result-' || fulfillment_claim_id::text
+	) then
+		raise exception 'A visitor should be able to mark their reward result notification as read.';
+	end if;
+	support_case_id := public.visitor_report_loyalty_claim_issue(
+		fulfillment_claim_id, 'not_received', 'The selected reward has not arrived yet.'
+	);
+	duplicate_support_case_id := public.visitor_report_loyalty_claim_issue(
+		fulfillment_claim_id, 'not_received', 'The selected reward has not arrived yet.'
+	);
+	if support_case_id is null or duplicate_support_case_id is distinct from support_case_id then
+		raise exception 'Submitting the same reward issue twice should return one support case.';
+	end if;
+	perform set_config('request.jwt.claim.sub', admin_user::text, true);
+	perform set_config('request.jwt.claims', jsonb_build_object('sub', admin_user::text, 'role', 'authenticated', 'app_metadata', '{"role":"admin"}'::jsonb)::text, true);
+	if not exists (
+		select 1 from public.admin_get_loyalty_claim_support_cases(50, 0) support_case
+		where support_case.case_id = support_case_id and support_case.status = 'open'
+	) then
+		raise exception 'An open visitor reward issue should appear in the admin queue.';
+	end if;
+	perform public.admin_update_loyalty_claim_support_case(support_case_id, 'in_review', null);
+	perform public.admin_update_loyalty_claim_support_case(support_case_id, 'resolved', 'Confirmed the delivery tracking and replied to the visitor.');
+	if not exists (
+		select 1 from public.loyalty_claim_support_cases support_case
+		where support_case.id = support_case_id and support_case.status = 'resolved'
+			and support_case.resolution_note = 'Confirmed the delivery tracking and replied to the visitor.'
+			and support_case.resolved_by = admin_user
+	) or not exists (
+		select 1 from public.admin_audit_logs audit
+		where audit.entity_type = 'loyalty_claim_support_case' and audit.entity_id = support_case_id
+			and audit.action = 'loyalty_claim_support_case_updated'
+	) then
+		raise exception 'Support resolution should store an admin note and audit record.';
+	end if;
+	evidence_path_value := fulfillment_claim_id::text || '/' || gen_random_uuid()::text || '.pdf';
+	insert into storage.objects (bucket_id, name, owner, owner_id)
+	values ('loyalty-fulfilment-evidence', evidence_path_value, admin_user, admin_user::text);
+	perform public.admin_set_loyalty_claim_fulfilled(fulfillment_claim_id, 'Gift handed to the selected visitor.', 'REWARD-TEST-001', evidence_path_value);
+	if exists (
+		select 1 from public.admin_get_loyalty_pending_fulfillments(50, 0) pending
+		where pending.claim_id = fulfillment_claim_id
+	) or not exists (
+		select 1 from public.admin_get_loyalty_offer_recipients(random_offer) recipient
+		where recipient.claim_id = fulfillment_claim_id
+			and recipient.fulfillment_status = 'fulfilled'
+			and recipient.fulfillment_note = 'Gift handed to the selected visitor.'
+			and recipient.fulfillment_reference = 'REWARD-TEST-001'
+			and recipient.fulfillment_evidence_path = evidence_path_value
+			and recipient.fulfilled_at is not null
+			and recipient.fulfilled_by_email = admin_user::text || '@rewards-test.invalid'
+	) then
+		raise exception 'Fulfilment should record its note, reference, timestamp, administrator, and remove the claim from the queue.';
+	end if;
+	if (select count(*) from public.admin_audit_logs audit
+		where audit.action = 'loyalty_reward_fulfilled' and audit.entity_id = fulfillment_claim_id) <> 1 then
+		raise exception 'A fulfilment should create exactly one audit entry.';
+	end if;
+	perform set_config('request.jwt.claim.sub', visitor_one::text, true);
+	perform set_config('request.jwt.claims', jsonb_build_object('sub', visitor_one::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+	begin
+		perform public.admin_set_loyalty_claim_fulfilled(fulfillment_claim_id, 'Unauthorized delivery record.', null, null);
+		raise exception 'Visitors must not mark rewards as fulfilled.';
+	exception when sqlstate '42501' then
+		null;
+	end;
 	select points_balance into current_balance from public.loyalty_accounts where visitor_id = visitor_one;
 	if current_balance <> 1 then
 		raise exception 'Visitor one expected balance 1 after redemption and draw; got %.', current_balance;

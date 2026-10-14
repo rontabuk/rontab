@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { saveLoyaltyOffer } from "@/app/admin/(protected)/actions";
-import { CityPicker, type SupportedCity, type SupportedCountry } from "@/components/CityPicker";
+import { CityPicker, type EligibleOfferAudienceCount, type SupportedCity, type SupportedCountry } from "@/components/CityPicker";
 import { formatNumber } from "@/lib/format";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
 
 type Offer = Database["public"]["Tables"]["loyalty_offers"]["Row"];
@@ -17,9 +18,53 @@ export function LoyaltyOfferEditor({ offer, countries, cities }: { offer: (Offer
   const [selectionMethod, setSelectionMethod] = useState<"random" | "first_come">(offer?.selection_method ?? "random");
   const [cityQuotas, setCityQuotas] = useState<CityQuota[]>(() => offer?.cityQuotas ?? []);
   const [globalCapacity, setGlobalCapacity] = useState(offer?.capacity ?? 5);
+  const [minimumPoints, setMinimumPoints] = useState(offer?.minimum_points ?? 0);
+  const [pointsCost, setPointsCost] = useState(offer?.points_cost ?? Number.NaN);
+  const [eligibleAudienceCounts, setEligibleAudienceCounts] = useState<EligibleOfferAudienceCount[] | null>(null);
+  const [audienceCountError, setAudienceCountError] = useState<string | null>(null);
   const [startsAt, setStartsAt] = useState(() => offer ? toLocalInput(offer.starts_at) : "");
   const [endsAt, setEndsAt] = useState(() => offer ? toLocalInput(offer.ends_at) : "");
   const assignedCapacity = cityQuotas.reduce((total, quota) => total + quota.capacity, 0);
+  const cityAudienceCounts = new Map((eligibleAudienceCounts ?? []).filter((count) => count.city_id !== null).map((count) => [count.city_id, count.eligible_visitor_count]));
+  const totalEligibleAudience = (eligibleAudienceCounts ?? [])
+    .filter((count) => count.city_id === null)
+    .reduce((total, count) => total + count.eligible_visitor_count, 0);
+  const audienceThresholdsValid = Number.isSafeInteger(minimumPoints) && minimumPoints >= 0 && minimumPoints <= 1_000_000
+    && Number.isSafeInteger(pointsCost) && pointsCost >= 1 && pointsCost <= 1_000_000;
+
+  useEffect(() => {
+    if (!audienceThresholdsValid) return;
+
+    let isCurrent = true;
+    const timeout = window.setTimeout(async () => {
+      const supabase = createSupabaseBrowserClient();
+      if (!supabase) {
+        if (isCurrent) setAudienceCountError("Audience counts are unavailable in this environment.");
+        return;
+      }
+      try {
+        const { data, error } = await supabase.rpc("admin_get_loyalty_offer_audience_counts", {
+          p_minimum_points: minimumPoints,
+          p_points_cost: pointsCost,
+        });
+        if (!isCurrent) return;
+        if (error) {
+          setAudienceCountError(error.code === "PGRST202"
+            ? "Apply the loyalty audience-count migration to display eligible visitors."
+            : "Eligible audience counts could not be loaded.");
+          return;
+        }
+        setEligibleAudienceCounts(data ?? []);
+      } catch {
+        if (isCurrent) setAudienceCountError("Eligible audience counts could not be loaded.");
+      }
+    }, 250);
+
+    return () => {
+      isCurrent = false;
+      window.clearTimeout(timeout);
+    };
+  }, [audienceThresholdsValid, minimumPoints, pointsCost]);
 
   async function submitOffer(formData: FormData) {
     formData.set("global_capacity", String(globalCapacity));
@@ -61,8 +106,16 @@ export function LoyaltyOfferEditor({ offer, countries, cities }: { offer: (Offer
           </select>
         </label>
         {offerType === "redemption" && <input type="hidden" name="selection_method" value="first_come" />}
-        <label>Minimum points for eligibility<input name="minimum_points" type="number" min="0" max="1000000" step="1" defaultValue={offer?.minimum_points ?? 1000} required /></label>
-        <label>Points spent to enter or redeem<input name="points_cost" type="number" min="1" max="1000000" step="1" defaultValue={offer?.points_cost ?? 1000} required /></label>
+        <label>Minimum points for eligibility<input name="minimum_points" type="number" min="0" max="1000000" step="1" value={Number.isNaN(minimumPoints) ? "" : minimumPoints} onChange={(event) => {
+          setMinimumPoints(event.currentTarget.valueAsNumber);
+          setEligibleAudienceCounts(null);
+          setAudienceCountError(null);
+        }} required /></label>
+        <label>Points spent to enter or redeem<input name="points_cost" type="number" min="1" max="1000000" step="1" placeholder="Required" value={Number.isNaN(pointsCost) ? "" : pointsCost} onChange={(event) => {
+          setPointsCost(event.currentTarget.valueAsNumber);
+          setEligibleAudienceCounts(null);
+          setAudienceCountError(null);
+        }} required /></label>
         <label>Starts in your local time<input name="starts_at_local" type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} required /></label>
         <label>Ends in your local time<input name="ends_at_local" type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} required /></label>
         <label className="is-wide">Terms and fulfilment details<textarea name="terms" defaultValue={offer?.terms ?? ""} maxLength={5000} rows={4} required /></label>
@@ -74,7 +127,7 @@ export function LoyaltyOfferEditor({ offer, countries, cities }: { offer: (Offer
         </div>
         {cityQuotas.length === 0 ? (
           <label className="admin-global-capacity">
-            <span>All locations</span>
+            <span>All locations{eligibleAudienceCounts ? ` · ${formatNumber(totalEligibleAudience)} eligible` : ""}</span>
             <input type="range" min="1" max="100000" step="1" value={globalCapacity} onChange={(event) => setGlobalCapacity(Number(event.target.value))} aria-label="Capacity for all locations" />
             <output>{formatNumber(globalCapacity)} gifts or winners</output>
           </label>
@@ -95,6 +148,7 @@ export function LoyaltyOfferEditor({ offer, countries, cities }: { offer: (Offer
                       country_code: quota.country_code,
                     } satisfies SupportedCity : null}
                     initialCountryCode={quota.country_code || countries[0]?.country_code || null}
+                    eligibleAudienceCounts={eligibleAudienceCounts}
                     required
                     onSelect={(city) => setCityQuotas((current) => current.map((item, itemIndex) => itemIndex === index ? {
                       ...item,
@@ -107,7 +161,7 @@ export function LoyaltyOfferEditor({ offer, countries, cities }: { offer: (Offer
                   <button className="admin-city-quota-remove" type="button" aria-label={`Remove ${quota.city || "city"} allocation`} onClick={() => setCityQuotas((current) => current.filter((_, itemIndex) => itemIndex !== index))}><Trash2 size={15} aria-hidden="true" /></button>
                 </div>
                 <label className="admin-city-quota-slider">
-                  <span>{quota.city || "City"} allocation</span>
+                  <span>{quota.city || "City"} allocation{quota.city_id && eligibleAudienceCounts ? ` · ${formatNumber(cityAudienceCounts.get(quota.city_id) ?? 0)} eligible` : ""}</span>
                   <input type="range" min="1" max="100000" step="1" value={quota.capacity} onChange={(event) => setCityQuotas((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, capacity: Number(event.target.value) } : item))} aria-label={`${quota.city || "City"} gifts or winners`} />
                   <output>{formatNumber(quota.capacity)}</output>
                 </label>
@@ -115,6 +169,13 @@ export function LoyaltyOfferEditor({ offer, countries, cities }: { offer: (Offer
             ))}
           </div>
         )}
+        <p className="admin-loyalty-audience-status" role="status">
+          {audienceCountError ?? (!audienceThresholdsValid
+            ? "Enter valid minimum points and points cost to calculate eligible visitors."
+            : eligibleAudienceCounts
+              ? `Audience reflects the current minimum and points cost. ${formatNumber(totalEligibleAudience)} eligible visitors across enabled countries.`
+              : "Updating eligible audience for the current points settings…")}
+        </p>
         <button className="admin-city-quota-add" type="button" disabled={cityQuotas.length >= 50} onClick={() => setCityQuotas((current) => [...current, { city_id: "", city: "", admin_name: "", country_code: countries[0]?.country_code ?? "GB", capacity: 1 }])}>
           <Plus size={14} aria-hidden="true" /> Add a city allocation
         </button>

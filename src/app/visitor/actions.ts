@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getVisitorAccount } from "@/lib/visitor/access";
+import { getSafeVisitorPath } from "@/lib/visitor/paths";
 import { FormError, runFormAction, type FormState } from "@/lib/form-state";
 import { getProfileImageProblem, isCityId, isUuid, PROFILE_IMAGE_TYPES } from "@/lib/validation";
 
@@ -110,6 +111,29 @@ export async function joinLoyaltyOffer(formData: FormData) {
   redirect(result.alreadyJoined ? "/visitor/rewards?offerMessage=already" : "/visitor/rewards?offerMessage=joined");
 }
 
+export async function reportLoyaltyClaimIssue(formData: FormData) {
+  const claimId = String(formData.get("claim_id") ?? "");
+  const issueType = String(formData.get("issue_type") ?? "");
+  const description = String(formData.get("description") ?? "").trim();
+  if (!isUuid(claimId) || !["not_received", "incorrect_reward", "damaged", "other"].includes(issueType)
+    || description.length < 10 || description.length > 2000) {
+    redirect("/visitor/rewards?history=offers&supportError=details");
+  }
+
+  const { supabase } = await getVisitorAccount();
+  const { error } = await supabase.rpc("visitor_report_loyalty_claim_issue", {
+    p_claim_id: claimId,
+    p_issue_type: issueType,
+    p_description: description,
+  });
+  if (error) {
+    redirect(`/visitor/rewards?history=offers&supportError=${error.code === "55000" ? "unavailable" : "submit"}`);
+  }
+  revalidatePath("/visitor/rewards");
+  redirect("/visitor/rewards?history=offers&supportReported=1");
+}
+
+
 export async function reserveSellerOfferCoupon(formData: FormData) {
   const offerId = String(formData.get("offer_id") ?? "");
   const locationId = String(formData.get("location_id") ?? "");
@@ -155,4 +179,56 @@ export async function cancelSellerOfferCoupon(formData: FormData) {
   revalidatePath("/visitor/offers");
   revalidatePath("/visitor/rewards");
   redirect("/visitor/offers?view=vouchers&cancelled=1");
+}
+
+export async function reportSellerVoucherIssue(formData: FormData) {
+  const couponId = String(formData.get("coupon_id") ?? "");
+  const issueType = String(formData.get("issue_type") ?? "");
+  const description = String(formData.get("description") ?? "").trim();
+  if (!isUuid(couponId) || !["not_honored", "incorrect_offer", "quality_issue", "other"].includes(issueType)
+    || description.length < 10 || description.length > 2000) {
+    redirect("/visitor/offers?view=vouchers&error=reportDetails");
+  }
+
+  const { supabase } = await getVisitorAccount();
+  const { error } = await supabase.rpc("visitor_report_seller_voucher_issue", {
+    p_coupon_id: couponId,
+    p_issue_type: issueType,
+    p_description: description,
+  });
+  if (error) {
+    const errorType = error.code === "55000" ? "reportUnavailable" : "reportFailed";
+    redirect(`/visitor/offers?view=vouchers&error=${errorType}`);
+  }
+  revalidatePath("/visitor/offers");
+  redirect("/visitor/offers?view=vouchers&reported=1");
+}
+
+export async function reportMarketplaceItem(formData: FormData) {
+  const returnPath = getSafeVisitorPath(String(formData.get("return_path") ?? ""));
+  if (!returnPath.startsWith("/products/")) redirect("/products");
+  const targetType = String(formData.get("target_type") ?? "");
+  const targetId = String(formData.get(targetType === "product" ? "product_id" : "seller_profile_id") ?? "");
+  const issueType = String(formData.get("issue_type") ?? "");
+  const description = String(formData.get("description") ?? "").trim();
+  if (!['product', 'seller_account'].includes(targetType) || !isUuid(targetId)
+    || !["misleading", "prohibited", "counterfeit", "seller_conduct", "other"].includes(issueType)
+    || description.length < 10 || description.length > 2000) {
+    redirect(`${returnPath}?report=invalid#report`);
+  }
+
+  const { supabase } = await getVisitorAccount(returnPath);
+  const { error } = await supabase.rpc("visitor_report_marketplace_item", {
+    p_target_type: targetType,
+    p_target_id: targetId,
+    p_issue_type: issueType,
+    p_description: description,
+  });
+  if (error) {
+    const reportStatus = error.code === "42501" ? "verification" : error.code === "55000" ? "unavailable" : "failed";
+    redirect(`${returnPath}?report=${reportStatus}#report`);
+  }
+  revalidatePath("/admin/support");
+  revalidatePath(returnPath);
+  redirect(`${returnPath}?report=sent#report`);
 }

@@ -76,7 +76,11 @@ export type Database = {
         never
       >;
       loyalty_offer_claims: Table<
-        { city: string | null; city_id: string | null; claim_type: "participation" | "redemption"; created_at: string; country_code: string | null; fulfillment_status: "not_required" | "pending" | "fulfilled"; id: string; offer_id: string; points_spent: number; status: "entered" | "won" | "lost" | "redeemed"; visitor_id: string },
+        { city: string | null; city_id: string | null; claim_type: "participation" | "redemption"; created_at: string; country_code: string | null; fulfilled_at: string | null; fulfilled_by: string | null; fulfillment_evidence_path: string | null; fulfillment_note: string | null; fulfillment_reference: string | null; fulfillment_status: "not_required" | "pending" | "fulfilled"; id: string; offer_id: string; points_spent: number; result_at: string | null; status: "entered" | "won" | "lost" | "redeemed"; visitor_id: string },
+        { fulfilled_at?: string | null; fulfilled_by?: string | null; fulfillment_evidence_path?: string | null; fulfillment_note?: string | null; fulfillment_reference?: string | null }
+      >;
+      loyalty_claim_support_cases: Table<
+        { claim_id: string; created_at: string; description: string; id: string; issue_type: "not_received" | "incorrect_reward" | "damaged" | "other"; resolution_note: string | null; resolved_at: string | null; resolved_by: string | null; status: "open" | "in_review" | "resolved"; updated_at: string; visitor_id: string },
         never
       >;
       supported_countries: Table<
@@ -171,6 +175,14 @@ export type Database = {
           { foreignKeyName: "seller_offer_coupons_location_id_offer_date_starts_at_fkey"; columns: ["location_id", "offer_date", "starts_at"]; isOneToOne: false; referencedRelation: "seller_offer_daily_quotas"; referencedColumns: ["location_id", "offer_date", "starts_at"] }
         ]
       >;
+      seller_voucher_support_cases: Table<
+        { coupon_id: string; created_at: string; description: string; id: string; issue_type: "not_honored" | "incorrect_offer" | "quality_issue" | "other"; resolution_note: string | null; resolved_at: string | null; resolved_by: string | null; status: "open" | "in_review" | "resolved"; updated_at: string; visitor_id: string },
+        never
+      >;
+      marketplace_support_cases: Table<
+        { created_at: string; description: string; id: string; issue_type: "misleading" | "prohibited" | "counterfeit" | "seller_conduct" | "other"; reporter_id: string; resolution_note: string | null; resolved_at: string | null; resolved_by: string | null; status: "open" | "in_review" | "resolved"; target_id: string; target_type: "product" | "seller_account"; updated_at: string },
+        never
+      >;
       seller_offer_point_transactions: Table<
         { coupon_id: string; created_at: string; id: number; idempotency_key: string; points_delta: number; transaction_type: string; visitor_id: string },
         { coupon_id: string; created_at?: string; id?: never; idempotency_key: string; points_delta: number; transaction_type: string; visitor_id: string },
@@ -182,6 +194,12 @@ export type Database = {
       admin_review_product: { Args: { p_next_status: Database["public"]["Enums"]["product_status"]; p_product_id: string }; Returns: undefined };
       admin_set_product_featured: { Args: { p_is_featured: boolean; p_product_id: string }; Returns: string | null };
       admin_update_marketplace_settings: { Args: { p_click_price_pence_per_1000: number; p_featured_duration_minutes: number; p_new_products_duration_minutes: number; p_product_approval_mode: "manual" | "automatic"; p_seller_approval_mode: "manual" | "automatic"; p_visitor_daily_visit_points_cap: number }; Returns: undefined };
+      admin_get_visitor_directory: { Args: { p_limit: number; p_offset: number; p_query: string; p_status: string }; Returns: { banned_until: string | null; created_at: string; email_confirmed_at: string | null; last_sign_in_at: string | null; total_count: number; visitor_email: string | null; visitor_id: string; visitor_name: string | null }[] };
+      visitor_report_marketplace_item: { Args: { p_description: string; p_issue_type: string; p_target_id: string; p_target_type: string }; Returns: string };
+      admin_get_marketplace_support_cases: { Args: { p_limit: number; p_offset: number }; Returns: { case_id: string; created_at: string; description: string; issue_type: string; reporter_email: string | null; reporter_id: string; resolution_note: string | null; status: string; target_id: string; target_name: string; target_type: string; target_url: string | null; total_case_count: number; updated_at: string }[] };
+      admin_update_marketplace_support_case: { Args: { p_case_id: string; p_resolution_note: string; p_status: string }; Returns: undefined };
+      get_visitor_marketplace_support_cases: { Args: { p_limit: number; p_offset: number }; Returns: { case_id: string; created_at: string; description: string; issue_type: string; resolution_note: string | null; status: string; target_name: string; target_type: string; total_case_count: number; updated_at: string }[] };
+      get_visitor_marketplace_support_notifications: { Args: Record<PropertyKey, never>; Returns: { notification_id: string; resolution_note: string | null; status: string; target_name: string; updated_at: string }[] };
       get_click_price_pence_per_1000: { Args: Record<PropertyKey, never>; Returns: number };
       get_visitor_daily_visit_points_status: { Args: Record<PropertyKey, never>; Returns: { daily_cap: number; points_earned: number }[] };
       get_visitor_loyalty_points: { Args: Record<PropertyKey, never>; Returns: number };
@@ -198,9 +216,18 @@ export type Database = {
       admin_count_loyalty_offer_eligible: { Args: { p_offer_id: string }; Returns: number };
       admin_get_loyalty_offer_metrics: { Args: Record<PropertyKey, never>; Returns: { claim_count: number; database_now: string; eligible_count: number; offer_id: string; winner_count: number }[] };
       admin_get_loyalty_offer_city_metrics: { Args: Record<PropertyKey, never>; Returns: { admin_name: string | null; capacity: number; claim_count: number; city: string | null; city_id: string | null; country_code: string | null; eligible_count: number; offer_id: string }[] };
+      admin_get_loyalty_location_metrics: { Args: Record<PropertyKey, never>; Returns: { active_loyalty_offer_count: number; active_seller_count: number; active_seller_offer_count: number; admin_name: string | null; approved_product_count: number; claims_last_30_days: number; city_id: string | null; city_name: string | null; country_code: string; country_name: string; eligible_point_holder_count: number; registered_visitor_count: number; verified_visitor_count: number }[] };
+      admin_get_loyalty_country_metrics: { Args: Record<PropertyKey, never>; Returns: { active_loyalty_offer_count: number; active_seller_count: number; active_seller_offer_count: number; approved_product_count: number; claims_last_30_days: number; country_code: string; eligible_point_holder_count: number; registered_visitor_count: number; verified_visitor_count: number }[] };
+      admin_get_seller_voucher_location_metrics: { Args: Record<PropertyKey, never>; Returns: { city_id: string | null; country_code: string; vouchers_issued_last_30_days: number; vouchers_redeemed_last_30_days: number }[] };
+      admin_get_loyalty_offer_audience_counts: { Args: { p_minimum_points: number; p_points_cost: number }; Returns: { city_id: string | null; country_code: string; eligible_visitor_count: number }[] };
       admin_run_loyalty_offer_draw: { Args: { p_offer_id: string }; Returns: number };
-      admin_get_loyalty_offer_recipients: { Args: { p_offer_id: string }; Returns: { city: string | null; claim_id: string; country_code: string | null; created_at: string; display_name: string | null; email: string | null; fulfillment_status: string; points_spent: number; status: string; visitor_id: string }[] };
-      admin_set_loyalty_claim_fulfilled: { Args: { p_claim_id: string }; Returns: undefined };
+      admin_get_loyalty_offer_recipients: { Args: { p_offer_id: string }; Returns: { city: string | null; claim_id: string; country_code: string | null; created_at: string; display_name: string | null; email: string | null; fulfilled_at: string | null; fulfilled_by_email: string | null; fulfillment_evidence_path: string | null; fulfillment_note: string | null; fulfillment_reference: string | null; fulfillment_status: string; points_spent: number; status: string; visitor_id: string }[] };
+      admin_get_loyalty_pending_fulfillments: { Args: { p_limit: number; p_offset: number }; Returns: { claim_id: string; claim_status: string; claim_type: string; country_code: string | null; city: string | null; created_at: string; offer_id: string; offer_title: string; points_spent: number; total_pending_count: number; visitor_email: string | null; visitor_id: string; visitor_name: string | null }[] };
+      admin_get_loyalty_claim_support_cases: { Args: { p_limit: number; p_offset: number }; Returns: { case_id: string; claim_id: string; created_at: string; description: string; offer_title: string; resolution_note: string | null; status: string; total_case_count: number; updated_at: string; visitor_email: string | null; visitor_id: string; visitor_name: string | null; issue_type: string }[] };
+      admin_update_loyalty_claim_support_case: { Args: { p_case_id: string; p_resolution_note: string; p_status: string }; Returns: undefined };
+      get_visitor_loyalty_result_notifications: { Args: Record<PropertyKey, never>; Returns: { claim_id: string; claim_status: string; claim_type: string; country_code: string | null; city: string | null; offer_title: string; points_spent: number; result_at: string | null }[] };
+      visitor_report_loyalty_claim_issue: { Args: { p_claim_id: string; p_description: string; p_issue_type: string }; Returns: string };
+      admin_set_loyalty_claim_fulfilled: { Args: { p_claim_id: string; p_note: string; p_reference: string | null; p_evidence_path: string | null }; Returns: undefined };
       search_supported_cities: { Args: { p_country_code: string; p_query: string }; Returns: { admin_name: string; city_ascii: string; city_id: string; city_name: string; country_code: string }[] };
       join_loyalty_offer: { Args: { p_offer_id: string }; Returns: Json };
       is_product_click_credit_available: { Args: { p_product_id: string }; Returns: boolean };
@@ -227,11 +254,16 @@ export type Database = {
       seller_mark_ad_credit_grants_seen: { Args: Record<PropertyKey, never>; Returns: undefined };
       seller_save_offer_request: { Args: { p_payload: Json; p_request_id: string; p_submit: boolean }; Returns: Json };
       seller_get_offer_audience_estimates: { Args: Record<PropertyKey, never>; Returns: { city_id: string; city_name: string; country_code: string; is_withheld: boolean; registered_audience: number | null; request_id: string }[] };
+      seller_get_location_registration_counts: { Args: Record<PropertyKey, never>; Returns: { city_id: string | null; country_code: string; registered_count: number }[] };
       reserve_seller_offer_coupon: { Args: { p_idempotency_key: string; p_location_id: string; p_offer_date: string; p_offer_id: string; p_starts_at: string }; Returns: Json };
       cancel_seller_offer_coupon: { Args: { p_coupon_id: string }; Returns: Json };
       seller_redeem_offer_coupon: { Args: { p_coupon_code: string }; Returns: Json };
+      admin_get_seller_offer_voucher_status_metrics: { Args: Record<PropertyKey, never>; Returns: { cancelled_count: number; expired_count: number; location_id: string; offer_id: string; redeemed_count: number; reserved_count: number }[] };
+      visitor_report_seller_voucher_issue: { Args: { p_coupon_id: string; p_description: string; p_issue_type: string }; Returns: string };
+      admin_get_seller_voucher_support_cases: { Args: { p_limit: number; p_offset: number }; Returns: { case_id: string; coupon_id: string; created_at: string; description: string; issue_type: string; offer_id: string; offer_title: string; resolution_note: string | null; seller_profile_id: string; shop_name: string; status: string; total_case_count: number; updated_at: string; visitor_email: string | null; visitor_id: string }[] };
+      admin_update_seller_voucher_support_case: { Args: { p_case_id: string; p_resolution_note: string; p_status: string }; Returns: undefined };
       get_visitor_seller_offer_coupons: { Args: Record<PropertyKey, never>; Returns: { branch_address: string | null; branch_name: string; can_cancel: boolean; city_name: string; coupon_code: string; created_at: string; ends_at: string; id: string; offer_date: string; offer_id: string; points_cost: number; starts_at: string; status: string; title: string }[] };
-      admin_decide_seller_offer_request: { Args: { p_daily_capacity: number; p_decision: string; p_final_terms: string; p_points_cost: number; p_request_id: string; p_review_note: string | null }; Returns: string | null };
+      admin_decide_seller_offer_request: { Args: { p_decision: string; p_final_terms: string; p_points_cost: number; p_request_id: string; p_review_note: string | null; p_schedule_capacities: Json }; Returns: string | null };
       admin_set_seller_offer_status: { Args: { p_next_status: string; p_offer_id: string }; Returns: undefined };
       seller_submit_product: { Args: { p_product_id: string }; Returns: Database["public"]["Enums"]["product_status"] };
       is_active_seller_owner: { Args: { profile_id: string }; Returns: boolean };
