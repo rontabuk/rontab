@@ -21,6 +21,7 @@ export function SellerNavigation({ hasNewAdCreditGrants }: { hasNewAdCreditGrant
         { href: "/seller/profile", label: "Profile" },
         { href: "/seller", label: "Add products", exact: true },
         { href: "/seller/products", label: "Your products" },
+        { href: "/seller/offers", label: "Offer requests" },
         {
           href: "/seller/advertising",
           label: "Advertising",

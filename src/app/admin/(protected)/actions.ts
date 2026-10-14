@@ -469,3 +469,61 @@ export async function deleteTopVideoAd(formData: FormData) {
   revalidatePath("/admin/video-ads");
   revalidatePath("/products");
 }
+
+export async function decideSellerOfferRequest(formData: FormData) {
+  const requestId = String(formData.get("request_id") ?? "");
+  const decision = String(formData.get("decision") ?? "");
+  const reviewNote = String(formData.get("review_note") ?? "").trim();
+  const pointsCost = Number(formData.get("points_cost"));
+  const finalTerms = String(formData.get("final_terms") ?? "").trim();
+  const dailyCapacity = Number(formData.get("daily_capacity"));
+  if (!isUuid(requestId) || !["approve", "changes_requested", "reject"].includes(decision)) {
+    throw new FormError("Invalid offer review request.");
+  }
+  if (decision === "approve") {
+    if (!Number.isSafeInteger(pointsCost) || pointsCost < 1 || pointsCost > 1_000_000
+      || finalTerms.length < 10 || finalTerms.length > 5000
+      || !Number.isSafeInteger(dailyCapacity) || dailyCapacity < 1 || dailyCapacity > 1000) {
+      throw new FormError("Set valid points, terms, and a daily voucher capacity before approval.");
+    }
+  } else if (!reviewNote || reviewNote.length > 2000) {
+    throw new FormError("Add a review note when requesting changes or rejecting an offer.");
+  }
+
+  const supabase = await requireAdminClient();
+  const { error } = await supabase.rpc("admin_decide_seller_offer_request", {
+    p_request_id: requestId,
+    p_decision: decision,
+    p_review_note: reviewNote || null,
+    p_points_cost: pointsCost || 0,
+    p_final_terms: finalTerms,
+    p_daily_capacity: dailyCapacity || 0,
+  });
+  if (error?.code === "22023" || error?.code === "55000") throw new FormError(error.message);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/seller-offers");
+  revalidatePath("/seller/offers");
+  revalidatePath("/visitor/offers");
+  redirect("/admin/seller-offers?reviewed=1");
+}
+
+export async function setSellerOfferStatus(formData: FormData) {
+  const offerId = String(formData.get("offer_id") ?? "");
+  const status = String(formData.get("status") ?? "");
+  if (!isUuid(offerId) || !["published", "paused", "ended"].includes(status)) {
+    throw new FormError("Invalid seller offer status change.");
+  }
+
+  const supabase = await requireAdminClient();
+  const { error } = await supabase.rpc("admin_set_seller_offer_status", {
+    p_offer_id: offerId,
+    p_next_status: status,
+  });
+  if (error?.code === "22023" || error?.code === "55000") throw new FormError(error.message);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/seller-offers");
+  revalidatePath("/visitor/offers");
+  redirect("/admin/seller-offers?changed=1");
+}

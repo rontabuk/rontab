@@ -192,6 +192,26 @@ export async function markSellerAdCreditGrantsSeen() {
   revalidatePath("/seller", "layout");
 }
 
+export async function redeemSellerOfferCoupon(formData: FormData) {
+  const code = String(formData.get("coupon_code") ?? "").trim().toUpperCase();
+  if (!/^[A-F0-9]{20}$/.test(code)) redirect("/seller/offers?redeemError=code");
+
+  const { supabase, seller } = await getSellerAccount();
+  if (seller.status !== "active") redirect("/seller/offers?redeemError=unavailable");
+  const { data, error } = await supabase.rpc("seller_redeem_offer_coupon", { p_coupon_code: code });
+  if (error) {
+    const errorType = error.code === "55000" ? "window" : error.code === "P0002" ? "notFound" : "unavailable";
+    redirect(`/seller/offers?redeemError=${errorType}`);
+  }
+
+  const result = data as { status?: string; alreadyRedeemed?: boolean };
+  revalidatePath("/seller/offers");
+  revalidatePath("/visitor/offers");
+  redirect(result.status === "expired"
+    ? "/seller/offers?redeemed=expired"
+    : result.alreadyRedeemed ? "/seller/offers?redeemed=already" : "/seller/offers?redeemed=1");
+}
+
 export async function deleteSellerProduct(formData: FormData) {
   const productId = String(formData.get("product_id") ?? "");
   if (!isUuid(productId)) throw new Error("Invalid product deletion request.");

@@ -277,6 +277,8 @@ function VisitorOfferCard({ offer, balance }: { offer: VisitorOffer; balance: nu
 function transactionLabel(type: PointTransaction["transaction_type"]) {
   if (type === "visit_earned") return "First eligible product visit";
   if (type === "participation_spent") return "Offer entry";
+  if (type === "seller_offer_spent") return "Seller voucher reservation";
+  if (type === "seller_offer_refund") return "Voucher cancellation refund";
   return "Gift redemption";
 }
 

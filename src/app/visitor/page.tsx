@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { connection } from "next/server";
 import Link from "next/link";
-import { ArrowRight, MapPin, UserRound } from "lucide-react";
+import { ArrowRight, MapPin, Ticket, UserRound } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
 import { CityPicker } from "@/components/CityPicker";
 import { formatNumber } from "@/lib/format";
@@ -55,7 +55,10 @@ export default async function VisitorAccountPage({
           <h2 id="visitor-points-title">Your points balance</h2>
           <strong>{formatNumber(summary.points_balance)}</strong>
           <p>{formatNumber(summary.points_earned)} earned · {formatNumber(summary.points_spent)} used</p>
-          <Link className="visitor-rewards-link" href="/visitor/rewards">Points & rewards <ArrowRight size={15} aria-hidden="true" /></Link>
+          <div className="visitor-account-offer-links">
+            <Link className="visitor-rewards-link" href="/visitor/offers"><Ticket size={15} aria-hidden="true" />Offer gallery <ArrowRight size={15} aria-hidden="true" /></Link>
+            <Link className="visitor-rewards-link" href="/visitor/rewards">Points & rewards <ArrowRight size={15} aria-hidden="true" /></Link>
+          </div>
         </section>
         <section className="visitor-profile-section" aria-labelledby="visitor-profile-title">
           <div className="visitor-profile-heading">

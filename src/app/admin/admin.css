@@ -160,6 +160,20 @@
 .admin-loyalty-list-heading > span { color: #737c72; font-size: 11px; }
 .admin-loyalty-offer-list { display: grid; gap: 9px; }
 .admin-loyalty-offer-item { display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: 12px 20px; padding: 15px; border: 1px solid #e0e4dc; background: #fcfdf9; }
+.admin-seller-offers-page { max-width: 1180px; }
+.admin-seller-offer-review-item { grid-template-columns: minmax(0, 1fr) minmax(280px, .8fr); }
+.admin-seller-offer-decisions { display: grid; align-content: start; gap: 9px; }
+.admin-seller-offer-approval-form, .admin-seller-offer-note-form { display: grid; gap: 8px; padding: 12px; border: 1px solid #e0e4dc; background: #f7f9f5; }
+.admin-seller-offer-approval-form label, .admin-seller-offer-note-form label { display: grid; gap: 4px; color: #586258; font-size: 11px; font-weight: 700; }
+.admin-seller-offer-approval-form input, .admin-seller-offer-approval-form textarea, .admin-seller-offer-note-form textarea { width: 100%; min-height: 34px; padding: 7px 8px; border: 1px solid #d9ded5; border-radius: 2px; background: #fff; color: #374239; font: inherit; font-size: 12px; }
+.admin-seller-offer-approval-form textarea, .admin-seller-offer-note-form textarea { min-height: 70px; resize: vertical; }
+.admin-seller-offer-approval-form button, .admin-seller-offer-note-form button { display: inline-flex; width: fit-content; min-height: 33px; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid #cfd9ca; background: #edf3e9; color: #3d6043; cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; }
+.admin-seller-offer-note-form button.is-secondary { border-color: #e1d4c9; background: #f6eee8; color: #845340; }
+.admin-seller-offer-media { display: inline-block; margin-top: 10px; color: #405f45; font-size: 11px; text-decoration: underline; text-underline-offset: 2px; }
+.admin-seller-offer-live-section { margin-top: 32px; }
+.admin-seller-offer-decisions form { margin: 0; }
+.admin-seller-offer-approval-form button, .admin-seller-offer-note-form button { justify-self: start; }
+.admin-seller-offer-live-section .admin-loyalty-offer-item { grid-template-columns: minmax(0, 1fr); }
 .admin-loyalty-offer-main { min-width: 0; }
 .admin-loyalty-offer-tags { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .admin-loyalty-status, .admin-loyalty-kind { padding: 4px 6px; background: #eef0ea; color: #626b60; font-size: 10px; }
@@ -187,5 +201,5 @@
 .admin-loyalty-recipients .admin-table { min-width: 620px; }
 .admin-loyalty-status.is-won, .admin-loyalty-status.is-redeemed { background: #e4efe2; color: #3d6941; }
 .admin-loyalty-error { margin: 13px 0 0; padding: 11px 13px; border-left: 3px solid #a44839; background: #f6eae5; color: #823d33; font-size: 12px; line-height: 1.55; }
-@media (max-width: 900px) { .admin-loyalty-offer-item { grid-template-columns: minmax(0, 1fr); } .admin-loyalty-offer-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 9px 0 0; border-top: 1px solid #e3e7e0; border-left: 0; } }
+@media (max-width: 900px) { .admin-loyalty-offer-item, .admin-seller-offer-review-item { grid-template-columns: minmax(0, 1fr); } .admin-loyalty-offer-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 9px 0 0; border-top: 1px solid #e3e7e0; border-left: 0; } }
 @media (max-width: 700px) { .admin-loyalty-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .admin-loyalty-random-control { grid-template-columns: 36px minmax(0, 1fr); gap: 10px; padding: 13px; } .admin-loyalty-random-icon { width: 34px; } .admin-loyalty-random-control form { grid-column: 1 / -1; } .admin-loyalty-toggle { width: 100%; } .admin-loyalty-offer-form { padding: 13px; } .admin-loyalty-form-grid { grid-template-columns: 1fr; } .admin-loyalty-form-grid label.is-wide { grid-column: auto; } .admin-loyalty-offer-item { padding: 12px; } .admin-loyalty-offer-details { display: grid; align-items: start; } .admin-global-capacity, .admin-city-quota-row { grid-template-columns: 1fr; gap: 7px; } .admin-global-capacity output { text-align: left; } .admin-city-quota-fields { grid-template-columns: minmax(0, 1fr) minmax(110px, .8fr) 30px; } }

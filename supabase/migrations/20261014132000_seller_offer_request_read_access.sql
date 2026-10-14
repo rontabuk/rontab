@@ -1,0 +1,2 @@
+grant select on public.seller_offer_request_locations,
+	public.seller_offer_request_schedules to authenticated;

@@ -119,6 +119,63 @@ export type Database = {
         { amount_pence: number; clicks: number; created_at: string; currency: string; id: string; is_test: boolean; paid_at: string | null; paid_event_id: string | null; seller_profile_id: string; status: "pending" | "paid" | "expired"; stripe_checkout_session_id: string | null; stripe_payment_intent_id: string | null; unit_price_pence_per_1000: number },
         never
       >;
+      seller_offer_requests: Table<
+        { benefit_details: string; capacity_acknowledged: boolean; created_at: string; description: string; discount_percent: number | null; id: string; media_storage_path: string | null; media_type: string | null; media_url: string | null; offer_kind: string; request_payload_hash: string | null; review_note: string | null; reviewed_at: string | null; reviewed_by: string | null; seller_profile_id: string; seller_terms_accepted_at: string | null; status: string; submitted_at: string | null; title: string; updated_at: string; valid_from: string; valid_until: string },
+        { benefit_details: string; capacity_acknowledged?: boolean; created_at?: string; description: string; discount_percent?: number | null; id?: string; media_storage_path?: string | null; media_type?: string | null; media_url?: string | null; offer_kind: string; request_payload_hash?: string | null; review_note?: string | null; reviewed_at?: string | null; reviewed_by?: string | null; seller_profile_id: string; seller_terms_accepted_at?: string | null; status?: string; submitted_at?: string | null; title: string; updated_at?: string; valid_from: string; valid_until: string },
+        [{ foreignKeyName: "seller_offer_requests_seller_profile_id_fkey"; columns: ["seller_profile_id"]; isOneToOne: false; referencedRelation: "seller_profiles"; referencedColumns: ["id"] }]
+      >;
+      seller_offer_request_locations: Table<
+        { branch_address: string | null; branch_name: string; city_id: string; created_at: string; id: string; request_id: string },
+        { branch_address?: string | null; branch_name: string; city_id: string; created_at?: string; id?: string; request_id: string },
+        [
+          { foreignKeyName: "seller_offer_request_locations_city_id_fkey"; columns: ["city_id"]; isOneToOne: false; referencedRelation: "supported_cities"; referencedColumns: ["city_id"] },
+          { foreignKeyName: "seller_offer_request_locations_request_id_fkey"; columns: ["request_id"]; isOneToOne: false; referencedRelation: "seller_offer_requests"; referencedColumns: ["id"] }
+        ]
+      >;
+      seller_offer_request_schedules: Table<
+        { ends_at: string; id: string; location_id: string; requested_daily_capacity: number; starts_at: string; weekday: number },
+        { ends_at: string; id?: string; location_id: string; requested_daily_capacity: number; starts_at: string; weekday: number },
+        [{ foreignKeyName: "seller_offer_request_schedules_location_id_fkey"; columns: ["location_id"]; isOneToOne: false; referencedRelation: "seller_offer_request_locations"; referencedColumns: ["id"] }]
+      >;
+      seller_offers: Table<
+        { approved_at: string; approved_by: string; benefit_details: string; created_at: string; description: string; discount_percent: number | null; id: string; media_storage_path: string | null; media_type: string; media_url: string | null; offer_kind: string; points_cost: number; published_at: string | null; request_id: string; seller_profile_id: string; status: string; terms: string; title: string; updated_at: string; valid_from: string; valid_until: string },
+        { approved_at?: string; approved_by: string; benefit_details: string; created_at?: string; description: string; discount_percent?: number | null; id?: string; media_storage_path?: string | null; media_type: string; media_url?: string | null; offer_kind: string; points_cost: number; published_at?: string | null; request_id: string; seller_profile_id: string; status?: string; terms: string; title: string; updated_at?: string; valid_from: string; valid_until: string },
+        [
+          { foreignKeyName: "seller_offers_request_id_fkey"; columns: ["request_id"]; isOneToOne: true; referencedRelation: "seller_offer_requests"; referencedColumns: ["id"] },
+          { foreignKeyName: "seller_offers_seller_profile_id_fkey"; columns: ["seller_profile_id"]; isOneToOne: false; referencedRelation: "seller_profiles"; referencedColumns: ["id"] }
+        ]
+      >;
+      seller_offer_locations: Table<
+        { branch_address: string | null; branch_name: string; city_id: string; id: string; offer_id: string },
+        { branch_address?: string | null; branch_name: string; city_id: string; id?: string; offer_id: string },
+        [
+          { foreignKeyName: "seller_offer_locations_city_id_fkey"; columns: ["city_id"]; isOneToOne: false; referencedRelation: "supported_cities"; referencedColumns: ["city_id"] },
+          { foreignKeyName: "seller_offer_locations_offer_id_fkey"; columns: ["offer_id"]; isOneToOne: false; referencedRelation: "seller_offers"; referencedColumns: ["id"] }
+        ]
+      >;
+      seller_offer_schedules: Table<
+        { daily_capacity: number; ends_at: string; id: string; location_id: string; starts_at: string; weekday: number },
+        { daily_capacity: number; ends_at: string; id?: string; location_id: string; starts_at: string; weekday: number },
+        [{ foreignKeyName: "seller_offer_schedules_location_id_fkey"; columns: ["location_id"]; isOneToOne: false; referencedRelation: "seller_offer_locations"; referencedColumns: ["id"] }]
+      >;
+      seller_offer_daily_quotas: Table<
+        { capacity: number; ends_at: string; location_id: string; offer_date: string; reserved_count: number; starts_at: string },
+        { capacity: number; ends_at: string; location_id: string; offer_date: string; reserved_count?: number; starts_at: string }
+      >;
+      seller_offer_coupons: Table<
+        { cancelled_at: string | null; coupon_code: string; created_at: string; ends_at: string; expired_at: string | null; id: string; idempotency_key: string; location_id: string; offer_date: string; offer_id: string; points_cost: number; redeemed_at: string | null; starts_at: string; status: string; visitor_id: string },
+        { cancelled_at?: string | null; coupon_code: string; created_at?: string; ends_at: string; expired_at?: string | null; id?: string; idempotency_key: string; location_id: string; offer_date: string; offer_id: string; points_cost: number; redeemed_at?: string | null; starts_at: string; status?: string; visitor_id: string },
+        [
+          { foreignKeyName: "seller_offer_coupons_offer_id_fkey"; columns: ["offer_id"]; isOneToOne: false; referencedRelation: "seller_offers"; referencedColumns: ["id"] },
+          { foreignKeyName: "seller_offer_coupons_location_id_offer_id_fkey"; columns: ["location_id", "offer_id"]; isOneToOne: false; referencedRelation: "seller_offer_locations"; referencedColumns: ["id", "offer_id"] },
+          { foreignKeyName: "seller_offer_coupons_location_id_offer_date_starts_at_fkey"; columns: ["location_id", "offer_date", "starts_at"]; isOneToOne: false; referencedRelation: "seller_offer_daily_quotas"; referencedColumns: ["location_id", "offer_date", "starts_at"] }
+        ]
+      >;
+      seller_offer_point_transactions: Table<
+        { coupon_id: string; created_at: string; id: number; idempotency_key: string; points_delta: number; transaction_type: string; visitor_id: string },
+        { coupon_id: string; created_at?: string; id?: never; idempotency_key: string; points_delta: number; transaction_type: string; visitor_id: string },
+        [{ foreignKeyName: "seller_offer_point_transactions_coupon_id_fkey"; columns: ["coupon_id"]; isOneToOne: false; referencedRelation: "seller_offer_coupons"; referencedColumns: ["id"] }]
+      >;
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -168,6 +225,14 @@ export type Database = {
       admin_grant_seller_ad_credits: { Args: { p_clicks: number; p_note: string; p_seller_id: string }; Returns: number };
       seller_has_new_ad_credit_grants: { Args: Record<PropertyKey, never>; Returns: boolean };
       seller_mark_ad_credit_grants_seen: { Args: Record<PropertyKey, never>; Returns: undefined };
+      seller_save_offer_request: { Args: { p_payload: Json; p_request_id: string; p_submit: boolean }; Returns: Json };
+      seller_get_offer_audience_estimates: { Args: Record<PropertyKey, never>; Returns: { city_id: string; city_name: string; country_code: string; is_withheld: boolean; registered_audience: number | null; request_id: string }[] };
+      reserve_seller_offer_coupon: { Args: { p_idempotency_key: string; p_location_id: string; p_offer_date: string; p_offer_id: string; p_starts_at: string }; Returns: Json };
+      cancel_seller_offer_coupon: { Args: { p_coupon_id: string }; Returns: Json };
+      seller_redeem_offer_coupon: { Args: { p_coupon_code: string }; Returns: Json };
+      get_visitor_seller_offer_coupons: { Args: Record<PropertyKey, never>; Returns: { branch_address: string | null; branch_name: string; can_cancel: boolean; city_name: string; coupon_code: string; created_at: string; ends_at: string; id: string; offer_date: string; offer_id: string; points_cost: number; starts_at: string; status: string; title: string }[] };
+      admin_decide_seller_offer_request: { Args: { p_daily_capacity: number; p_decision: string; p_final_terms: string; p_points_cost: number; p_request_id: string; p_review_note: string | null }; Returns: string | null };
+      admin_set_seller_offer_status: { Args: { p_next_status: string; p_offer_id: string }; Returns: undefined };
       seller_submit_product: { Args: { p_product_id: string }; Returns: Database["public"]["Enums"]["product_status"] };
       is_active_seller_owner: { Args: { profile_id: string }; Returns: boolean };
       is_admin: { Args: never; Returns: boolean };

@@ -1,0 +1,1 @@
+alter function public.get_visitor_seller_offer_coupons() volatile;

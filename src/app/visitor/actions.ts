@@ -109,3 +109,50 @@ export async function joinLoyaltyOffer(formData: FormData) {
   revalidatePath("/visitor/rewards");
   redirect(result.alreadyJoined ? "/visitor/rewards?offerMessage=already" : "/visitor/rewards?offerMessage=joined");
 }
+
+export async function reserveSellerOfferCoupon(formData: FormData) {
+  const offerId = String(formData.get("offer_id") ?? "");
+  const locationId = String(formData.get("location_id") ?? "");
+  const offerDate = String(formData.get("offer_date") ?? "");
+  const startsAt = String(formData.get("starts_at") ?? "");
+  const idempotencyKey = String(formData.get("idempotency_key") ?? "");
+  const confirmed = formData.get("confirm_reservation") === "on";
+  if (!isUuid(offerId) || !isUuid(locationId) || !isUuid(idempotencyKey)
+    || !/^\d{4}-\d{2}-\d{2}$/.test(offerDate) || !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(startsAt)) {
+    redirect("/visitor/offers?error=unavailable");
+  }
+  if (!confirmed) redirect("/visitor/offers?error=confirmation");
+
+  const { supabase } = await getVisitorAccount();
+  const { data, error } = await supabase.rpc("reserve_seller_offer_coupon", {
+    p_offer_id: offerId,
+    p_location_id: locationId,
+    p_offer_date: offerDate,
+    p_starts_at: startsAt,
+    p_idempotency_key: idempotencyKey,
+  });
+  if (error) {
+    const errorType = error.code === "23514" ? "points" : error.code === "42501" ? "location" : "unavailable";
+    redirect(`/visitor/offers?error=${errorType}`);
+  }
+
+  const result = data as { id?: string };
+  revalidatePath("/visitor");
+  revalidatePath("/visitor/offers");
+  revalidatePath("/visitor/rewards");
+  redirect(`/visitor/offers?view=vouchers&reserved=${result.id ?? ""}`);
+}
+
+export async function cancelSellerOfferCoupon(formData: FormData) {
+  const couponId = String(formData.get("coupon_id") ?? "");
+  if (!isUuid(couponId)) redirect("/visitor/offers?view=vouchers&error=unavailable");
+  const { supabase } = await getVisitorAccount();
+  const { error } = await supabase.rpc("cancel_seller_offer_coupon", { p_coupon_id: couponId });
+  if (error) {
+    redirect(`/visitor/offers?view=vouchers&error=${error.code === "55000" ? "cancellationClosed" : "unavailable"}`);
+  }
+  revalidatePath("/visitor");
+  revalidatePath("/visitor/offers");
+  revalidatePath("/visitor/rewards");
+  redirect("/visitor/offers?view=vouchers&cancelled=1");
+}

@@ -37,7 +37,7 @@ export async function MobileBottomNav() {
           label: "Visitor navigation",
           items: [
             { href: "/products", label: "Home", icon: "home", exact: true },
-            { href: "/riders", label: "Riders", icon: "riders", disabled: true },
+            { href: "/visitor/offers", label: "Offers", icon: "ticket" },
             {
               href: "/visitor/rewards",
               label: "Rewards",
@@ -47,7 +47,7 @@ export async function MobileBottomNav() {
             },
             { href: "/visitor", label: "Account", icon: "account", exact: true },
           ],
-          menuLinks: [{ href: "/seller/register", label: "Sell on Rontab" }, ...infoLinks],
+          menuLinks: [{ href: "/visitor/offers?view=vouchers", label: "My vouchers" }, { href: "/seller/register", label: "Sell on Rontab" }, ...infoLinks],
           signOutTo: "/",
         }}
       />
@@ -65,7 +65,7 @@ export async function MobileBottomNav() {
             { href: "/seller", label: "Add", icon: "add", exact: true, highlight: true, ariaLabel: "Add a product" },
             { href: "/seller/products", label: "Products", icon: "products" },
           ],
-          menuLinks: [{ href: "/seller/profile", label: "Profile" }, ...infoLinks],
+          menuLinks: [{ href: "/seller/offers", label: "Offer requests" }, { href: "/seller/profile", label: "Profile" }, ...infoLinks],
           signOutTo: "/seller/login",
         }}
       />

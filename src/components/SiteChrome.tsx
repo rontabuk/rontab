@@ -47,6 +47,7 @@ async function AccountLinks() {
       <HeaderActions accountHref="/seller/profile" accountLabel="Seller profile" bell={bell}>
         <Link href="/seller">Seller workspace</Link>
         <Link href="/seller/advertising">Advertising</Link>
+        <Link href="/seller/offers">Offer requests</Link>
       </HeaderActions>
     );
   }
@@ -54,6 +55,7 @@ async function AccountLinks() {
   if (viewer.role === "visitor") {
     return (
       <HeaderActions accountHref="/visitor" accountLabel="My account" points={viewer.points} bell={bell}>
+        <Link href="/visitor/offers">Offer gallery</Link>
         <Link href="/visitor/rewards">Points & rewards</Link>
         <Link href="/seller/register">For sellers</Link>
       </HeaderActions>

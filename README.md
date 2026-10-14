@@ -20,6 +20,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - Seller advertising balances use click credits, with a shared pool and optional per-product allocations. New sellers receive a one-time 10,000-click welcome credit; admins can grant more. Credit purchases stay disabled until a payment provider is configured.
 - Shop visits by confirmed visitor accounts are recorded on the server once per account and product; guest visits are redirected without spending seller credits or earning points. Subscription billing is not active yet.
 - Visitor rewards include an append-only points ledger, city-targeted offers, guaranteed redemptions, and limited participation. Random selection is disabled by default.
+- Seller promotions use a separate request/review/publish flow with UK branches, daily schedules, privacy-thresholded audience estimates, point-priced vouchers, atomic reservations, early-cancel refunds, and seller code redemption. Voucher points use a separate ledger but appear in the visitor's shared points balance and activity.
 - Current location coverage is UK-only. Visitors, sellers, and offer allocations use canonical UK city records; new countries stay unavailable until their supported-country and city data are explicitly added.
 - Configure `SUPABASE_SERVICE_ROLE_KEY` as a server-only environment variable for product visit redirects and visitor administration. Never expose it through a `NEXT_PUBLIC_` variable.
 
@@ -32,6 +33,12 @@ The loyalty and rewards behavior is specified in `docs/LOYALTY_REWARDS.md`.
 npm run lint
 npx tsc --noEmit
 npm run build
+```
+
+With the local Supabase database running, verify simultaneous last-seat voucher reservations with:
+
+```bash
+npm run test:offer-concurrency
 ```
 
 ## Supabase configuration

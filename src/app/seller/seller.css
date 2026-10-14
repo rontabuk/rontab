@@ -93,6 +93,34 @@
 .seller-profile-verification-error { color: #98483d !important; font-weight: 700; }
 .seller-profile-phone-confirmed { max-width: 820px; margin: 15px 0; color: #356b3b; font-size: 12px; font-weight: 700; }
 .seller-advertising-manager { display: grid; gap: 21px; max-width: 1060px; }
+.seller-offer-request-form { max-width: 900px; }
+.seller-offer-branches, .seller-offer-schedule { grid-column: 1 / -1; }
+.seller-offer-branches { display: grid; gap: 12px; }
+.seller-offer-branch, .seller-offer-schedule { min-width: 0; margin: 0; padding: 14px; border: 1px solid #dfe4dc; border-radius: 4px; }
+.seller-offer-branch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+.seller-offer-branch legend, .seller-offer-schedule legend { padding-inline: 5px; color: #354137; font-size: 12px; font-weight: 700; }
+.seller-offer-branch .city-picker, .seller-offer-remove-branch { grid-column: 1 / -1; }
+.seller-offer-branch .city-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+.seller-offer-remove-branch, .seller-offer-add-branch { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.seller-offer-remove-branch { justify-self: start; padding: 6px 0; border: 0; background: transparent; color: #90483c; cursor: pointer; font: inherit; font-size: 12px; }
+.seller-offer-schedule { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; }
+.seller-offer-days { display: flex; grid-column: 1 / -1; flex-wrap: wrap; gap: 9px 15px; }
+.seller-offer-days label, .seller-offer-capacity-acknowledgement { display: flex; align-items: center; gap: 7px; }
+.seller-offer-days input, .seller-offer-capacity-acknowledgement input { width: 15px; min-height: 15px; flex: 0 0 auto; margin: 0; accent-color: #526f52; }
+.seller-offer-policy-note, .seller-offer-capacity-acknowledgement { grid-column: 1 / -1; }
+.seller-offer-policy-note { margin: 0; color: #687267; font-size: 12px; line-height: 1.5; }
+.seller-offer-media-preview { display: grid; grid-column: 1 / -1; justify-items: start; gap: 5px; color: #687267; font-size: 11px; }
+.seller-offer-media-preview img, .seller-offer-media-preview video { width: min(100%, 260px); max-height: 180px; border: 1px solid #e0e4dc; background: #e7ece4; object-fit: cover; }
+.seller-offer-request-history { max-width: 900px; margin-top: 28px; }
+.seller-offer-request-history ol { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.seller-offer-request-history li { display: grid; gap: 5px; padding: 12px 14px; border: 1px solid #e1e5de; border-radius: 4px; background: #fcfdf9; }
+.seller-offer-request-history li > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.seller-offer-request-history p { margin: 0; color: #687267; font-size: 12px; }
+.seller-offer-redeem { display: grid; gap: 12px; max-width: 900px; margin-top: 26px; padding: 16px; border: 1px solid #dfe4dc; background: #fcfdf9; }
+.seller-offer-redeem form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px 12px; }
+.seller-offer-redeem form label { grid-column: 1 / -1; color: #626c60; font-size: 11px; font-weight: 700; }
+.seller-offer-redeem input { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid #d9ded5; background: #fff; color: #29332a; font: inherit; font-size: 13px; }
+.seller-offer-redeem button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding-inline: 12px; }
 .seller-ad-balance { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px; border-top: 2px solid #657c61; border-bottom: 1px solid #dfe3da; background: linear-gradient(105deg, #f4f7f0 0%, #fffdf8 76%); }
 .seller-ad-balance .admin-eyebrow { margin-bottom: 8px; }
 .seller-ad-balance h2 { margin: 0; color: #29332a; font-family: var(--font-display), Georgia, serif; font-size: 30px; font-weight: 400; line-height: 1.1; }
@@ -163,6 +191,8 @@
 @media (max-width: 1180px) { .seller-ad-product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 900px) { .seller-ad-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) {
+	.seller-offer-redeem form { grid-template-columns: 1fr; }
+	.seller-offer-branch, .seller-offer-branch .city-picker, .seller-offer-schedule { grid-template-columns: minmax(0, 1fr); }
 	.seller-ad-balance { align-items: flex-start; flex-direction: column; }
 	.seller-ad-balance-rule { grid-template-columns: auto auto auto; min-width: 0; align-items: center; gap: 6px; padding: 0; border-left: 0; }
 	.seller-ad-topup, .seller-ad-allocation { padding: 15px; }

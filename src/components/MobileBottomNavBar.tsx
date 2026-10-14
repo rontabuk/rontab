@@ -15,6 +15,7 @@ import {
   Plus,
   ShieldCheck,
   Store,
+  Ticket,
   UserPlus,
   type LucideIcon,
 } from "lucide-react";
@@ -34,6 +35,7 @@ const icons = {
   overview: LayoutDashboard,
   review: ShieldCheck,
   sellers: Store,
+  ticket: Ticket,
 } satisfies Record<string, LucideIcon>;
 
 type NavItem = {

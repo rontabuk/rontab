@@ -1,6 +1,7 @@
 export const adminAreas = [
   { href: "/admin/products", label: "Product review", description: "Review submissions and feature approved products." },
   { href: "/admin/sellers", label: "Sellers", description: "Approve shops, control visibility, and grant click credits." },
+  { href: "/admin/seller-offers", label: "Offer review", description: "Review seller promotions, set points and daily quotas, and publish approved offers." },
   { href: "/admin/visitors", label: "Visitors", description: "Review registered visitors and suspend or restore access." },
   { href: "/admin/rewards", label: "Loyalty & rewards", description: "Create offers, run draws, and record gift fulfilment." },
   { href: "/admin/categories", label: "Categories", description: "Organise the product discovery taxonomy." },
