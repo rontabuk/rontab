@@ -29,6 +29,6 @@ export default async function VisitorAccountPage({
       : null;
 
   const initialMode = mode === "register" ? "register" : "login";
-  const locations = await getSupportedLocations(supabase);
+  const locations = await getSupportedLocations();
   return <VisitorAccountForm nextPath={nextPath} notice={notice} initialMode={initialMode} {...locations} />;
 }

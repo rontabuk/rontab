@@ -34,7 +34,7 @@ export default async function AdminRewardsPage({
       .order("created_at", { ascending: false }),
     supabase.rpc("admin_get_loyalty_offer_metrics"),
     supabase.rpc("admin_get_loyalty_offer_city_metrics"),
-    getSupportedLocations(supabase),
+    getSupportedLocations(),
   ]);
   if (settingsResult.error) throw new Error(settingsResult.error.message);
   if (offersResult.error) throw new Error(offersResult.error.message);

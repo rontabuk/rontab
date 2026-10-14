@@ -26,7 +26,7 @@ export default async function SellerProfilePage({
       .select("contact_name,phone,phone_contact_confirmed_at,website_url,instagram_url,business_address")
       .eq("seller_profile_id", seller.id)
       .maybeSingle(),
-    getSupportedLocations(supabase),
+    getSupportedLocations(),
     getSavedCity(supabase, seller.shop_city_id),
   ]);
 

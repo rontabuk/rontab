@@ -24,7 +24,7 @@ export default async function VisitorAccountPage({
     supabase.from("profiles").select("display_name,avatar_url,city,city_id,country_code").eq("id", user.id).single(),
     supabase.rpc("get_visitor_loyalty_summary"),
     supabase.rpc("is_visitor_city_locked"),
-    getSupportedLocations(supabase),
+    getSupportedLocations(),
   ]);
 
   if (profileError) throw new Error(profileError.message);

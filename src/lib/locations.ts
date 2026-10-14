@@ -1,13 +1,15 @@
 import "server-only";
 
 import type { SupportedCity, SupportedCountry } from "@/components/CityPicker";
+import { createSupabasePublicClient } from "@/lib/supabase/server";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 const CITY_COLUMNS = "city_id,city_name,city_ascii,admin_name,country_code";
 
-export async function getSupportedLocations(supabase: ServerClient): Promise<{ countries: SupportedCountry[]; cities: SupportedCity[] }> {
+export async function getSupportedLocations(): Promise<{ countries: SupportedCountry[]; cities: SupportedCity[] }> {
+  const supabase = createSupabasePublicClient();
   const [countriesResult, citiesResult] = await Promise.all([
     supabase.from("supported_countries").select("country_code,country_name").eq("is_enabled", true).order("country_name"),
     supabase.from("supported_cities").select(CITY_COLUMNS).eq("is_enabled", true).order("city_name"),
