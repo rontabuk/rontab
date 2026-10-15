@@ -23,7 +23,6 @@ export function SellerNavigation({ hasNewAdCreditGrants }: { hasNewAdCreditGrant
         { href: "/seller/products", label: "Your products" },
         { href: "/seller/offers", label: "Offer requests" },
         { href: "/seller/creator-requests", label: "Creator collaborations" },
-        { href: "/seller/creator-requests", label: "Creator collaborations" },
         {
           href: "/seller/advertising",
           label: "Advertising",
