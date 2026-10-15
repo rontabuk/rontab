@@ -4,7 +4,7 @@
 
 Confirmed visitor accounts can submit a public creator profile with a display name, introduction, one to five specialties, an optional primary audience city, links to social platforms, and up to three work samples. The creator must explicitly consent to publishing these fields. Seller and administrator accounts cannot submit visitor creator applications.
 
-Applications move through `submitted`, `changes_requested`, `approved`, `rejected`, and `suspended` states. Only approved profiles appear in the public directory. Review notes are visible to the creator and administrators, not to the public. A creator who changes an approved profile submits a private draft for review; the last approved profile remains public until the new version is approved. A rejection or change request does not remove that approved version.
+Applications move through `submitted`, `changes_requested`, `approved`, `rejected`, `suspended`, and `withdrawn` states. Only public profiles appear in the directory. Review notes are visible to the creator and administrators, not to the public. A creator who changes an approved profile submits a private draft for review; the last approved profile remains public until the new version is approved. A rejection or change request does not remove that approved version. Creators can take their profile offline and submit it again later with fresh public consent. Administrators can reinstate a suspended profile to the status it had before suspension.
 
 ## Public information and metrics
 
@@ -12,7 +12,7 @@ Approved profiles show the creator's display name, introduction, specialties, pr
 
 ## Collaboration requests
 
-Active sellers can send a private request to an approved creator with a title, brief, and optional proposed compensation. Only the seller and creator can read the request. A creator can accept or decline and include a response; contact information is not exposed by the request workflow.
+Active sellers can send a private request to a public creator with a title, brief, and optional proposed compensation. Only the seller and creator can read the request. A creator can accept or decline and include a response while their profile is public; withdrawn or suspended creators cannot respond. Contact information is not exposed by the request workflow.
 
 ## Fan codes and attribution
 

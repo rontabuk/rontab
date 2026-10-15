@@ -107,6 +107,42 @@ try {
     .select("title,is_published").eq("creator_profile_id", ids.creator));
   assert.deepEqual(portfolio.map((item) => [item.title, item.is_published]), [["New sample awaiting review", true]]);
 
+  const pendingName = `${updatedName} Pending`;
+  const pendingHandle = `pending_${suffix.slice(0, 8)}`;
+  throwOnError(await visitor.rpc("save_creator_application", {
+    p_display_name: pendingName,
+    p_bio: "I create useful local food and home content for an engaged community.",
+    p_specialties: ["food", "local"],
+    p_platform_accounts: [{ platform: "instagram", handle: pendingHandle, profile_url: `https://www.instagram.com/${pendingHandle}/`, follower_count: 21000 }],
+    p_audience_city_id: cities[0].city_id,
+    p_portfolio_items: [],
+    p_public_profile_consent: true,
+  }));
+  throwOnError(await admin.rpc("admin_review_creator_profile", {
+    p_creator_profile_id: ids.creator,
+    p_decision: "suspend",
+    p_review_note: "Temporary review hold.",
+  }));
+  const hiddenSuspendedCreator = throwOnError(await publicClient.from("creator_profiles")
+    .select("id").eq("id", ids.creator));
+  assert.equal(hiddenSuspendedCreator.length, 0, "suspension removes the public profile");
+  throwOnError(await admin.rpc("admin_review_creator_profile", {
+    p_creator_profile_id: ids.creator,
+    p_decision: "reinstate",
+    p_review_note: null,
+  }));
+  const reinstatedDraft = throwOnError(await service.from("creator_profiles")
+    .select("status,suspended_from_status,is_public,published_display_name")
+    .eq("id", ids.creator).single());
+  assert.equal(reinstatedDraft.status, "submitted", "reinstatement restores the review state before suspension");
+  assert.equal(reinstatedDraft.suspended_from_status, null);
+  assert.equal(reinstatedDraft.is_public, true);
+  assert.equal(reinstatedDraft.published_display_name, updatedName, "reinstatement restores the last approved snapshot");
+  throwOnError(await admin.rpc("admin_review_creator_profile", { p_creator_profile_id: ids.creator, p_decision: "approve", p_review_note: null }));
+  const approvedAfterReinstatement = throwOnError(await publicClient.from("creator_profiles")
+    .select("published_display_name").eq("id", ids.creator).single());
+  assert.equal(approvedAfterReinstatement.published_display_name, pendingName);
+
   ids.fan = await createAccount(`creator-fan-${suffix}@example.com`);
   const fan = createClient(url, anonKey);
   throwOnError(await fan.auth.signInWithPassword({ email: `creator-fan-${suffix}@example.com`, password }));
@@ -121,11 +157,13 @@ try {
   ids.secondOwner = await createAccount(`creator-second-${suffix}@example.com`);
   const secondOwner = createClient(url, anonKey);
   throwOnError(await secondOwner.auth.signInWithPassword({ email: `creator-second-${suffix}@example.com`, password }));
+  const secondCreatorName = `Second Creator ${suffix.slice(0, 8)}`;
+  const secondPlatformHandle = `second_${suffix.slice(0, 8)}`;
   const secondCreatorApplication = throwOnError(await secondOwner.rpc("save_creator_application", {
-    p_display_name: `Second Creator ${suffix.slice(0, 8)}`,
+    p_display_name: secondCreatorName,
     p_bio: "I share useful local lifestyle and product recommendations with my community.",
     p_specialties: ["local", "home"],
-    p_platform_accounts: [{ platform: "youtube", handle: `second_${suffix.slice(0, 8)}`, profile_url: `https://www.youtube.com/@second_${suffix.slice(0, 8)}`, follower_count: 8000 }],
+    p_platform_accounts: [{ platform: "youtube", handle: secondPlatformHandle, profile_url: `https://www.youtube.com/@${secondPlatformHandle}`, follower_count: 8000 }],
     p_audience_city_id: cities[0].city_id,
     p_portfolio_items: [],
     p_public_profile_consent: true,
@@ -147,6 +185,24 @@ try {
   assert.equal(creatorFanStats[0].first_referral_count, 1);
   const selfFollow = await visitor.rpc("creator_follow_by_code", { p_code: creatorCodeResult.referral_code });
   assert.equal(selfFollow.error?.code, "55000", "a creator cannot count themselves as a fan");
+
+  throwOnError(await secondOwner.rpc("creator_withdraw_public_profile"));
+  const withdrawnPublicProfile = throwOnError(await publicClient.from("creator_profiles")
+    .select("id").eq("id", ids.secondCreator));
+  assert.equal(withdrawnPublicProfile.length, 0, "creator withdrawal removes the profile from public access");
+  const withdrawnCodeFollow = await fan.rpc("creator_follow_by_code", { p_code: secondCreatorCode.referral_code });
+  assert.equal(withdrawnCodeFollow.error?.code, "P0002", "withdrawn creators cannot receive new follows");
+  const secondCreatorReapplication = throwOnError(await secondOwner.rpc("save_creator_application", {
+    p_display_name: secondCreatorName,
+    p_bio: "I share useful local lifestyle and product recommendations with my community.",
+    p_specialties: ["local", "home"],
+    p_platform_accounts: [{ platform: "youtube", handle: secondPlatformHandle, profile_url: `https://www.youtube.com/@${secondPlatformHandle}`, follower_count: 9000 }],
+    p_audience_city_id: cities[0].city_id,
+    p_portfolio_items: [],
+    p_public_profile_consent: true,
+  }));
+  assert.equal(secondCreatorReapplication, ids.secondCreator, "withdrawn creators can reapply using the same profile");
+  throwOnError(await admin.rpc("admin_review_creator_profile", { p_creator_profile_id: ids.secondCreator, p_decision: "approve", p_review_note: null }));
 
   ids.sellerUser = await createAccount(`creator-seller-${suffix}@example.com`);
   const sellerProfile = throwOnError(await service.from("seller_profiles").insert({
@@ -176,6 +232,22 @@ try {
   const incomingRequest = throwOnError(await visitor.from("creator_collaboration_requests")
     .select("status,title").eq("id", ids.request).single());
   assert.equal(incomingRequest.status, "pending");
+  throwOnError(await admin.rpc("admin_review_creator_profile", {
+    p_creator_profile_id: ids.creator,
+    p_decision: "suspend",
+    p_review_note: "Pause collaboration responses during a safety review.",
+  }));
+  const suspendedResponse = await visitor.rpc("creator_decide_collaboration_request", {
+    p_request_id: ids.request,
+    p_decision: "accept",
+    p_response: "This response must be blocked while the profile is suspended.",
+  });
+  assert.equal(suspendedResponse.error?.code, "55000", "suspended creators cannot respond to pending collaboration requests");
+  throwOnError(await admin.rpc("admin_review_creator_profile", {
+    p_creator_profile_id: ids.creator,
+    p_decision: "reinstate",
+    p_review_note: null,
+  }));
   throwOnError(await visitor.rpc("creator_decide_collaboration_request", {
     p_request_id: ids.request,
     p_decision: "accept",
@@ -204,7 +276,7 @@ try {
     .select("status").eq("id", withdrawnRequestId).single());
   assert.equal(withdrawnRequest.status, "withdrawn");
 
-  console.log("PASS: public snapshots, multi-fan codes, single first attribution, self-follow prevention, draft privacy, notifications, collaboration responses, and withdrawal.");
+  console.log("PASS: public snapshots, reversible suspension, creator withdrawal and reapplication, multi-fan codes, single first attribution, self-follow prevention, draft privacy, notifications, collaboration response guards, and seller withdrawal.");
 } catch (error) {
   failure = error;
 } finally {

@@ -10,10 +10,10 @@ export async function reviewCreatorProfile(formData: FormData) {
   const profileId = String(formData.get("creator_profile_id") ?? "");
   const decision = String(formData.get("decision") ?? "");
   const reviewNote = String(formData.get("review_note") ?? "").trim();
-  if (!isUuid(profileId) || !["approve", "changes_requested", "reject", "suspend"].includes(decision)) {
+  if (!isUuid(profileId) || !["approve", "changes_requested", "reject", "suspend", "reinstate"].includes(decision)) {
     throw new FormError("Invalid creator review request.");
   }
-  if (reviewNote.length > 2000 || (decision !== "approve" && !reviewNote)) {
+  if (reviewNote.length > 2000 || (["changes_requested", "reject", "suspend"].includes(decision) && !reviewNote)) {
     throw new FormError("Add a review note of 2,000 characters or fewer when requesting changes, rejecting, or suspending.");
   }
 

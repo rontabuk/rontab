@@ -189,7 +189,7 @@ export type Database = {
         [{ foreignKeyName: "seller_offer_point_transactions_coupon_id_fkey"; columns: ["coupon_id"]; isOneToOne: false; referencedRelation: "seller_offer_coupons"; referencedColumns: ["id"] }]
       >;
       creator_profiles: Table<
-        { audience_city_id: string | null; bio: string; created_at: string; display_name: string; id: string; is_public: boolean; owner_id: string; public_profile_consent_at: string | null; published_audience_city_id: string | null; published_bio: string | null; published_display_name: string | null; published_specialties: string[] | null; referral_code: string | null; reviewed_at: string | null; slug: string; specialties: string[]; status: string; submitted_at: string; updated_at: string },
+        { audience_city_id: string | null; bio: string; created_at: string; display_name: string; id: string; is_public: boolean; owner_id: string; public_profile_consent_at: string | null; published_audience_city_id: string | null; published_bio: string | null; published_display_name: string | null; published_specialties: string[] | null; referral_code: string | null; reviewed_at: string | null; slug: string; specialties: string[]; status: string; submitted_at: string; suspended_from_status: string | null; updated_at: string },
         never
       >;
       creator_platform_accounts: Table<
@@ -315,6 +315,7 @@ export type Database = {
       get_my_creator_profile_id: { Args: Record<PropertyKey, never>; Returns: string | null };
       save_creator_application: { Args: { p_audience_city_id: string | null; p_bio: string; p_display_name: string; p_platform_accounts: Json; p_portfolio_items: Json; p_public_profile_consent: boolean; p_specialties: string[] }; Returns: string };
       admin_review_creator_profile: { Args: { p_creator_profile_id: string; p_decision: string; p_review_note: string | null }; Returns: undefined };
+      creator_withdraw_public_profile: { Args: Record<PropertyKey, never>; Returns: undefined };
       admin_grant_creator_points: { Args: { p_creator_profile_id: string; p_points: number; p_reason: string; p_idempotency_key: string }; Returns: boolean };
       seller_create_creator_collaboration_request: { Args: { p_brief: string; p_creator_profile_id: string; p_proposed_compensation: string; p_seller_profile_id: string; p_title: string }; Returns: string };
       creator_decide_collaboration_request: { Args: { p_decision: string; p_request_id: string; p_response: string }; Returns: undefined };

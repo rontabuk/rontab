@@ -87,6 +87,17 @@ export async function saveCreatorApplication(_state: FormState, formData: FormDa
   });
 }
 
+export async function withdrawCreatorProfile() {
+  const { supabase } = await getVisitorAccount("/visitor/creator");
+  const { error } = await supabase.rpc("creator_withdraw_public_profile");
+  if (error?.code === "P0002" || error?.code === "55000" || error?.code === "42501") throw new FormError(error.message);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/visitor/creator");
+  revalidatePath("/creators");
+  redirect("/visitor/creator?withdrawn=1");
+}
+
 export async function respondToCreatorCollaborationRequest(formData: FormData) {
   const requestId = String(formData.get("request_id") ?? "");
   const decision = String(formData.get("decision") ?? "");

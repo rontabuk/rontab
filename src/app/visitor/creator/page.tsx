@@ -5,7 +5,7 @@ import { ArrowUpRight, BadgeCheck, Check, Coins, ExternalLink, MessageSquareText
 import { ActionForm } from "@/components/ActionForm";
 import { CreatorFanTools } from "@/components/creator/CreatorFanTools";
 import { CityPicker } from "@/components/CityPicker";
-import { respondToCreatorCollaborationRequest } from "@/app/visitor/creator-actions";
+import { respondToCreatorCollaborationRequest, withdrawCreatorProfile } from "@/app/visitor/creator-actions";
 import { creatorPlatforms, creatorSpecialties } from "@/lib/creator/catalog";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import { getSavedCity, getSupportedLocations } from "@/lib/locations";
@@ -41,15 +41,16 @@ const statusCopy: Record<string, string> = {
   rejected: "This application was not approved. You can revise it and submit again.",
   approved: "Your profile is public. Any changes you submit will be reviewed before they appear.",
   suspended: "This profile is currently unavailable. Contact Rontab support if you need help.",
+  withdrawn: "Your profile is offline. You can submit it again with public consent.",
 };
 
 export default async function VisitorCreatorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ submitted?: string; replied?: string }>;
+  searchParams: Promise<{ submitted?: string; replied?: string; withdrawn?: string }>;
 }) {
   await connection();
-  const [{ submitted, replied }, { supabase }, { countries, cities }] = await Promise.all([
+  const [{ submitted, replied, withdrawn }, { supabase }, { countries, cities }] = await Promise.all([
     searchParams,
     getVisitorAccount("/visitor/creator"),
     getSupportedLocations(),
@@ -126,6 +127,7 @@ export default async function VisitorCreatorPage({
 
       {submitted === "1" && <p className="admin-save-success" role="status">Your creator profile has been submitted for review.</p>}
       {replied === "1" && <p className="admin-save-success" role="status">Your collaboration response has been sent.</p>}
+      {withdrawn === "1" && <p className="admin-save-success" role="status">Your profile is now offline. You can apply again whenever you are ready.</p>}
       <div className="creator-programme-links">
         <Link href="/creators">Browse approved creators <ArrowUpRight size={15} aria-hidden="true" /></Link>
         {profile?.is_public && <Link href={`/creators/${profile.slug}`}><ExternalLink size={14} aria-hidden="true" />View your public profile</Link>}
@@ -155,6 +157,13 @@ export default async function VisitorCreatorPage({
           firstReferralCount={firstReferralCount}
           platforms={accounts.filter((account) => account.is_published).map((account) => account.platform === "x" ? "X" : account.platform)}
         />
+      )}
+
+      {profile && profile.status !== "suspended" && profile.status !== "withdrawn" && (
+        <form className="creator-withdraw-action" action={withdrawCreatorProfile}>
+          <p>Take your profile offline. It will no longer appear in the creator directory or accept new collaboration requests.</p>
+          <button className="admin-reject-button" type="submit">Take profile offline</button>
+        </form>
       )}
 
       {profile?.status === "suspended" ? (

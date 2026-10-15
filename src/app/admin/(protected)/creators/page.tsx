@@ -17,14 +17,17 @@ export default async function AdminCreatorsPage({
 }) {
   await connection();
   const [{ reviewed, granted, duplicate }, { supabase }] = await Promise.all([searchParams, requireAdmin()]);
-  const [submittedResult, approvedResult] = await Promise.all([
+  const [submittedResult, approvedResult, suspendedResult] = await Promise.all([
     supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,published_display_name,published_bio,published_specialties,published_audience_city_id,created_at,updated_at").eq("status", "submitted").order("submitted_at", { ascending: true }),
     supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,published_display_name,published_bio,published_specialties,published_audience_city_id,created_at,updated_at").eq("is_public", true).order("updated_at", { ascending: false }).limit(100),
+    supabase.from("creator_profiles").select("id,display_name").eq("status", "suspended").order("updated_at", { ascending: false }),
   ]);
   if (submittedResult.error) throw new Error(submittedResult.error.message);
   if (approvedResult.error) throw new Error(approvedResult.error.message);
+  if (suspendedResult.error) throw new Error(suspendedResult.error.message);
   const submitted = submittedResult.data;
   const approved = approvedResult.data;
+  const suspended = suspendedResult.data;
   const allProfileIds = [...submitted, ...approved].map((profile) => profile.id);
   const cityIds = [...new Set([...submitted.map((profile) => profile.audience_city_id), ...approved.map((profile) => profile.published_audience_city_id)].filter((cityId): cityId is string => Boolean(cityId)))];
   const [accountsResult, portfolioResult, citiesResult, reviewsResult, pointsResult] = await Promise.all([
@@ -172,6 +175,33 @@ export default async function AdminCreatorsPage({
             ))}
           </div>
         ) : <div className="admin-empty-state"><h2>No approved creators yet</h2><p>Approved public profiles will appear here.</p></div>}
+      </section>
+
+      <section className="admin-dashboard-section" aria-labelledby="suspended-creators-title">
+        <div className="admin-loyalty-list-heading">
+          <div><p className="admin-eyebrow">ACCOUNT STATUS</p><h2 id="suspended-creators-title">Suspended profiles</h2></div>
+          <span>{formatNumber(suspended.length)} profiles</span>
+        </div>
+        {suspended.length ? (
+          <div className="creator-admin-list">
+            {suspended.map((profile) => (
+              <article className="creator-admin-item" key={profile.id}>
+                <div>
+                  <span className="admin-status admin-status-pending">Suspended</span>
+                  <h3>{profile.display_name}</h3>
+                  <p className="creator-admin-specialties">This profile is hidden from the public directory.</p>
+                </div>
+                <div className="creator-admin-review-actions">
+                  <form action={reviewCreatorProfile}>
+                    <input type="hidden" name="creator_profile_id" value={profile.id} />
+                    <input type="hidden" name="decision" value="reinstate" />
+                    <button className="admin-approve-button" type="submit">Restore public profile</button>
+                  </form>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : <div className="admin-empty-state"><h2>No suspended creator profiles</h2></div>}
       </section>
     </main>
   );
