@@ -75,10 +75,6 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .65; point
 .site-header-inner > .wordmark { grid-column: 2; grid-row: 1; justify-self: center; }
 .site-header-inner > .header-actions { grid-column: 1; grid-row: 1; justify-self: start; }
 .site-header-inner > .header-end { grid-column: 3; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 8px; }
-.site-creator-navigation { display: flex; justify-content: center; border-bottom: 1px solid #d9ded5; }
-.site-creator-navigation > a { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 2px solid var(--green-dark); color: var(--green-dark); font-size: 12px; font-weight: 700; }
-.site-creator-navigation > a:hover { background: #e9eee5; }
-.site-creator-count { min-width: 3ch; padding: 2px 6px; border-radius: 4px; background: #e9eee5; font-size: 11px; font-variant-numeric: tabular-nums; text-align: center; }
 .notification-bell { position: relative; }
 .notification-bell-trigger { position: relative; display: grid; width: 40px; height: 40px; place-items: center; border: 0; border-radius: 5px; background: #f2f2f2; color: #0f0f0f; cursor: pointer; transition: background-color 150ms ease, color 150ms ease, transform 120ms ease; }
 .notification-bell-trigger:hover { background: #e5e5e5; }

@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { connection } from "next/server";
-import { CircleUserRound, Menu, UsersRound } from "lucide-react";
+import { CircleUserRound, Menu } from "lucide-react";
 import { DismissibleDetails } from "@/components/DismissibleDetails";
 import { NotificationBell } from "@/components/NotificationBell";
 import { informationPages } from "@/data/information";
 import { getViewer } from "@/lib/auth/viewer";
 import { formatNumber } from "@/lib/format";
-import { createSupabasePublicClient } from "@/lib/supabase/server";
 
 export function SiteHeader() {
   return (
@@ -19,27 +17,8 @@ export function SiteHeader() {
           <AccountLinks />
         </Suspense>
       </div>
-      <nav className="site-creator-navigation page-shell" aria-label="Community">
-        <Link href="/creators">
-          <UsersRound size={16} aria-hidden="true" />
-          Browse creators
-          <Suspense fallback={<span className="site-creator-count" aria-label="Loading creator count">...</span>}>
-            <PublicCreatorCount />
-          </Suspense>
-        </Link>
-      </nav>
     </header>
   );
-}
-
-async function PublicCreatorCount() {
-  await connection();
-  const { count, error } = await createSupabasePublicClient()
-    .from("creator_profiles")
-    .select("id", { count: "exact", head: true })
-    .eq("is_public", true);
-  if (error) return null;
-  return <span className="site-creator-count" aria-label={`${count ?? 0} published creators`}>{formatNumber(count ?? 0)}</span>;
 }
 
 function AccountLinksFallback({ bell = null }: { bell?: React.ReactNode }) {
