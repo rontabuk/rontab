@@ -94,6 +94,7 @@ function HeaderActions({
               {points !== null && (
                 <span className="visitor-points-badge" aria-label={`${points} Rontab points`}>Points <strong>{formatNumber(points)}</strong></span>
               )}
+                <Link href="/creators">Creators</Link>
               {children}
             </div>
           </div>

@@ -13,6 +13,7 @@ const visitorLinks = [
   { href: "/visitor/support", label: "My reports" },
   { href: "/visitor/rewards", label: "Points & rewards" },
   { href: "/products", label: "Discover products" },
+  { href: "/visitor/creator", label: "Introduce yourself" },
 ];
 
 async function ProtectedVisitorShell({ children }: { children: ReactNode }) {

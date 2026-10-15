@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { Boxes, LifeBuoy, Store, TicketCheck } from "lucide-react";
+import { Boxes, LifeBuoy, Store, TicketCheck, UsersRound } from "lucide-react";
 import { requireAdmin } from "@/lib/admin/access";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import { adminAreas, plannedAdminAreas } from "@/lib/admin/areas";
@@ -16,11 +16,12 @@ export const instant = false;
 export default async function AdminOverviewPage() {
   await connection();
   const { supabase } = await requireAdmin();
-  const [productsResult, sellersResult, requestsResult, offersResult, auditResult, profilesResult, verifiedProfilesResult, activeSellersResult, approvedProductsResult, rewardSupportResult, voucherSupportResult, marketplaceSupportResult] = await Promise.all([
+  const [productsResult, sellersResult, requestsResult, offersResult, creatorApplicationsResult, auditResult, profilesResult, verifiedProfilesResult, activeSellersResult, approvedProductsResult, rewardSupportResult, voucherSupportResult, marketplaceSupportResult] = await Promise.all([
     supabase.from("products").select("id", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("seller_profiles").select("id", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("seller_offer_requests").select("id", { count: "exact", head: true }).eq("status", "submitted"),
     supabase.from("seller_offers").select("id", { count: "exact", head: true }).eq("status", "published"),
+    supabase.from("creator_profiles").select("id", { count: "exact", head: true }).eq("status", "submitted"),
     supabase.from("admin_audit_logs").select("id,action,entity_type,entity_id,created_at,actor_id").order("created_at", { ascending: false }).limit(8),
     supabase.from("profiles").select("id", { count: "exact", head: true }),
     supabase.from("profiles").select("id", { count: "exact", head: true }).not("email_verified_at", "is", null),
@@ -30,7 +31,7 @@ export default async function AdminOverviewPage() {
     supabase.rpc("admin_get_seller_voucher_support_cases", { p_limit: 1, p_offset: 0 }),
     supabase.rpc("admin_get_marketplace_support_cases", { p_limit: 1, p_offset: 0 }),
   ]);
-  for (const result of [productsResult, sellersResult, auditResult, profilesResult, verifiedProfilesResult, activeSellersResult, approvedProductsResult]) {
+  for (const result of [productsResult, sellersResult, creatorApplicationsResult, auditResult, profilesResult, verifiedProfilesResult, activeSellersResult, approvedProductsResult]) {
     if (result.error) throw new Error(result.error.message);
   }
   const requestsSchemaUnavailable = isSellerOfferSchemaUnavailable(requestsResult.error);
@@ -58,6 +59,7 @@ export default async function AdminOverviewPage() {
     { href: "/admin/products", label: "Product review", count: productsResult.count ?? 0, icon: Boxes },
     { href: "/admin/sellers", label: "Seller applications", count: sellersResult.count ?? 0, icon: Store },
     { href: "/admin/seller-offers", label: "Offer requests", count: requestCount, icon: TicketCheck },
+    { href: "/admin/creators", label: "Creator applications", count: creatorApplicationsResult.count ?? 0, icon: UsersRound },
     { href: "/admin/support", label: "Support cases", count: supportCount, icon: LifeBuoy },
   ];
 

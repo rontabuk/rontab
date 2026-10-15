@@ -188,6 +188,30 @@ export type Database = {
         { coupon_id: string; created_at?: string; id?: never; idempotency_key: string; points_delta: number; transaction_type: string; visitor_id: string },
         [{ foreignKeyName: "seller_offer_point_transactions_coupon_id_fkey"; columns: ["coupon_id"]; isOneToOne: false; referencedRelation: "seller_offer_coupons"; referencedColumns: ["id"] }]
       >;
+      creator_profiles: Table<
+        { bio: string; created_at: string; display_name: string; id: string; is_public: boolean; owner_id: string; reviewed_at: string | null; slug: string; specialties: string[]; status: string; submitted_at: string; updated_at: string },
+        never
+      >;
+      creator_platform_accounts: Table<
+        { created_at: string; creator_profile_id: string; followers_updated_at: string; follower_count: number; handle: string; id: string; platform: string; profile_url: string },
+        never,
+        [{ foreignKeyName: "creator_platform_accounts_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }]
+      >;
+      creator_profile_reviews: Table<
+        { admin_id: string; created_at: string; creator_profile_id: string; decision: string; id: number; review_note: string | null },
+        never,
+        [{ foreignKeyName: "creator_profile_reviews_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }]
+      >;
+      creator_point_accounts: Table<
+        { creator_profile_id: string; points_balance: number; updated_at: string },
+        never,
+        [{ foreignKeyName: "creator_point_accounts_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: true; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }]
+      >;
+      creator_point_transactions: Table<
+        { admin_id: string; created_at: string; creator_profile_id: string; id: number; idempotency_key: string; points_delta: number; reason: string },
+        never,
+        [{ foreignKeyName: "creator_point_transactions_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }]
+      >;
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -262,6 +286,11 @@ export type Database = {
       visitor_report_seller_voucher_issue: { Args: { p_coupon_id: string; p_description: string; p_issue_type: string }; Returns: string };
       admin_get_seller_voucher_support_cases: { Args: { p_limit: number; p_offset: number }; Returns: { case_id: string; coupon_id: string; created_at: string; description: string; issue_type: string; offer_id: string; offer_title: string; resolution_note: string | null; seller_profile_id: string; shop_name: string; status: string; total_case_count: number; updated_at: string; visitor_email: string | null; visitor_id: string }[] };
       admin_update_seller_voucher_support_case: { Args: { p_case_id: string; p_resolution_note: string; p_status: string }; Returns: undefined };
+      get_my_creator_profile_id: { Args: Record<PropertyKey, never>; Returns: string | null };
+      save_creator_application: { Args: { p_bio: string; p_display_name: string; p_platform_accounts: Json; p_specialties: string[] }; Returns: string };
+      admin_review_creator_profile: { Args: { p_creator_profile_id: string; p_decision: string; p_review_note: string | null }; Returns: undefined };
+      admin_grant_creator_points: { Args: { p_creator_profile_id: string; p_points: number; p_reason: string; p_idempotency_key: string }; Returns: boolean };
+      is_creator_profile_owner: { Args: { p_creator_profile_id: string }; Returns: boolean };
       get_visitor_seller_offer_coupons: { Args: Record<PropertyKey, never>; Returns: { branch_address: string | null; branch_name: string; can_cancel: boolean; city_name: string; coupon_code: string; created_at: string; ends_at: string; id: string; offer_date: string; offer_id: string; points_cost: number; starts_at: string; status: string; title: string }[] };
       admin_decide_seller_offer_request: { Args: { p_decision: string; p_final_terms: string; p_points_cost: number; p_request_id: string; p_review_note: string | null; p_schedule_capacities: Json }; Returns: string | null };
       admin_set_seller_offer_status: { Args: { p_next_status: string; p_offer_id: string }; Returns: undefined };
