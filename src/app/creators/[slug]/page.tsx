@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ArrowLeft, BadgeCheck, ExternalLink, MapPin, Send } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
-import { CreatorFanTools } from "@/components/creator/CreatorFanTools";
+import { CreatorFanTools, CreatorVerificationBadge } from "@/components/creator/CreatorFanTools";
 import { sendCreatorCollaborationRequest } from "@/app/seller/(protected)/creator-actions";
 import { getViewer } from "@/lib/auth/viewer";
 import { creatorSpecialties } from "@/lib/creator/catalog";
@@ -86,7 +86,7 @@ export default async function CreatorProfilePage({
       <Link className="creator-back-link" href="/creators"><ArrowLeft size={14} aria-hidden="true" />All creators</Link>
       <header className="creator-profile-hero">
         <p className="creator-directory-eyebrow">RONTAB CREATOR PROFILE</p>
-        <h1>{profile.published_display_name}</h1>
+        <h1 className="creator-profile-name">{profile.published_display_name}<CreatorVerificationBadge fanCount={fanCountResult.data ?? 0} /></h1>
         <p className="creator-profile-specialties">
           {(profile.published_specialties ?? []).map((value) => creatorSpecialties.find((item) => item.value === value)?.label ?? value).join(" · ")}
         </p>

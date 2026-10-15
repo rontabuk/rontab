@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { BadgeCheck, Copy, Download, FileDown, Share2 } from "lucide-react";
 import { formatNumber } from "@/lib/format";
-import styles from "./CreatorFanTools.module.css";
 
 type CreatorFanToolsProps = {
   displayName: string;
@@ -13,6 +12,20 @@ type CreatorFanToolsProps = {
   firstReferralCount?: number;
   platforms: string[];
 };
+
+export function CreatorVerificationBadge({ fanCount }: { fanCount: number }) {
+  const blueBadge = fanCount >= 10000;
+  return (
+    <span
+      className={`creator-verification-badge ${blueBadge ? "is-blue" : "is-grey"}`}
+      title={blueBadge ? "Creator has reached 10,000 Rontab fans" : "Creator profile approved by Rontab"}
+      aria-label={blueBadge ? "10,000 or more Rontab fans" : "Rontab-approved creator"}
+    >
+      <BadgeCheck size={14} aria-hidden="true" />
+      <span>{blueBadge ? "10K+ fans" : "Rontab approved"}</span>
+    </span>
+  );
+}
 
 function drawWrappedText(context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number) {
   const words = text.trim().split(/\s+/);
@@ -125,7 +138,6 @@ function downloadBlob(blob: Blob, filename: string) {
 
 export function CreatorFanTools(props: CreatorFanToolsProps) {
   const [feedback, setFeedback] = useState("");
-  const blueBadge = props.fanCount >= 10000;
   const filename = props.displayName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "rontab-creator";
 
   async function copyCode() {
@@ -177,24 +189,24 @@ export function CreatorFanTools(props: CreatorFanToolsProps) {
   }
 
   return (
-    <section className={styles.panel} aria-label="Creator fan code and sharing">
-      <div className={styles.identity}>
-        <p className={styles.label}>Your Rontab fan code</p>
-        <strong className={styles.code}>{props.code}</strong>
-        <p className={styles.badgeLine}>
-          <span className={`${styles.badge} ${blueBadge ? styles.blue : styles.grey}`}><span aria-hidden="true">●</span>{blueBadge ? "10,000+ Rontab fans" : "Admin-approved creator"}</span>
-          <span className={styles.count}>{formatNumber(props.fanCount)} fans</span>
-        </p>
-        {props.firstReferralCount !== undefined && <small className={styles.referralCount}>{formatNumber(props.firstReferralCount)} original referrals</small>}
+    <section className="creator-fan-tools" aria-label="Creator fan code and sharing">
+      <div className="creator-fan-tools-identity">
+        <div className="creator-fan-tools-name-line">
+          <h2>{props.displayName}</h2>
+          <CreatorVerificationBadge fanCount={props.fanCount} />
+        </div>
+        <p className="creator-fan-tools-label">Your Rontab fan code</p>
+        <strong className="creator-fan-tools-code">{props.code}</strong>
+        {props.firstReferralCount !== undefined && <small className="creator-fan-tools-referrals">{formatNumber(props.firstReferralCount)} original referrals</small>}
       </div>
-      <div className={styles.actions}>
-        <button type="button" onClick={copyCode}><Copy size={14} aria-hidden="true" />Copy code</button>
-        <button type="button" onClick={shareProfile}><Share2 size={14} aria-hidden="true" />Share profile</button>
-        <button type="button" onClick={downloadPng}><Download size={14} aria-hidden="true" />PNG certificate</button>
-        <button type="button" onClick={downloadPdf}><FileDown size={14} aria-hidden="true" />PDF certificate</button>
+      <div className="creator-fan-tools-actions">
+        <button type="button" onClick={copyCode} aria-label="Copy fan code" title="Copy fan code"><Copy size={17} aria-hidden="true" /></button>
+        <button type="button" onClick={shareProfile} aria-label="Share creator profile" title="Share profile"><Share2 size={17} aria-hidden="true" /></button>
+        <button type="button" onClick={downloadPng} aria-label="Download PNG certificate" title="Download PNG certificate"><Download size={17} aria-hidden="true" /></button>
+        <button type="button" onClick={downloadPdf} aria-label="Download PDF certificate" title="Download PDF certificate"><FileDown size={17} aria-hidden="true" /></button>
       </div>
-      <p className={styles.caption}><BadgeCheck size={13} aria-hidden="true" />{props.platforms.length ? `Share on ${props.platforms.join(", ")} or anywhere your audience follows you.` : "Share your profile and fan code with your audience."}</p>
-      <p className={styles.feedback} role="status" aria-live="polite">{feedback}</p>
+      <p className="creator-fan-tools-caption"><BadgeCheck size={13} aria-hidden="true" />{formatNumber(props.fanCount)} fans · {props.platforms.length ? `Share on ${props.platforms.join(", ")} or anywhere your audience follows you.` : "Share your profile and fan code with your audience."}</p>
+      <p className="creator-fan-tools-feedback" role="status" aria-live="polite">{feedback}</p>
     </section>
   );
 }

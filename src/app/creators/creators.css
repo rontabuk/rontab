@@ -32,6 +32,7 @@
 .creator-back-link { display: inline-flex; align-items: center; gap: 6px; color: #526b50; font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
 .creator-profile-hero { max-width: 780px; padding: 38px 0 33px; border-bottom: 1px solid #dde2d9; }
 .creator-profile-hero h1 { font-size: 50px; }
+.creator-profile-name { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .creator-profile-specialties { margin: 12px 0 0; color: #60745e; font-size: 11px; font-weight: 700; }
 .creator-profile-bio { max-width: 700px; margin: 17px 0 0; color: #536054; font-size: 14px; line-height: 1.8; white-space: pre-line; }
 .creator-profile-audience { display: flex; align-items: center; gap: 6px; margin: 12px 0 0; color: #697468; font-size: 11px; }

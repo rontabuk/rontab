@@ -29,6 +29,25 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
 a { color: inherit; text-decoration: none; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; }
 ::selection { background: #cbd7c7; color: var(--ink); }
+.creator-fan-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 20px; align-items: center; margin-top: 18px; padding: 15px 16px; border: 1px solid #d9e1d5; border-left: 3px solid #71896c; background: #f8faf6; }
+.creator-fan-tools-identity { display: grid; gap: 4px; min-width: 0; }
+.creator-fan-tools-name-line { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 2px; }
+.creator-fan-tools-name-line h2 { margin: 0; color: #29332a; font-family: var(--font-display), Georgia, serif; font-size: 20px; font-weight: 400; line-height: 1.2; overflow-wrap: anywhere; }
+.creator-verification-badge { display: inline-flex; min-height: 22px; align-items: center; gap: 4px; padding: 2px 7px; font-size: 9px; font-weight: 700; white-space: nowrap; }
+.creator-verification-badge svg { flex: 0 0 auto; }
+.creator-verification-badge.is-grey { background: #eceeea; color: #5d665e; }
+.creator-verification-badge.is-blue { background: #e8f0fa; color: #315f91; }
+.creator-fan-tools-label { margin: 0; color: #60715d; font-size: 10px; font-weight: 700; }
+.creator-fan-tools-code { color: #34483a; font-family: var(--font-display), Georgia, serif; font-size: 36px; font-weight: 400; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.creator-fan-tools-referrals { color: #737c71; font-size: 10px; }
+.creator-fan-tools-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.creator-fan-tools-actions button { display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid #d9ded5; background: #fff; color: #405745; cursor: pointer; }
+.creator-fan-tools-actions button:hover { border-color: #aebba8; background: #edf2e9; }
+.creator-fan-tools-actions button:focus-visible { outline: 2px solid #526c54; outline-offset: 2px; }
+.creator-fan-tools-caption { display: flex; align-items: center; gap: 5px; margin: 0; color: #737c71; font-size: 10px; line-height: 1.45; }
+.creator-fan-tools-caption svg { flex: 0 0 auto; color: #607b5e; }
+.creator-fan-tools-feedback { grid-column: 1 / -1; min-height: 14px; margin: 0; color: #456b49; font-size: 10px; }
+.creator-fan-tools-feedback:empty { display: none; }
 .page-shell { width: min(calc(100% - 112px), 1360px); margin-inline: auto; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .form-error { grid-column: 1 / -1; margin: 0; padding: 11px 13px; border-left: 3px solid #a44839; background: #f6eae5; color: #823d33; font-size: 12px; line-height: 1.55; }
@@ -348,6 +367,10 @@ li[data-unread] .notification-copy time { color: #065fd4; font-weight: 700; }
 }
 
 @media (max-width: 760px) {
+  .creator-fan-tools { grid-template-columns: minmax(0, 1fr); }
+  .creator-fan-tools-actions { justify-content: flex-start; }
+  .creator-fan-tools-actions button { width: 40px; height: 40px; }
+  .creator-fan-tools-code { font-size: 32px; }
   .page-shell { width: min(calc(100% - 36px), 560px); }
   .wordmark { font-size: 31px; }
   .site-header-inner { padding-block: 14px 10px; }
