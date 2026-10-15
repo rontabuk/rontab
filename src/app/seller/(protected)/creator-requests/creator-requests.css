@@ -1,3 +1,7 @@
+.seller-creator-browse-navigation { display: flex; margin: 18px 0 24px; border-bottom: 1px solid #dfe4dc; }
+.seller-creator-browse-navigation > a { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; max-width: 100%; padding: 8px 12px; border-bottom: 2px solid #405f45; color: #405f45; font-size: 12px; font-weight: 700; }
+.seller-creator-browse-navigation > a:hover { background: #e9eee5; }
+.seller-creator-browse-navigation > a > span { min-width: 3ch; padding: 2px 6px; border-radius: 4px; background: #e9eee5; font-size: 11px; font-variant-numeric: tabular-nums; text-align: center; }
 .seller-creator-request-list { display: grid; gap: 0; margin: 20px 0 0; padding: 0; border-top: 1px solid #dfe4dc; list-style: none; }
 .seller-creator-request-list > li { display: grid; gap: 8px; padding: 17px 4px; border-bottom: 1px solid #dfe4dc; }
 .seller-creator-request-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
@@ -11,4 +15,3 @@
 .seller-creator-request-response time { display: block; margin-top: 4px; color: #7b8379; font-size: 10px; }
 .seller-creator-request-list form { margin: 2px 0 0; }
 .seller-creator-request-list button { display: inline-flex; min-height: 34px; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid #dfd4c7; background: #faf5ee; color: #87533e; cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; }
-.seller-creator-requests .admin-empty-state > a { display: inline-flex; align-items: center; gap: 5px; margin-top: 12px; color: #405f45; font-size: 11px; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }

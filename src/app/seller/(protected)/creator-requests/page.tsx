@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { ArrowUpRight, RotateCcw } from "lucide-react";
+import { ArrowUpRight, RotateCcw, UsersRound } from "lucide-react";
 import { withdrawCreatorCollaborationRequest } from "@/app/seller/(protected)/creator-actions";
 import { getSellerAccount } from "@/lib/seller/access";
 import { createSupabasePublicClient } from "@/lib/supabase/server";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatNumber } from "@/lib/format";
 import "../../seller.css";
 import "./creator-requests.css";
 
@@ -29,12 +29,15 @@ export default async function SellerCreatorRequestsPage({
 
   const creatorIds = [...new Set(requests.map((request) => request.creator_profile_id))];
   const publicClient = createSupabasePublicClient();
-  const { data: creators, error: creatorsError } = creatorIds.length
-    ? await publicClient.from("creator_profiles")
-      .select("id,slug,published_display_name")
-      .in("id", creatorIds)
-      .eq("is_public", true)
-    : { data: [], error: null };
+  const [{ data: creators, error: creatorsError }, { count: creatorCount, error: countError }] = await Promise.all([
+    creatorIds.length
+      ? publicClient.from("creator_profiles")
+        .select("id,slug,published_display_name")
+        .in("id", creatorIds)
+        .eq("is_public", true)
+      : Promise.resolve({ data: [], error: null }),
+    publicClient.from("creator_profiles").select("id", { count: "exact", head: true }).eq("is_public", true),
+  ]);
   if (creatorsError) throw new Error(creatorsError.message);
   const creatorsById = new Map((creators ?? []).map((creator) => [creator.id, creator]));
 
@@ -45,6 +48,14 @@ export default async function SellerCreatorRequestsPage({
         <h1>Creator collaborations</h1>
         <p>Review your private collaboration requests and creator responses.</p>
       </header>
+      <nav className="seller-creator-browse-navigation" aria-label="Creator discovery">
+        <Link href="/creators">
+          <UsersRound size={16} aria-hidden="true" />
+          Browse creators
+          {!countError && <span aria-label={`${creatorCount ?? 0} published creators`}>{formatNumber(creatorCount ?? 0)}</span>}
+          <ArrowUpRight size={14} aria-hidden="true" />
+        </Link>
+      </nav>
       {withdrawn === "1" && <p className="admin-save-success" role="status">The pending request was withdrawn.</p>}
       {seller.status !== "active" && <p className="seller-account-notice" role="status">Only active sellers can send new collaboration requests.</p>}
       {requests.length ? (
@@ -72,7 +83,7 @@ export default async function SellerCreatorRequestsPage({
           })}
         </ol>
       ) : (
-        <div className="admin-empty-state"><h2>No collaboration requests yet</h2><p>Send a private request from an approved creator profile.</p><Link href="/creators">Browse creators <ArrowUpRight size={14} aria-hidden="true" /></Link></div>
+        <div className="admin-empty-state"><h2>No collaboration requests yet</h2><p>Send a private request from an approved creator profile.</p></div>
       )}
     </main>
   );
