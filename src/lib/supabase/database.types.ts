@@ -305,6 +305,8 @@ export type Database = {
       admin_grant_creator_points: { Args: { p_creator_profile_id: string; p_points: number; p_reason: string; p_idempotency_key: string }; Returns: boolean };
       seller_create_creator_collaboration_request: { Args: { p_brief: string; p_creator_profile_id: string; p_proposed_compensation: string; p_seller_profile_id: string; p_title: string }; Returns: string };
       creator_decide_collaboration_request: { Args: { p_decision: string; p_request_id: string; p_response: string }; Returns: undefined };
+      get_creator_collaboration_notifications: { Args: Record<PropertyKey, never>; Returns: { body: string; created_at: string; href: string; notification_id: string; title: string }[] };
+      seller_withdraw_creator_collaboration_request: { Args: { p_request_id: string }; Returns: undefined };
       is_creator_profile_owner: { Args: { p_creator_profile_id: string }; Returns: boolean };
       get_visitor_seller_offer_coupons: { Args: Record<PropertyKey, never>; Returns: { branch_address: string | null; branch_name: string; can_cancel: boolean; city_name: string; coupon_code: string; created_at: string; ends_at: string; id: string; offer_date: string; offer_id: string; points_cost: number; starts_at: string; status: string; title: string }[] };
       admin_decide_seller_offer_request: { Args: { p_decision: string; p_final_terms: string; p_points_cost: number; p_request_id: string; p_review_note: string | null; p_schedule_capacities: Json }; Returns: string | null };

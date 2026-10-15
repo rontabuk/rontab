@@ -33,6 +33,18 @@ export async function sendCreatorCollaborationRequest(_state: FormState, formDat
 
     revalidatePath("/creators");
     revalidatePath(`/creators/${creatorSlug}`);
+    revalidatePath("/seller/creator-requests");
     redirect(`/creators/${creatorSlug}?request=sent`);
   });
+}
+
+export async function withdrawCreatorCollaborationRequest(formData: FormData) {
+  const requestId = String(formData.get("request_id") ?? "");
+  if (!isUuid(requestId)) throw new FormError("Invalid collaboration request.");
+  const { supabase } = await getSellerAccount();
+  const { error } = await supabase.rpc("seller_withdraw_creator_collaboration_request", { p_request_id: requestId });
+  if (error?.code === "22023" || error?.code === "55000" || error?.code === "42501") throw new FormError(error.message);
+  if (error) throw new Error(error.message);
+  revalidatePath("/seller/creator-requests");
+  redirect("/seller/creator-requests?withdrawn=1");
 }

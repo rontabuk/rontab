@@ -11,7 +11,7 @@ const service = createClient(url, serviceKey);
 const publicClient = createClient(url, anonKey);
 const suffix = randomUUID();
 const password = `LocalTest-${suffix}-Aa1!`;
-const ids = { visitor: null, sellerUser: null, sellerProfile: null, admin: null, creator: null, request: null };
+const ids = { visitor: null, sellerUser: null, sellerProfile: null, admin: null, creator: null, request: null, requests: [] };
 let failure;
 
 function throwOnError(result) {
@@ -125,6 +125,13 @@ try {
     p_brief: "We would like to feature your work in a local Rontab campaign and discuss a suitable format.",
     p_proposed_compensation: "Product sample and agreed fee",
   }));
+  ids.requests.push(ids.request);
+  const requestNotifications = throwOnError(await visitor.rpc("get_creator_collaboration_notifications"));
+  const requestNotification = requestNotifications.find((notification) => notification.notification_id === `creator-request-${ids.request}`);
+  assert.ok(requestNotification, "creator receives a notification for a new collaboration request");
+  assert.equal(requestNotification.href, "/visitor/creator#creator-collaboration-title");
+  const readNotifications = throwOnError(await visitor.rpc("mark_notification_items_read", { p_notification_ids: [requestNotification.notification_id] }));
+  assert.ok(readNotifications.includes(requestNotification.notification_id));
   const incomingRequest = throwOnError(await visitor.from("creator_collaboration_requests")
     .select("status,title").eq("id", ids.request).single());
   assert.equal(incomingRequest.status, "pending");
@@ -137,15 +144,30 @@ try {
     .select("status,creator_response").eq("id", ids.request).single());
   assert.equal(sellerRequest.status, "accepted");
   assert.equal(sellerRequest.creator_response, "Happy to discuss the campaign dates.");
+  const responseNotifications = throwOnError(await visitor.rpc("get_creator_collaboration_notifications"));
+  assert.ok(responseNotifications.some((notification) => notification.notification_id === `creator-response-${ids.request}`));
   const sellerCannotReadDraft = throwOnError(await seller.from("creator_profiles")
     .select("display_name").eq("id", ids.creator));
   assert.equal(sellerCannotReadDraft.length, 0, "signed-in sellers cannot read creator application fields");
 
-  console.log("PASS: public snapshots, approved audience and portfolio, pending draft isolation, and private collaboration request lifecycle.");
+  const withdrawnRequestId = throwOnError(await seller.rpc("seller_create_creator_collaboration_request", {
+    p_creator_profile_id: ids.creator,
+    p_seller_profile_id: ids.sellerProfile,
+    p_title: "Request to withdraw",
+    p_brief: "This pending request is created only to verify seller withdrawal controls locally.",
+    p_proposed_compensation: "",
+  }));
+  ids.requests.push(withdrawnRequestId);
+  throwOnError(await seller.rpc("seller_withdraw_creator_collaboration_request", { p_request_id: withdrawnRequestId }));
+  const withdrawnRequest = throwOnError(await seller.from("creator_collaboration_requests")
+    .select("status").eq("id", withdrawnRequestId).single());
+  assert.equal(withdrawnRequest.status, "withdrawn");
+
+  console.log("PASS: public snapshots, approved audience and portfolio, draft privacy, collaboration notifications, request responses, and seller withdrawal.");
 } catch (error) {
   failure = error;
 } finally {
-  if (ids.request) await service.from("creator_collaboration_requests").delete().eq("id", ids.request);
+  if (ids.requests.length) await service.from("creator_collaboration_requests").delete().in("id", ids.requests);
   if (ids.creator) {
     await service.from("creator_point_transactions").delete().eq("creator_profile_id", ids.creator);
     await service.from("creator_profiles").delete().eq("id", ids.creator);

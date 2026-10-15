@@ -6,7 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type SiteNotification = {
   id: string;
-  kind: "verify-email" | "announcement" | "new-product" | "loyalty-offer" | "reward-result" | "support-case";
+  kind: "verify-email" | "announcement" | "new-product" | "loyalty-offer" | "reward-result" | "support-case" | "collaboration-request";
   title: string;
   body: string;
   href: string | null;
@@ -23,7 +23,7 @@ export const getNotificationFeed = cache(async () => {
   const now = Date.now();
   const signedIn = viewer.role !== "guest";
 
-  const [announcements, products, reads, offers, rewardResults, supportUpdates] = await Promise.all([
+  const [announcements, products, reads, offers, rewardResults, supportUpdates, creatorCollaborationUpdates] = await Promise.all([
     supabase
       .from("site_announcements")
       .select("id,title,body,link_url,audience,created_at")
@@ -49,6 +49,9 @@ export const getNotificationFeed = cache(async () => {
       : Promise.resolve({ data: null, error: null }),
     viewer.role === "visitor" && viewer.emailVerifiedAt
       ? supabase.rpc("get_visitor_marketplace_support_notifications")
+      : Promise.resolve({ data: null, error: null }),
+    viewer.role === "visitor"
+      ? supabase.rpc("get_creator_collaboration_notifications")
       : Promise.resolve({ data: null, error: null }),
   ]);
 
@@ -107,6 +110,14 @@ export const getNotificationFeed = cache(async () => {
       href: "/visitor/support",
       createdAt: update.updated_at,
     })),
+    ...(creatorCollaborationUpdates?.data ?? []).map((update) => ({
+      id: update.notification_id,
+      kind: "collaboration-request" as const,
+      title: update.title,
+      body: update.body,
+      href: update.href,
+      createdAt: update.created_at,
+    })),
   ].sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt));
 
   if (viewer.role === "visitor" && !viewer.emailVerifiedAt) {
@@ -130,5 +141,6 @@ export const getNotificationFeed = cache(async () => {
   if (offers?.error) throw new Error("Offer notifications are temporarily unavailable.");
   if (rewardResults?.error) throw new Error("Reward result notifications are temporarily unavailable.");
   if (supportUpdates?.error && supportUpdates.error.code !== "PGRST202") throw new Error("Support case notifications are temporarily unavailable.");
+  if (creatorCollaborationUpdates?.error) throw new Error("Collaboration notifications are temporarily unavailable.");
   return { items, signedIn, userId: viewer.role === "guest" ? null : viewer.userId, readIds: (itemReads.data ?? []).map((item) => item.notification_id), lastSeenAt: reads.data?.last_seen_at ?? null };
 });
