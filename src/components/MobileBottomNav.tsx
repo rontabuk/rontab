@@ -47,7 +47,13 @@ export async function MobileBottomNav() {
             },
             { href: "/visitor", label: "Account", icon: "account", exact: true },
           ],
-          menuLinks: [{ href: "/visitor/offers?view=vouchers", label: "My vouchers" }, { href: "/seller/register", label: "Sell on Rontab" }, ...infoLinks],
+          menuLinks: [
+            { href: "/visitor/creator", label: "Introduce yourself" },
+            { href: "/visitor/fans", label: "I'm a fan of" },
+            { href: "/visitor/offers?view=vouchers", label: "My vouchers" },
+            { href: "/seller/register", label: "Sell on Rontab" },
+            ...infoLinks,
+          ],
           signOutTo: "/",
         }}
       />
