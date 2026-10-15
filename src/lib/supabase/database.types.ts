@@ -189,13 +189,26 @@ export type Database = {
         [{ foreignKeyName: "seller_offer_point_transactions_coupon_id_fkey"; columns: ["coupon_id"]; isOneToOne: false; referencedRelation: "seller_offer_coupons"; referencedColumns: ["id"] }]
       >;
       creator_profiles: Table<
-        { bio: string; created_at: string; display_name: string; id: string; is_public: boolean; owner_id: string; reviewed_at: string | null; slug: string; specialties: string[]; status: string; submitted_at: string; updated_at: string },
+        { audience_city_id: string | null; bio: string; created_at: string; display_name: string; id: string; is_public: boolean; owner_id: string; public_profile_consent_at: string | null; published_audience_city_id: string | null; published_bio: string | null; published_display_name: string | null; published_specialties: string[] | null; reviewed_at: string | null; slug: string; specialties: string[]; status: string; submitted_at: string; updated_at: string },
         never
       >;
       creator_platform_accounts: Table<
-        { created_at: string; creator_profile_id: string; followers_updated_at: string; follower_count: number; handle: string; id: string; platform: string; profile_url: string },
+        { created_at: string; creator_profile_id: string; followers_updated_at: string; follower_count: number; handle: string; id: string; is_published: boolean; platform: string; profile_url: string },
         never,
         [{ foreignKeyName: "creator_platform_accounts_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }]
+      >;
+      creator_portfolio_items: Table<
+        { created_at: string; creator_profile_id: string; id: string; is_published: boolean; position: number; title: string; url: string },
+        never,
+        [{ foreignKeyName: "creator_portfolio_items_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }]
+      >;
+      creator_collaboration_requests: Table<
+        { brief: string; created_at: string; creator_profile_id: string; creator_response: string | null; id: string; proposed_compensation: string | null; responded_at: string | null; seller_profile_id: string; status: string; title: string; updated_at: string },
+        never,
+        [
+          { foreignKeyName: "creator_collaboration_requests_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] },
+          { foreignKeyName: "creator_collaboration_requests_seller_profile_id_fkey"; columns: ["seller_profile_id"]; isOneToOne: false; referencedRelation: "seller_profiles"; referencedColumns: ["id"] }
+        ]
       >;
       creator_profile_reviews: Table<
         { admin_id: string; created_at: string; creator_profile_id: string; decision: string; id: number; review_note: string | null },
@@ -287,9 +300,11 @@ export type Database = {
       admin_get_seller_voucher_support_cases: { Args: { p_limit: number; p_offset: number }; Returns: { case_id: string; coupon_id: string; created_at: string; description: string; issue_type: string; offer_id: string; offer_title: string; resolution_note: string | null; seller_profile_id: string; shop_name: string; status: string; total_case_count: number; updated_at: string; visitor_email: string | null; visitor_id: string }[] };
       admin_update_seller_voucher_support_case: { Args: { p_case_id: string; p_resolution_note: string; p_status: string }; Returns: undefined };
       get_my_creator_profile_id: { Args: Record<PropertyKey, never>; Returns: string | null };
-      save_creator_application: { Args: { p_bio: string; p_display_name: string; p_platform_accounts: Json; p_specialties: string[] }; Returns: string };
+      save_creator_application: { Args: { p_audience_city_id: string | null; p_bio: string; p_display_name: string; p_platform_accounts: Json; p_portfolio_items: Json; p_public_profile_consent: boolean; p_specialties: string[] }; Returns: string };
       admin_review_creator_profile: { Args: { p_creator_profile_id: string; p_decision: string; p_review_note: string | null }; Returns: undefined };
       admin_grant_creator_points: { Args: { p_creator_profile_id: string; p_points: number; p_reason: string; p_idempotency_key: string }; Returns: boolean };
+      seller_create_creator_collaboration_request: { Args: { p_brief: string; p_creator_profile_id: string; p_proposed_compensation: string; p_seller_profile_id: string; p_title: string }; Returns: string };
+      creator_decide_collaboration_request: { Args: { p_decision: string; p_request_id: string; p_response: string }; Returns: undefined };
       is_creator_profile_owner: { Args: { p_creator_profile_id: string }; Returns: boolean };
       get_visitor_seller_offer_coupons: { Args: Record<PropertyKey, never>; Returns: { branch_address: string | null; branch_name: string; can_cancel: boolean; city_name: string; coupon_code: string; created_at: string; ends_at: string; id: string; offer_date: string; offer_id: string; points_cost: number; starts_at: string; status: string; title: string }[] };
       admin_decide_seller_offer_request: { Args: { p_decision: string; p_final_terms: string; p_points_cost: number; p_request_id: string; p_review_note: string | null; p_schedule_capacities: Json }; Returns: string | null };

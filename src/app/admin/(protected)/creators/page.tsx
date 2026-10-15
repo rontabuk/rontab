@@ -18,17 +18,24 @@ export default async function AdminCreatorsPage({
   await connection();
   const [{ reviewed, granted, duplicate }, { supabase }] = await Promise.all([searchParams, requireAdmin()]);
   const [submittedResult, approvedResult] = await Promise.all([
-    supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,created_at,updated_at").eq("status", "submitted").order("submitted_at", { ascending: true }),
-    supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,created_at,updated_at").eq("status", "approved").order("updated_at", { ascending: false }).limit(100),
+    supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,published_display_name,published_bio,published_specialties,published_audience_city_id,created_at,updated_at").eq("status", "submitted").order("submitted_at", { ascending: true }),
+    supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,published_display_name,published_bio,published_specialties,published_audience_city_id,created_at,updated_at").eq("is_public", true).order("updated_at", { ascending: false }).limit(100),
   ]);
   if (submittedResult.error) throw new Error(submittedResult.error.message);
   if (approvedResult.error) throw new Error(approvedResult.error.message);
   const submitted = submittedResult.data;
   const approved = approvedResult.data;
   const allProfileIds = [...submitted, ...approved].map((profile) => profile.id);
-  const [accountsResult, reviewsResult, pointsResult] = await Promise.all([
+  const cityIds = [...new Set([...submitted.map((profile) => profile.audience_city_id), ...approved.map((profile) => profile.published_audience_city_id)].filter((cityId): cityId is string => Boolean(cityId)))];
+  const [accountsResult, portfolioResult, citiesResult, reviewsResult, pointsResult] = await Promise.all([
     allProfileIds.length
-      ? supabase.from("creator_platform_accounts").select("id,creator_profile_id,platform,handle,profile_url,follower_count,followers_updated_at").in("creator_profile_id", allProfileIds).order("platform")
+      ? supabase.from("creator_platform_accounts").select("id,creator_profile_id,platform,handle,profile_url,follower_count,followers_updated_at,is_published").in("creator_profile_id", allProfileIds).order("platform")
+      : Promise.resolve({ data: [], error: null }),
+    allProfileIds.length
+      ? supabase.from("creator_portfolio_items").select("id,creator_profile_id,title,url,position,is_published").in("creator_profile_id", allProfileIds).order("position")
+      : Promise.resolve({ data: [], error: null }),
+    cityIds.length
+      ? supabase.from("supported_cities").select("city_id,city_name,country_code").in("city_id", cityIds)
       : Promise.resolve({ data: [], error: null }),
     submitted.length
       ? supabase.from("creator_profile_reviews").select("creator_profile_id,review_note,created_at").in("creator_profile_id", submitted.map((profile) => profile.id)).order("created_at", { ascending: false })
@@ -37,7 +44,7 @@ export default async function AdminCreatorsPage({
       ? supabase.from("creator_point_accounts").select("creator_profile_id,points_balance").in("creator_profile_id", approved.map((profile) => profile.id))
       : Promise.resolve({ data: [], error: null }),
   ]);
-  for (const result of [accountsResult, reviewsResult, pointsResult]) {
+  for (const result of [accountsResult, portfolioResult, citiesResult, reviewsResult, pointsResult]) {
     if (result.error) throw new Error(result.error.message);
   }
   const accountsByProfile = new Map<string, typeof accountsResult.data>();
@@ -51,6 +58,7 @@ export default async function AdminCreatorsPage({
     if (!latestNotes.has(review.creator_profile_id)) latestNotes.set(review.creator_profile_id, review.review_note);
   }
   const balances = new Map((pointsResult.data ?? []).map((account) => [account.creator_profile_id, account.points_balance]));
+  const citiesById = new Map((citiesResult.data ?? []).map((city) => [city.city_id, `${city.city_name}, ${city.country_code}`]));
   const specialtyLabel = (value: string) => creatorSpecialties.find((item) => item.value === value)?.label ?? value;
 
   return (
@@ -72,7 +80,8 @@ export default async function AdminCreatorsPage({
         {submitted.length ? (
           <div className="creator-admin-list">
             {submitted.map((profile) => {
-              const accounts = accountsByProfile.get(profile.id) ?? [];
+              const accounts = (accountsByProfile.get(profile.id) ?? []).filter((account) => !account.is_published);
+              const portfolio = (portfolioResult.data ?? []).filter((item) => item.creator_profile_id === profile.id && !item.is_published);
               return (
                 <article className="creator-admin-item" key={profile.id}>
                   <div className="creator-admin-profile">
@@ -80,6 +89,15 @@ export default async function AdminCreatorsPage({
                     <h3>{profile.display_name}</h3>
                     <p className="creator-admin-specialties">{profile.specialties.map(specialtyLabel).join(" · ")}</p>
                     <p className="creator-admin-bio">{profile.bio}</p>
+                    {profile.audience_city_id && <p className="creator-admin-specialties">Primary audience: {citiesById.get(profile.audience_city_id) ?? profile.audience_city_id}</p>}
+                    {profile.is_public && (
+                      <div className="creator-admin-public-snapshot">
+                        <strong>Currently public</strong>
+                        <span>{profile.published_display_name ?? profile.display_name} · {(profile.published_specialties ?? []).map(specialtyLabel).join(" · ")}</span>
+                        {profile.published_audience_city_id && <span>Audience: {citiesById.get(profile.published_audience_city_id) ?? profile.published_audience_city_id}</span>}
+                        {profile.published_bio && <p>{profile.published_bio}</p>}
+                      </div>
+                    )}
                     {latestNotes.has(profile.id) && <p className="creator-admin-prior-note"><strong>Previous review note:</strong> {latestNotes.get(profile.id)}</p>}
                     <div className="creator-admin-platforms">
                       {accounts.map((account) => (
@@ -91,6 +109,7 @@ export default async function AdminCreatorsPage({
                         </a>
                       ))}
                     </div>
+                    {portfolio.length > 0 && <div className="creator-admin-portfolio">{portfolio.map((item) => <a href={item.url} target="_blank" rel="noreferrer" key={item.id}>{item.title}<ExternalLink size={12} aria-hidden="true" /></a>)}</div>}
                   </div>
                   <div className="creator-admin-review-actions">
                     <form action={reviewCreatorProfile}>
@@ -128,8 +147,9 @@ export default async function AdminCreatorsPage({
             {approved.map((profile) => (
               <article className="creator-admin-approved" key={profile.id}>
                 <div>
-                  <span className="admin-status admin-status-approved">Approved</span>
-                  <h3>{profile.display_name}</h3>
+                  <span className="admin-status admin-status-approved">{profile.status === "approved" ? "Approved" : "Public · update under review"}</span>
+                  <h3>{profile.published_display_name ?? profile.display_name}</h3>
+                  {profile.published_audience_city_id && <small>{citiesById.get(profile.published_audience_city_id) ?? profile.published_audience_city_id}</small>}
                   <a href={`/creators/${profile.slug}`} target="_blank" rel="noreferrer">Open public profile <ExternalLink size={12} aria-hidden="true" /></a>
                 </div>
                 <div className="creator-admin-points">

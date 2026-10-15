@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { FormError, runFormAction, type FormState } from "@/lib/form-state";
 import { creatorPlatforms, creatorSpecialties, type CreatorPlatform } from "@/lib/creator/catalog";
+import { isCityId, isHttpsUrl, isUuid } from "@/lib/validation";
 import { getVisitorAccount } from "@/lib/visitor/access";
 
 const allowedHosts: Record<CreatorPlatform, string[]> = {
@@ -18,7 +19,9 @@ export async function saveCreatorApplication(_state: FormState, formData: FormDa
   return runFormAction(async () => {
     const displayName = String(formData.get("display_name") ?? "").trim();
     const bio = String(formData.get("bio") ?? "").trim();
+    const audienceCityId = String(formData.get("audience_city_id") ?? "").trim() || null;
     const specialties = formData.getAll("specialty").map(String);
+    const publicConsent = formData.get("public_profile_consent") === "on";
     const validSpecialties = new Set(creatorSpecialties.map(({ value }) => value));
     if (displayName.length < 2 || displayName.length > 100 || bio.length < 30 || bio.length > 2000) {
       throw new FormError("Add a display name and a short introduction of at least 30 characters.");
@@ -26,6 +29,8 @@ export async function saveCreatorApplication(_state: FormState, formData: FormDa
     if (specialties.length < 1 || specialties.length > 5 || specialties.some((value) => !validSpecialties.has(value as never))) {
       throw new FormError("Choose between one and five content specialties.");
     }
+    if (audienceCityId && !isCityId(audienceCityId)) throw new FormError("Choose a supported audience city.");
+    if (!publicConsent) throw new FormError("Confirm that these details and links may appear on your public creator profile.");
 
     const accounts = creatorPlatforms.flatMap(({ value: platform }) => {
       const handle = String(formData.get(`platform_${platform}_handle`) ?? "").trim();
@@ -53,12 +58,25 @@ export async function saveCreatorApplication(_state: FormState, formData: FormDa
     });
     if (accounts.length < 1) throw new FormError("Add at least one social platform.");
 
+    const portfolioItems = [1, 2, 3].flatMap((position) => {
+      const title = String(formData.get(`portfolio_${position}_title`) ?? "").trim();
+      const url = String(formData.get(`portfolio_${position}_url`) ?? "").trim();
+      if (!title && !url) return [];
+      if (title.length < 3 || title.length > 120 || url.length > 500 || !isHttpsUrl(url)) {
+        throw new FormError(`Add a title and valid HTTPS link for work sample ${position}.`);
+      }
+      return [{ title, url }];
+    });
+
     const { supabase } = await getVisitorAccount("/visitor/creator");
     const { error } = await supabase.rpc("save_creator_application", {
       p_display_name: displayName,
       p_bio: bio,
       p_specialties: specialties,
       p_platform_accounts: accounts,
+      p_audience_city_id: audienceCityId,
+      p_portfolio_items: portfolioItems,
+      p_public_profile_consent: publicConsent,
     });
     if (error?.code === "22023" || error?.code === "55000") throw new FormError(error.message);
     if (error) throw new Error(error.message);
@@ -67,4 +85,25 @@ export async function saveCreatorApplication(_state: FormState, formData: FormDa
     revalidatePath("/creators");
     redirect("/visitor/creator?submitted=1");
   });
+}
+
+export async function respondToCreatorCollaborationRequest(formData: FormData) {
+  const requestId = String(formData.get("request_id") ?? "");
+  const decision = String(formData.get("decision") ?? "");
+  const response = String(formData.get("response") ?? "").trim();
+  if (!isUuid(requestId) || !["accept", "decline"].includes(decision) || response.length > 2000) {
+    throw new FormError("Invalid collaboration response.");
+  }
+
+  const { supabase } = await getVisitorAccount("/visitor/creator");
+  const { error } = await supabase.rpc("creator_decide_collaboration_request", {
+    p_request_id: requestId,
+    p_decision: decision,
+    p_response: response,
+  });
+  if (error?.code === "22023" || error?.code === "55000" || error?.code === "42501") throw new FormError(error.message);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/visitor/creator");
+  redirect("/visitor/creator?replied=1");
 }

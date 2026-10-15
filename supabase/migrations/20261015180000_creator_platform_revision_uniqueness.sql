@@ -1,0 +1,5 @@
+alter table public.creator_platform_accounts
+	drop constraint creator_platform_accounts_creator_profile_id_platform_key;
+
+create unique index creator_platform_accounts_profile_platform_publication_idx
+	on public.creator_platform_accounts (creator_profile_id, platform, is_published);

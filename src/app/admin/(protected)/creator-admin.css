@@ -7,12 +7,17 @@
 .creator-admin-specialties { margin: 0; color: #60745e; font-size: 10px; font-weight: 700; }
 .creator-admin-bio { margin: 10px 0 0; color: #606a60; font-size: 12px; line-height: 1.65; white-space: pre-line; }
 .creator-admin-prior-note { margin: 10px 0 0; padding: 8px 10px; border-left: 2px solid #b08a4f; background: #f5f0e5; color: #65563e; font-size: 11px; line-height: 1.5; }
+.creator-admin-public-snapshot { display: grid; gap: 4px; margin-top: 12px; padding: 9px 11px; border-left: 2px solid #71896c; background: #f0f4ed; color: #566357; font-size: 10px; line-height: 1.5; }
+.creator-admin-public-snapshot > strong { color: #3d6043; font-size: 10px; }
+.creator-admin-public-snapshot p { margin: 2px 0 0; white-space: pre-line; }
 .creator-admin-platforms { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 13px; }
 .creator-admin-platforms a { display: grid; grid-template-columns: auto auto; gap: 3px 7px; padding: 7px 8px; border: 1px solid #e0e4dc; color: #586458; }
 .creator-admin-platforms a span { color: #727b70; font-size: 9px; text-transform: capitalize; }
 .creator-admin-platforms a strong { font-size: 10px; }
 .creator-admin-platforms a small { color: #7f877d; font-size: 9px; }
 .creator-admin-platforms a svg { grid-column: 2; grid-row: 1; justify-self: end; }
+.creator-admin-portfolio { display: grid; gap: 5px; margin-top: 10px; }
+.creator-admin-portfolio a { display: inline-flex; width: fit-content; align-items: center; gap: 5px; color: #405f45; font-size: 10px; text-decoration: underline; text-underline-offset: 2px; }
 .creator-admin-review-actions { display: grid; align-content: start; gap: 10px; }
 .creator-admin-review-actions form { display: grid; gap: 7px; margin: 0; }
 .creator-admin-review-actions label, .creator-admin-points label { display: grid; gap: 4px; color: #626c60; font-size: 10px; font-weight: 700; }
