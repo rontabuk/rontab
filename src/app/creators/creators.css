@@ -36,9 +36,6 @@
 .creator-profile-bio { max-width: 700px; margin: 17px 0 0; color: #536054; font-size: 14px; line-height: 1.8; white-space: pre-line; }
 .creator-profile-audience { display: flex; align-items: center; gap: 6px; margin: 12px 0 0; color: #697468; font-size: 11px; }
 .creator-approved-mark { display: inline-flex; align-items: center; gap: 6px; margin: 18px 0 0; color: #4b704c; font-size: 11px; font-weight: 700; }
-.creator-public-referral-code { display: grid; width: fit-content; gap: 4px; margin-top: 16px; padding: 10px 12px; border: 1px solid #d9e1d5; background: #f8faf6; }
-.creator-public-referral-code span, .creator-public-referral-code small { color: #6f786d; font-size: 10px; }
-.creator-public-referral-code strong { color: #34483a; font-family: var(--font-display), Georgia, serif; font-size: 22px; font-weight: 400; }
 .creator-public-platforms { padding: 28px 0 25px; border-bottom: 1px solid #dde2d9; }
 .creator-public-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 15px; margin-bottom: 14px; }
 .creator-public-section-heading .creator-directory-eyebrow { margin-bottom: 5px; }

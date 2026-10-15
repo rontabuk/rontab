@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ArrowLeft, BadgeCheck, ExternalLink, MapPin, Send } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
+import { CreatorFanTools } from "@/components/creator/CreatorFanTools";
 import { sendCreatorCollaborationRequest } from "@/app/seller/(protected)/creator-actions";
 import { getViewer } from "@/lib/auth/viewer";
 import { creatorSpecialties } from "@/lib/creator/catalog";
@@ -92,7 +93,13 @@ export default async function CreatorProfilePage({
         <p className="creator-profile-bio">{profile.published_bio}</p>
         {audienceCityResult.data && <p className="creator-profile-audience"><MapPin size={14} aria-hidden="true" />Audience: {audienceCityResult.data.city_name}, {audienceCityResult.data.country_code}</p>}
         <p className="creator-approved-mark"><BadgeCheck size={15} aria-hidden="true" />Profile reviewed by Rontab</p>
-        {profile.referral_code && <div className="creator-public-referral-code"><span>Rontab fan code</span><strong>{profile.referral_code}</strong><small>{formatNumber(fanCountResult.data ?? 0)} fans follow this creator</small></div>}
+        {profile.referral_code && <CreatorFanTools
+          displayName={profile.published_display_name ?? "Rontab Creator"}
+          code={profile.referral_code}
+          profileUrl={`/creators/${profile.slug}`}
+          fanCount={fanCountResult.data ?? 0}
+          platforms={accounts.map((account) => account.platform === "x" ? "X" : account.platform)}
+        />}
       </header>
       <section className="creator-public-platforms" aria-labelledby="creator-public-platforms-title">
         <div className="creator-public-section-heading">

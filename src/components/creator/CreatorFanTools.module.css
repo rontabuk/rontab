@@ -1,0 +1,23 @@
+.panel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 20px; align-items: center; margin-top: 22px; padding: 17px 18px; border: 1px solid #d9e1d5; border-left: 3px solid #71896c; background: #f8faf6; }
+.identity { display: grid; gap: 5px; min-width: 0; }
+.label { margin: 0; color: #60715d; font-size: 10px; font-weight: 700; }
+.code { color: #34483a; font-family: var(--font-display), Georgia, serif; font-size: 27px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.badgeLine { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0; }
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; font-size: 10px; font-weight: 700; }
+.badge > span { font-size: 8px; }
+.grey { background: #eceeea; color: #5d665e; }
+.blue { background: #e8f0fa; color: #315f91; }
+.count { color: #697268; font-size: 10px; }
+.referralCount { color: #737c71; font-size: 10px; }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.actions button { display: inline-flex; min-height: 34px; align-items: center; gap: 5px; padding: 0 9px; border: 1px solid #d9ded5; background: #fff; color: #405745; cursor: pointer; font: inherit; font-size: 10px; font-weight: 700; }
+.actions button:hover { background: #edf2e9; }
+.caption { display: flex; align-items: center; gap: 6px; margin: 0; color: #737c71; font-size: 10px; line-height: 1.5; }
+.caption svg { flex: 0 0 auto; color: #607b5e; }
+.feedback { grid-column: 1 / -1; min-height: 15px; margin: 0; color: #456b49; font-size: 10px; }
+.feedback:empty { display: none; }
+@media (max-width: 760px) {
+  .panel { grid-template-columns: minmax(0, 1fr); }
+  .actions { justify-content: flex-start; }
+  .actions button { flex: 1 1 calc(50% - 6px); justify-content: center; }
+}

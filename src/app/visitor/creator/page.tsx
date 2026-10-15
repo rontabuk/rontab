@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { ArrowUpRight, BadgeCheck, Check, Coins, ExternalLink, MessageSquareText, X } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
+import { CreatorFanTools } from "@/components/creator/CreatorFanTools";
 import { CityPicker } from "@/components/CityPicker";
 import { respondToCreatorCollaborationRequest } from "@/app/visitor/creator-actions";
 import { creatorPlatforms, creatorSpecialties } from "@/lib/creator/catalog";
@@ -146,20 +147,25 @@ export default async function VisitorCreatorPage({
       )}
 
       {profile?.is_public && profile.referral_code && (
-        <section className="creator-fan-code-panel" aria-label="Your Rontab fan code">
-          <div><p className="admin-eyebrow">YOUR RONTAB FAN CODE</p><strong>{profile.referral_code}</strong><small>Followers can enter this code from “I&apos;m a fan of”.</small></div>
-          <div><strong>{formatNumber(fanCount)}</strong><small>fans following you</small><span>{formatNumber(firstReferralCount)} first referrals</span></div>
-        </section>
+        <CreatorFanTools
+          displayName={profile.display_name}
+          code={profile.referral_code}
+          profileUrl={`/creators/${profile.slug}`}
+          fanCount={fanCount}
+          firstReferralCount={firstReferralCount}
+          platforms={accounts.filter((account) => account.is_published).map((account) => account.platform === "x" ? "X" : account.platform)}
+        />
       )}
 
       {profile?.status === "suspended" ? (
         <p className="creator-suspended-note">Your profile cannot be edited while it is suspended.</p>
       ) : (
-        <section className="creator-application-section" aria-labelledby="creator-application-title">
-          <div className="visitor-profile-heading">
-            <p className="admin-eyebrow">YOUR PUBLIC PROFILE</p>
-            <h2 id="creator-application-title">{profile ? "Update your application" : "Creator application"}</h2>
-          </div>
+        <details className="creator-application-section" open={!profile || profile.status === "changes_requested" || profile.status === "rejected"}>
+          <summary className="creator-application-summary">
+            <span className="admin-eyebrow">YOUR PUBLIC PROFILE</span>
+            <strong>{profile ? "Update your application" : "Creator application"}</strong>
+            <small>{profile ? "Open to edit your profile details." : "Add your details to apply."}</small>
+          </summary>
           {profile?.is_public && <p className="creator-edit-notice">Changes stay private during review. Your current approved profile remains visible until updates are approved.</p>}
           <ActionForm className="creator-application-form" action={saveCreatorApplication}>
             <label>
@@ -241,7 +247,7 @@ export default async function VisitorCreatorPage({
             </label>
             <button className="admin-primary-button" type="submit">{profile ? "Save and submit for review" : "Submit for review"}</button>
           </ActionForm>
-        </section>
+        </details>
       )}
 
       {pointTransactions.length > 0 && (
