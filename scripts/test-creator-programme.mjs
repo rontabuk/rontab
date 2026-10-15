@@ -61,6 +61,8 @@ try {
     .eq("id", ids.creator).single());
   assert.equal(firstPublic.published_display_name, profileName);
   assert.equal(firstPublic.published_audience_city_id, cities[0].city_id);
+  const approvalNotifications = throwOnError(await visitor.rpc("get_creator_collaboration_notifications"));
+  assert.ok(approvalNotifications.some((notification) => notification.title === "Creator profile approved"), "creator receives profile review decisions");
 
   const updatedName = `${profileName} Updated`;
   const updatedHandle = `updated_${suffix.slice(0, 8)}`;
@@ -175,6 +177,8 @@ try {
   const secondFollow = throwOnError(await fan.rpc("creator_follow_by_code", { p_code: secondCreatorCode.referral_code }));
   assert.equal(secondFollow.already_following, false);
   assert.equal(secondFollow.first_referral, false, "following a second creator must not rewrite first-referral attribution");
+  const unrelatedNotifications = throwOnError(await fan.rpc("get_creator_collaboration_notifications"));
+  assert.equal(unrelatedNotifications.length, 0, "creator programme notifications are private to event recipients");
   const followedCreators = throwOnError(await fan.rpc("creator_get_my_follows"));
   assert.equal(followedCreators.length, 2, "a visitor can follow multiple creators");
   const fanPointTransactions = throwOnError(await service.from("loyalty_point_transactions")
@@ -224,8 +228,9 @@ try {
   }));
   ids.requests.push(ids.request);
   const requestNotifications = throwOnError(await visitor.rpc("get_creator_collaboration_notifications"));
-  const requestNotification = requestNotifications.find((notification) => notification.notification_id === `creator-request-${ids.request}`);
+  const requestNotification = requestNotifications.find((notification) => notification.title === "New collaboration request");
   assert.ok(requestNotification, "creator receives a notification for a new collaboration request");
+  assert.match(requestNotification.notification_id, /^creator-event-[0-9a-f-]{36}$/);
   assert.equal(requestNotification.href, "/visitor/creator#creator-collaboration-title");
   const readNotifications = throwOnError(await visitor.rpc("mark_notification_items_read", { p_notification_ids: [requestNotification.notification_id] }));
   assert.ok(readNotifications.includes(requestNotification.notification_id));
@@ -237,6 +242,10 @@ try {
     p_decision: "suspend",
     p_review_note: "Pause collaboration responses during a safety review.",
   }));
+  const suspendedCreatorNotifications = throwOnError(await visitor.rpc("get_creator_collaboration_notifications"));
+  assert.ok(suspendedCreatorNotifications.some((notification) => notification.title === "Creator profile suspended"));
+  const unavailableSellerNotifications = throwOnError(await seller.rpc("get_creator_collaboration_notifications"));
+  assert.ok(unavailableSellerNotifications.some((notification) => notification.title === "Creator profile is temporarily unavailable"));
   const suspendedResponse = await visitor.rpc("creator_decide_collaboration_request", {
     p_request_id: ids.request,
     p_decision: "accept",
@@ -248,6 +257,8 @@ try {
     p_decision: "reinstate",
     p_review_note: null,
   }));
+  const restoredSellerNotifications = throwOnError(await seller.rpc("get_creator_collaboration_notifications"));
+  assert.ok(restoredSellerNotifications.some((notification) => notification.title === "Creator profile is available again"));
   throwOnError(await visitor.rpc("creator_decide_collaboration_request", {
     p_request_id: ids.request,
     p_decision: "accept",
@@ -257,8 +268,11 @@ try {
     .select("status,creator_response").eq("id", ids.request).single());
   assert.equal(sellerRequest.status, "accepted");
   assert.equal(sellerRequest.creator_response, "Happy to discuss the campaign dates.");
-  const responseNotifications = throwOnError(await visitor.rpc("get_creator_collaboration_notifications"));
-  assert.ok(responseNotifications.some((notification) => notification.notification_id === `creator-response-${ids.request}`));
+  const responseNotifications = throwOnError(await seller.rpc("get_creator_collaboration_notifications"));
+  assert.ok(responseNotifications.some((notification) => notification.title === "Creator accepted your request"));
+  const creatorNotificationsAfterResponse = throwOnError(await visitor.rpc("get_creator_collaboration_notifications"));
+  assert.ok(creatorNotificationsAfterResponse.some((notification) => notification.notification_id === requestNotification.notification_id), "the original request event remains after its status changes");
+  assert.equal(creatorNotificationsAfterResponse.some((notification) => notification.title === "Creator accepted your request"), false, "creators do not receive their own seller response notification");
   const sellerCannotReadDraft = throwOnError(await seller.from("creator_profiles")
     .select("display_name").eq("id", ids.creator));
   assert.equal(sellerCannotReadDraft.length, 0, "signed-in sellers cannot read creator application fields");
@@ -275,8 +289,10 @@ try {
   const withdrawnRequest = throwOnError(await seller.from("creator_collaboration_requests")
     .select("status").eq("id", withdrawnRequestId).single());
   assert.equal(withdrawnRequest.status, "withdrawn");
+  const sellerWithdrawalNotifications = throwOnError(await visitor.rpc("get_creator_collaboration_notifications"));
+  assert.ok(sellerWithdrawalNotifications.some((notification) => notification.title === "Seller withdrew a collaboration request"));
 
-  console.log("PASS: public snapshots, reversible suspension, creator withdrawal and reapplication, multi-fan codes, single first attribution, self-follow prevention, draft privacy, notifications, collaboration response guards, and seller withdrawal.");
+  console.log("PASS: creator lifecycle, private durable review/collaboration notifications, correct recipient routing, notification read tracking, and existing profile/fan/collaboration workflows.");
 } catch (error) {
   failure = error;
 } finally {

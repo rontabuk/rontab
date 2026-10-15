@@ -188,6 +188,10 @@ export type Database = {
         { coupon_id: string; created_at?: string; id?: never; idempotency_key: string; points_delta: number; transaction_type: string; visitor_id: string },
         [{ foreignKeyName: "seller_offer_point_transactions_coupon_id_fkey"; columns: ["coupon_id"]; isOneToOne: false; referencedRelation: "seller_offer_coupons"; referencedColumns: ["id"] }]
       >;
+      creator_notification_events: Table<
+        { body: string; created_at: string; event_type: string; href: string; id: string; recipient_id: string; title: string },
+        never
+      >;
       creator_profiles: Table<
         { audience_city_id: string | null; bio: string; created_at: string; display_name: string; id: string; is_public: boolean; owner_id: string; public_profile_consent_at: string | null; published_audience_city_id: string | null; published_bio: string | null; published_display_name: string | null; published_specialties: string[] | null; referral_code: string | null; reviewed_at: string | null; slug: string; specialties: string[]; status: string; submitted_at: string; suspended_from_status: string | null; updated_at: string },
         never

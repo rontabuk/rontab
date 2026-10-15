@@ -12,7 +12,7 @@ Approved profiles show the creator's display name, introduction, specialties, pr
 
 ## Collaboration requests
 
-Active sellers can send a private request to a public creator with a title, brief, and optional proposed compensation. Only the seller and creator can read the request. A creator can accept or decline and include a response while their profile is public; withdrawn or suspended creators cannot respond. Contact information is not exposed by the request workflow.
+Active sellers can send a private request to a public creator with a title, brief, and optional proposed compensation. Only the seller and creator can read the request. A creator can accept or decline and include a response while their profile is public; withdrawn or suspended creators cannot respond. Contact information is not exposed by the request workflow. Durable in-app notifications are sent to the creator for new requests and to the seller for creator responses. Either party is notified when the other withdraws or the creator profile becomes unavailable or is restored. Review decisions, suspension, and reinstatement are also sent to the creator.
 
 ## Fan codes and attribution
 

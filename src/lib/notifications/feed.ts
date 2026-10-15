@@ -6,7 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type SiteNotification = {
   id: string;
-  kind: "verify-email" | "announcement" | "new-product" | "loyalty-offer" | "reward-result" | "support-case" | "collaboration-request";
+  kind: "verify-email" | "announcement" | "new-product" | "loyalty-offer" | "reward-result" | "support-case" | "collaboration-request" | "creator-programme";
   title: string;
   body: string;
   href: string | null;
@@ -50,7 +50,7 @@ export const getNotificationFeed = cache(async () => {
     viewer.role === "visitor" && viewer.emailVerifiedAt
       ? supabase.rpc("get_visitor_marketplace_support_notifications")
       : Promise.resolve({ data: null, error: null }),
-    viewer.role === "visitor"
+    (viewer.role === "visitor" || viewer.role === "seller")
       ? supabase.rpc("get_creator_collaboration_notifications")
       : Promise.resolve({ data: null, error: null }),
   ]);
@@ -112,7 +112,7 @@ export const getNotificationFeed = cache(async () => {
     })),
     ...(creatorCollaborationUpdates?.data ?? []).map((update) => ({
       id: update.notification_id,
-      kind: "collaboration-request" as const,
+      kind: "creator-programme" as const,
       title: update.title,
       body: update.body,
       href: update.href,
