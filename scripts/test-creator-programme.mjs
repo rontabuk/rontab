@@ -11,7 +11,7 @@ const service = createClient(url, serviceKey);
 const publicClient = createClient(url, anonKey);
 const suffix = randomUUID();
 const password = `LocalTest-${suffix}-Aa1!`;
-const ids = { visitor: null, sellerUser: null, sellerProfile: null, admin: null, creator: null, request: null, requests: [] };
+const ids = { visitor: null, fan: null, secondOwner: null, sellerUser: null, sellerProfile: null, admin: null, creator: null, secondCreator: null, request: null, requests: [] };
 let failure;
 
 function throwOnError(result) {
@@ -107,6 +107,47 @@ try {
     .select("title,is_published").eq("creator_profile_id", ids.creator));
   assert.deepEqual(portfolio.map((item) => [item.title, item.is_published]), [["New sample awaiting review", true]]);
 
+  ids.fan = await createAccount(`creator-fan-${suffix}@example.com`);
+  const fan = createClient(url, anonKey);
+  throwOnError(await fan.auth.signInWithPassword({ email: `creator-fan-${suffix}@example.com`, password }));
+  const creatorCodeResult = throwOnError(await publicClient.from("creator_profiles").select("referral_code").eq("id", ids.creator).single());
+  const firstFollow = throwOnError(await fan.rpc("creator_follow_by_code", { p_code: creatorCodeResult.referral_code }));
+  assert.equal(firstFollow.already_following, false);
+  assert.equal(firstFollow.first_referral, true);
+  const duplicateFollow = throwOnError(await fan.rpc("creator_follow_by_code", { p_code: creatorCodeResult.referral_code.toLowerCase() }));
+  assert.equal(duplicateFollow.already_following, true);
+  assert.equal(duplicateFollow.first_referral, false);
+
+  ids.secondOwner = await createAccount(`creator-second-${suffix}@example.com`);
+  const secondOwner = createClient(url, anonKey);
+  throwOnError(await secondOwner.auth.signInWithPassword({ email: `creator-second-${suffix}@example.com`, password }));
+  const secondCreatorApplication = throwOnError(await secondOwner.rpc("save_creator_application", {
+    p_display_name: `Second Creator ${suffix.slice(0, 8)}`,
+    p_bio: "I share useful local lifestyle and product recommendations with my community.",
+    p_specialties: ["local", "home"],
+    p_platform_accounts: [{ platform: "youtube", handle: `second_${suffix.slice(0, 8)}`, profile_url: `https://www.youtube.com/@second_${suffix.slice(0, 8)}`, follower_count: 8000 }],
+    p_audience_city_id: cities[0].city_id,
+    p_portfolio_items: [],
+    p_public_profile_consent: true,
+  }));
+  ids.secondCreator = secondCreatorApplication;
+  throwOnError(await admin.rpc("admin_review_creator_profile", { p_creator_profile_id: ids.secondCreator, p_decision: "approve", p_review_note: null }));
+  const secondCreatorCode = throwOnError(await publicClient.from("creator_profiles")
+    .select("referral_code").eq("id", ids.secondCreator).single());
+  const secondFollow = throwOnError(await fan.rpc("creator_follow_by_code", { p_code: secondCreatorCode.referral_code }));
+  assert.equal(secondFollow.already_following, false);
+  assert.equal(secondFollow.first_referral, false, "following a second creator must not rewrite first-referral attribution");
+  const followedCreators = throwOnError(await fan.rpc("creator_get_my_follows"));
+  assert.equal(followedCreators.length, 2, "a visitor can follow multiple creators");
+  const fanPointTransactions = throwOnError(await service.from("loyalty_point_transactions")
+    .select("id").eq("visitor_id", ids.fan));
+  assert.equal(fanPointTransactions.length, 0, "following creators does not award visitor loyalty points");
+  const creatorFanStats = throwOnError(await visitor.rpc("creator_get_my_fan_stats"));
+  assert.equal(creatorFanStats[0].fan_count, 1);
+  assert.equal(creatorFanStats[0].first_referral_count, 1);
+  const selfFollow = await visitor.rpc("creator_follow_by_code", { p_code: creatorCodeResult.referral_code });
+  assert.equal(selfFollow.error?.code, "55000", "a creator cannot count themselves as a fan");
+
   ids.sellerUser = await createAccount(`creator-seller-${suffix}@example.com`);
   const sellerProfile = throwOnError(await service.from("seller_profiles").insert({
     user_id: ids.sellerUser,
@@ -163,14 +204,17 @@ try {
     .select("status").eq("id", withdrawnRequestId).single());
   assert.equal(withdrawnRequest.status, "withdrawn");
 
-  console.log("PASS: public snapshots, approved audience and portfolio, draft privacy, collaboration notifications, request responses, and seller withdrawal.");
+  console.log("PASS: public snapshots, multi-fan codes, single first attribution, self-follow prevention, draft privacy, notifications, collaboration responses, and withdrawal.");
 } catch (error) {
   failure = error;
 } finally {
   if (ids.requests.length) await service.from("creator_collaboration_requests").delete().in("id", ids.requests);
-  if (ids.creator) {
-    await service.from("creator_point_transactions").delete().eq("creator_profile_id", ids.creator);
-    await service.from("creator_profiles").delete().eq("id", ids.creator);
+  const creatorIds = [ids.creator, ids.secondCreator].filter(Boolean);
+  if (creatorIds.length) {
+    await service.from("creator_first_referrals").delete().in("creator_profile_id", creatorIds);
+    await service.from("creator_fans").delete().in("creator_profile_id", creatorIds);
+    await service.from("creator_point_transactions").delete().in("creator_profile_id", creatorIds);
+    await service.from("creator_profiles").delete().in("id", creatorIds);
   }
   if (ids.admin) {
     await service.from("admin_audit_logs").delete().eq("actor_id", ids.admin);
@@ -178,6 +222,8 @@ try {
   }
   if (ids.sellerProfile) await service.from("seller_profiles").delete().eq("id", ids.sellerProfile);
   if (ids.sellerUser) await service.auth.admin.deleteUser(ids.sellerUser);
+  if (ids.fan) await service.auth.admin.deleteUser(ids.fan);
+  if (ids.secondOwner) await service.auth.admin.deleteUser(ids.secondOwner);
   if (ids.visitor) await service.auth.admin.deleteUser(ids.visitor);
 }
 

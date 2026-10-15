@@ -18,7 +18,7 @@ export const instant = false;
 
 type CreatorProfile = Pick<
   Database["public"]["Tables"]["creator_profiles"]["Row"],
-  "id" | "slug" | "display_name" | "bio" | "specialties" | "status" | "is_public" | "submitted_at" | "audience_city_id" | "public_profile_consent_at"
+  "id" | "slug" | "display_name" | "bio" | "specialties" | "status" | "is_public" | "submitted_at" | "audience_city_id" | "public_profile_consent_at" | "referral_code"
 >;
 type CreatorPlatformAccount = Pick<
   Database["public"]["Tables"]["creator_platform_accounts"]["Row"],
@@ -60,21 +60,24 @@ export default async function VisitorCreatorPage({
   let accounts: CreatorPlatformAccount[] = [];
   let reviewNote: string | null = null;
   let pointsBalance = 0;
+  let fanCount = 0;
+  let firstReferralCount = 0;
   let pointTransactions: CreatorPointTransaction[] = [];
   let portfolioItems: CreatorPortfolioItem[] = [];
   let collaborationRequests: CreatorCollaborationRequest[] = [];
   let audienceCity = null;
   if (profileId) {
-    const [profileResult, accountsResult, reviewsResult, pointsResult, historyResult, portfolioResult, collaborationResult] = await Promise.all([
-      supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,public_profile_consent_at").eq("id", profileId).single(),
+    const [profileResult, accountsResult, reviewsResult, pointsResult, historyResult, portfolioResult, collaborationResult, fanStatsResult] = await Promise.all([
+      supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,public_profile_consent_at,referral_code").eq("id", profileId).single(),
       supabase.from("creator_platform_accounts").select("id,creator_profile_id,platform,handle,profile_url,follower_count,followers_updated_at,is_published").eq("creator_profile_id", profileId).order("platform"),
       supabase.from("creator_profile_reviews").select("review_note").eq("creator_profile_id", profileId).order("created_at", { ascending: false }).limit(1),
       supabase.from("creator_point_accounts").select("points_balance").eq("creator_profile_id", profileId).single(),
       supabase.from("creator_point_transactions").select("id,points_delta,reason,created_at").eq("creator_profile_id", profileId).order("created_at", { ascending: false }).limit(20),
       supabase.from("creator_portfolio_items").select("id,title,url,position,is_published").eq("creator_profile_id", profileId).order("position"),
       supabase.from("creator_collaboration_requests").select("id,seller_profile_id,title,brief,proposed_compensation,status,created_at,creator_response").eq("creator_profile_id", profileId).order("created_at", { ascending: false }).limit(20),
+      supabase.rpc("creator_get_my_fan_stats"),
     ]);
-    for (const result of [profileResult, accountsResult, reviewsResult, pointsResult, historyResult, portfolioResult, collaborationResult]) {
+    for (const result of [profileResult, accountsResult, reviewsResult, pointsResult, historyResult, portfolioResult, collaborationResult, fanStatsResult]) {
       if (result.error) throw new Error(result.error.message);
     }
     if (!profileResult.data) throw new Error("Creator profile is unavailable.");
@@ -86,6 +89,8 @@ export default async function VisitorCreatorPage({
     pointTransactions = historyResult.data ?? [];
     portfolioItems = portfolioResult.data ?? [];
     collaborationRequests = collaborationResult.data ?? [];
+    fanCount = fanStatsResult.data?.[0]?.fan_count ?? 0;
+    firstReferralCount = fanStatsResult.data?.[0]?.first_referral_count ?? 0;
     audienceCity = await getSavedCity(supabase, savedProfile.audience_city_id);
   }
 
@@ -137,6 +142,13 @@ export default async function VisitorCreatorPage({
             <Coins size={17} aria-hidden="true" />
             <span><strong>{formatNumber(pointsBalance)}</strong><small>creator points</small></span>
           </div>
+        </section>
+      )}
+
+      {profile?.is_public && profile.referral_code && (
+        <section className="creator-fan-code-panel" aria-label="Your Rontab fan code">
+          <div><p className="admin-eyebrow">YOUR RONTAB FAN CODE</p><strong>{profile.referral_code}</strong><small>Followers can enter this code from “I&apos;m a fan of”.</small></div>
+          <div><strong>{formatNumber(fanCount)}</strong><small>fans following you</small><span>{formatNumber(firstReferralCount)} first referrals</span></div>
         </section>
       )}
 

@@ -14,10 +14,14 @@ Approved profiles show the creator's display name, introduction, specialties, pr
 
 Active sellers can send a private request to an approved creator with a title, brief, and optional proposed compensation. Only the seller and creator can read the request. A creator can accept or decline and include a response; contact information is not exposed by the request workflow.
 
+## Fan codes and attribution
+
+Each approved creator receives a unique `RT-` code. A confirmed visitor can follow multiple creators; the `(visitor, creator)` relationship is unique, so re-entering a code does not inflate the fan count. The first accepted code is stored separately as the visitor's original creator referral. Later codes can add follows but do not replace that attribution. Entering a code gives the visitor no loyalty points and does not automatically grant promotion credits to the creator.
+
 ## Creator points
 
 Creator points are separate from visitor loyalty points. Administrators can grant points to approved creators with a recorded reason. Grants are positive, bounded, idempotent, and recorded in the admin audit log. Creators can view their balance and grant history. Creator points do not currently have a redemption flow.
 
 ## Database rollout
 
-Apply the creator migrations in timestamp order, including `20261015140000_creator_profiles.sql`, `20261015150000_restrict_creator_private_select.sql`, `20261015160000_creator_profile_enrichment.sql`, `20261015170000_creator_private_draft_policies.sql`, and `20261015180000_creator_platform_revision_uniqueness.sql`. They use row-level security to keep drafts private, expose only approved snapshots, and restrict collaboration requests to their participants.
+Apply the creator migrations in timestamp order, including `20261015140000_creator_profiles.sql`, `20261015150000_restrict_creator_private_select.sql`, `20261015160000_creator_profile_enrichment.sql`, `20261015170000_creator_private_draft_policies.sql`, `20261015180000_creator_platform_revision_uniqueness.sql`, `20261015190000_creator_collaboration_notifications.sql`, `20261015200000_creator_fan_codes.sql`, and `20261015210000_prevent_creator_self_follow.sql`. They use row-level security to keep drafts private, expose only approved snapshots, restrict collaboration requests to participants, and make fan/referral records idempotent.

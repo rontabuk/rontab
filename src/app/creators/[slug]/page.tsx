@@ -34,7 +34,7 @@ export default async function CreatorProfilePage({
   const supabase = createSupabasePublicClient();
   const { data: profile, error: profileError } = await supabase
     .from("creator_profiles")
-    .select("id,slug,published_display_name,published_bio,published_specialties,published_audience_city_id,is_public,created_at")
+    .select("id,slug,published_display_name,published_bio,published_specialties,published_audience_city_id,referral_code,is_public,created_at")
     .eq("slug", slug)
     .eq("is_public", true)
     .maybeSingle();
@@ -49,14 +49,16 @@ export default async function CreatorProfilePage({
     .order("platform");
   if (accountsError) throw new Error(accountsError.message);
 
-  const [portfolioResult, audienceCityResult] = await Promise.all([
+  const [portfolioResult, audienceCityResult, fanCountResult] = await Promise.all([
     supabase.from("creator_portfolio_items").select("id,title,url,position").eq("creator_profile_id", profile.id).eq("is_published", true).order("position"),
     profile.published_audience_city_id
       ? supabase.from("supported_cities").select("city_name,country_code").eq("city_id", profile.published_audience_city_id).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
+    supabase.rpc("creator_get_public_fan_count", { p_creator_profile_id: profile.id }),
   ]);
   if (portfolioResult.error) throw new Error(portfolioResult.error.message);
   if (audienceCityResult.error) throw new Error(audienceCityResult.error.message);
+  if (fanCountResult.error) throw new Error(fanCountResult.error.message);
 
   let sellerProfile: { id: string; status: string } | null = null;
   let sellerRequest: { id: string; status: string; created_at: string } | null = null;
@@ -90,6 +92,7 @@ export default async function CreatorProfilePage({
         <p className="creator-profile-bio">{profile.published_bio}</p>
         {audienceCityResult.data && <p className="creator-profile-audience"><MapPin size={14} aria-hidden="true" />Audience: {audienceCityResult.data.city_name}, {audienceCityResult.data.country_code}</p>}
         <p className="creator-approved-mark"><BadgeCheck size={15} aria-hidden="true" />Profile reviewed by Rontab</p>
+        {profile.referral_code && <div className="creator-public-referral-code"><span>Rontab fan code</span><strong>{profile.referral_code}</strong><small>{formatNumber(fanCountResult.data ?? 0)} fans follow this creator</small></div>}
       </header>
       <section className="creator-public-platforms" aria-labelledby="creator-public-platforms-title">
         <div className="creator-public-section-heading">

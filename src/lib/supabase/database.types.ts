@@ -189,7 +189,7 @@ export type Database = {
         [{ foreignKeyName: "seller_offer_point_transactions_coupon_id_fkey"; columns: ["coupon_id"]; isOneToOne: false; referencedRelation: "seller_offer_coupons"; referencedColumns: ["id"] }]
       >;
       creator_profiles: Table<
-        { audience_city_id: string | null; bio: string; created_at: string; display_name: string; id: string; is_public: boolean; owner_id: string; public_profile_consent_at: string | null; published_audience_city_id: string | null; published_bio: string | null; published_display_name: string | null; published_specialties: string[] | null; reviewed_at: string | null; slug: string; specialties: string[]; status: string; submitted_at: string; updated_at: string },
+        { audience_city_id: string | null; bio: string; created_at: string; display_name: string; id: string; is_public: boolean; owner_id: string; public_profile_consent_at: string | null; published_audience_city_id: string | null; published_bio: string | null; published_display_name: string | null; published_specialties: string[] | null; referral_code: string | null; reviewed_at: string | null; slug: string; specialties: string[]; status: string; submitted_at: string; updated_at: string },
         never
       >;
       creator_platform_accounts: Table<
@@ -209,6 +209,19 @@ export type Database = {
           { foreignKeyName: "creator_collaboration_requests_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] },
           { foreignKeyName: "creator_collaboration_requests_seller_profile_id_fkey"; columns: ["seller_profile_id"]; isOneToOne: false; referencedRelation: "seller_profiles"; referencedColumns: ["id"] }
         ]
+      >;
+      creator_fans: Table<
+        { creator_profile_id: string; first_code: string; followed_at: string; visitor_id: string },
+        never,
+        [
+          { foreignKeyName: "creator_fans_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] },
+          { foreignKeyName: "creator_fans_visitor_id_fkey"; columns: ["visitor_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] }
+        ]
+      >;
+      creator_first_referrals: Table<
+        { attributed_at: string; creator_profile_id: string; referral_code: string; visitor_id: string },
+        never,
+        [{ foreignKeyName: "creator_first_referrals_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }]
       >;
       creator_profile_reviews: Table<
         { admin_id: string; created_at: string; creator_profile_id: string; decision: string; id: number; review_note: string | null },
@@ -307,6 +320,11 @@ export type Database = {
       creator_decide_collaboration_request: { Args: { p_decision: string; p_request_id: string; p_response: string }; Returns: undefined };
       get_creator_collaboration_notifications: { Args: Record<PropertyKey, never>; Returns: { body: string; created_at: string; href: string; notification_id: string; title: string }[] };
       seller_withdraw_creator_collaboration_request: { Args: { p_request_id: string }; Returns: undefined };
+      creator_follow_by_code: { Args: { p_code: string }; Returns: Json };
+      creator_unfollow: { Args: { p_creator_profile_id: string }; Returns: boolean };
+      creator_get_my_follows: { Args: Record<PropertyKey, never>; Returns: { audience_city_name: string | null; country_code: string | null; creator_profile_id: string; display_name: string; followed_at: string; referral_code: string; slug: string; specialties: string[] }[] };
+      creator_get_my_fan_stats: { Args: Record<PropertyKey, never>; Returns: { fan_count: number; first_referral_count: number }[] };
+      creator_get_public_fan_count: { Args: { p_creator_profile_id: string }; Returns: number | null };
       is_creator_profile_owner: { Args: { p_creator_profile_id: string }; Returns: boolean };
       get_visitor_seller_offer_coupons: { Args: Record<PropertyKey, never>; Returns: { branch_address: string | null; branch_name: string; can_cancel: boolean; city_name: string; coupon_code: string; created_at: string; ends_at: string; id: string; offer_date: string; offer_id: string; points_cost: number; starts_at: string; status: string; title: string }[] };
       admin_decide_seller_offer_request: { Args: { p_decision: string; p_final_terms: string; p_points_cost: number; p_request_id: string; p_review_note: string | null; p_schedule_capacities: Json }; Returns: string | null };
