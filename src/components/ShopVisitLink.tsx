@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
@@ -23,8 +23,11 @@ export function ShopVisitLink({
   const [showPrompt, setShowPrompt] = useState(false);
   const [portalTarget] = useState<HTMLElement | null>(() => typeof document === "undefined" ? null : document.body);
   const [promptBounds, setPromptBounds] = useState<CSSProperties | null>(null);
+  const visitWindow = useRef<Window | null>(null);
+  const openingVisit = useRef(false);
   const visitPath = `/visit/${slug}`;
   const accountUrl = `/account?next=${encodeURIComponent(visitPath)}`;
+  const targetName = `rontab-shop-${slug}`;
 
   function showVisitorPrompt(anchor: HTMLAnchorElement) {
     const productImage = anchor.closest<HTMLElement>(".product-image");
@@ -56,29 +59,65 @@ export function ShopVisitLink({
 
   async function handleClick(event: MouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
-    if (isChecking) return;
+    if (openingVisit.current) {
+      visitWindow.current?.focus();
+      return;
+    }
     const anchor = event.currentTarget;
+    openingVisit.current = true;
     setIsChecking(true);
-    const supabase = createSupabaseBrowserClient();
+    let destination = visitWindow.current;
+    let openedBlankThisClick = false;
+    if (!destination || destination.closed) {
+      destination = window.open("about:blank", targetName);
+      if (destination) {
+        openedBlankThisClick = true;
+        destination.opener = null;
+        visitWindow.current = destination;
+      }
+    } else {
+      destination.focus();
+    }
 
-    if (!supabase) {
+    const closeBlankDestination = () => {
+      if (destination && !destination.closed) destination.close();
+      if (visitWindow.current === destination) visitWindow.current = null;
+    };
+
+    try {
+      const supabase = createSupabaseBrowserClient();
+      if (!supabase) {
+        closeBlankDestination();
+        openingVisit.current = false;
+        setIsChecking(false);
+        showVisitorPrompt(anchor);
+        return;
+      }
+
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data.user?.email_confirmed_at) {
+        if (openedBlankThisClick) closeBlankDestination();
+        openingVisit.current = false;
+        setIsChecking(false);
+        showVisitorPrompt(anchor);
+        return;
+      }
+
+      if (destination && !destination.closed) destination.location.replace(visitPath);
+      else router.push(visitPath);
+      openingVisit.current = false;
+      setIsChecking(false);
+    } catch {
+      closeBlankDestination();
+      openingVisit.current = false;
       setIsChecking(false);
       showVisitorPrompt(anchor);
-      return;
     }
-
-    const { data } = await supabase.auth.getUser();
-    if (data.user?.email_confirmed_at) {
-      router.push(visitPath);
-      return;
-    }
-    setIsChecking(false);
-    showVisitorPrompt(anchor);
   }
 
   return (
     <>
-      <a className={className} href={visitPath} aria-label={`Visit shop for ${productName}`} onClick={handleClick}>
+      <a className={className} href={visitPath} aria-label={`Visit shop for ${productName}`} aria-busy={isChecking} onClick={handleClick}>
         {children}
       </a>
       {showPrompt && portalTarget && createPortal(
