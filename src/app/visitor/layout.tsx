@@ -14,6 +14,7 @@ const visitorLinks = [
   { href: "/visitor/rewards", label: "Points & rewards" },
   { href: "/products", label: "Discover products" },
   { href: "/visitor/creator", label: "Introduce yourself" },
+  { href: "/visitor/creator/opportunities", label: "Creator opportunities" },
   { href: "/visitor/fans", label: "I'm a fan of" },
 ];
 

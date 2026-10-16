@@ -19,7 +19,7 @@ export async function saveCreatorApplication(_state: FormState, formData: FormDa
   return runFormAction(async () => {
     const displayName = String(formData.get("display_name") ?? "").trim();
     const bio = String(formData.get("bio") ?? "").trim();
-    const audienceCityId = String(formData.get("audience_city_id") ?? "").trim() || null;
+    const audienceCityIds = formData.getAll("audience_city_id").map(String).filter(Boolean);
     const specialties = formData.getAll("specialty").map(String);
     const publicConsent = formData.get("public_profile_consent") === "on";
     const validSpecialties = new Set(creatorSpecialties.map(({ value }) => value));
@@ -29,7 +29,10 @@ export async function saveCreatorApplication(_state: FormState, formData: FormDa
     if (specialties.length < 1 || specialties.length > 5 || specialties.some((value) => !validSpecialties.has(value as never))) {
       throw new FormError("Choose between one and five content specialties.");
     }
-    if (audienceCityId && !isCityId(audienceCityId)) throw new FormError("Choose a supported audience city.");
+    if (audienceCityIds.length > 10 || audienceCityIds.some((cityId) => !isCityId(cityId))
+      || new Set(audienceCityIds).size !== audienceCityIds.length) {
+      throw new FormError("Choose up to ten different supported audience cities.");
+    }
     if (!publicConsent) throw new FormError("Confirm that these details and links may appear on your public creator profile.");
 
     const accounts = creatorPlatforms.flatMap(({ value: platform }) => {
@@ -69,12 +72,12 @@ export async function saveCreatorApplication(_state: FormState, formData: FormDa
     });
 
     const { supabase } = await getVisitorAccount("/visitor/creator");
-    const { error } = await supabase.rpc("save_creator_application", {
+    const { error } = await supabase.rpc("save_creator_application_with_audience_cities", {
       p_display_name: displayName,
       p_bio: bio,
       p_specialties: specialties,
       p_platform_accounts: accounts,
-      p_audience_city_id: audienceCityId,
+      p_audience_city_ids: audienceCityIds,
       p_portfolio_items: portfolioItems,
       p_public_profile_consent: publicConsent,
     });

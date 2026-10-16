@@ -4,11 +4,11 @@ import { connection } from "next/server";
 import { ArrowUpRight, BadgeCheck, Check, Coins, ExternalLink, MessageSquareText, X } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
 import { CreatorFanTools } from "@/components/creator/CreatorFanTools";
-import { CityPicker } from "@/components/CityPicker";
+import { MultiCityPicker } from "@/components/MultiCityPicker";
 import { respondToCreatorCollaborationRequest, withdrawCreatorProfile } from "@/app/visitor/creator-actions";
 import { creatorPlatforms, creatorSpecialties } from "@/lib/creator/catalog";
 import { formatDateTime, formatNumber } from "@/lib/format";
-import { getSavedCity, getSupportedLocations } from "@/lib/locations";
+import { getSupportedLocations } from "@/lib/locations";
 import { getVisitorAccount } from "@/lib/visitor/access";
 import { saveCreatorApplication } from "@/app/visitor/creator-actions";
 import type { Database } from "@/lib/supabase/database.types";
@@ -50,7 +50,7 @@ export default async function VisitorCreatorPage({
   searchParams: Promise<{ submitted?: string; replied?: string; withdrawn?: string }>;
 }) {
   await connection();
-  const [{ submitted, replied, withdrawn }, { supabase }, { countries, cities }] = await Promise.all([
+  const [{ submitted, replied, withdrawn }, { supabase }, { cities }] = await Promise.all([
     searchParams,
     getVisitorAccount("/visitor/creator"),
     getSupportedLocations(),
@@ -67,9 +67,9 @@ export default async function VisitorCreatorPage({
   let pointTransactions: CreatorPointTransaction[] = [];
   let portfolioItems: CreatorPortfolioItem[] = [];
   let collaborationRequests: CreatorCollaborationRequest[] = [];
-  let audienceCity = null;
+  let audienceCityIds: string[] = [];
   if (profileId) {
-    const [profileResult, accountsResult, reviewsResult, pointsResult, historyResult, portfolioResult, collaborationResult, fanStatsResult] = await Promise.all([
+    const [profileResult, accountsResult, reviewsResult, pointsResult, historyResult, portfolioResult, collaborationResult, fanStatsResult, audienceCitiesResult] = await Promise.all([
       supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,public_profile_consent_at,referral_code").eq("id", profileId).single(),
       supabase.from("creator_platform_accounts").select("id,creator_profile_id,platform,handle,profile_url,follower_count,followers_updated_at,is_published").eq("creator_profile_id", profileId).order("platform"),
       supabase.from("creator_profile_reviews").select("review_note").eq("creator_profile_id", profileId).order("created_at", { ascending: false }).limit(1),
@@ -78,8 +78,9 @@ export default async function VisitorCreatorPage({
       supabase.from("creator_portfolio_items").select("id,title,url,position,is_published").eq("creator_profile_id", profileId).order("position"),
       supabase.from("creator_collaboration_requests").select("id,seller_profile_id,title,brief,proposed_compensation,status,created_at,creator_response").eq("creator_profile_id", profileId).order("created_at", { ascending: false }).limit(20),
       supabase.rpc("creator_get_my_fan_stats"),
+      supabase.from("creator_profile_audience_cities").select("city_id,is_published").eq("creator_profile_id", profileId),
     ]);
-    for (const result of [profileResult, accountsResult, reviewsResult, pointsResult, historyResult, portfolioResult, collaborationResult, fanStatsResult]) {
+    for (const result of [profileResult, accountsResult, reviewsResult, pointsResult, historyResult, portfolioResult, collaborationResult, fanStatsResult, audienceCitiesResult]) {
       if (result.error) throw new Error(result.error.message);
     }
     if (!profileResult.data) throw new Error("Creator profile is unavailable.");
@@ -93,7 +94,8 @@ export default async function VisitorCreatorPage({
     collaborationRequests = collaborationResult.data ?? [];
     fanCount = fanStatsResult.data?.[0]?.fan_count ?? 0;
     firstReferralCount = fanStatsResult.data?.[0]?.first_referral_count ?? 0;
-    audienceCity = await getSavedCity(supabase, savedProfile.audience_city_id);
+    audienceCityIds = (audienceCitiesResult.data ?? []).filter((city) => !city.is_published).map((city) => city.city_id);
+    if (!audienceCityIds.length && savedProfile.audience_city_id) audienceCityIds = [savedProfile.audience_city_id];
   }
 
   const useDraft = Boolean(profile && profile.status !== "approved");
@@ -130,6 +132,7 @@ export default async function VisitorCreatorPage({
       {withdrawn === "1" && <p className="admin-save-success" role="status">Your profile is now offline. You can apply again whenever you are ready.</p>}
       <div className="creator-programme-links">
         <Link href="/creators">Browse approved creators <ArrowUpRight size={15} aria-hidden="true" /></Link>
+        <Link href="/visitor/creator/opportunities">Available product promotions <ArrowUpRight size={15} aria-hidden="true" /></Link>
         {profile?.is_public && <Link href={`/creators/${profile.slug}`}><ExternalLink size={14} aria-hidden="true" />View your public profile</Link>}
       </div>
 
@@ -183,13 +186,12 @@ export default async function VisitorCreatorPage({
             </label>
 
             <div className="creator-audience-location">
-              <p>Primary audience location <small>Optional. This describes who you reach, not your home address.</small></p>
-              <CityPicker
+              <p>Audience cities <small>Optional. Choose up to 10 cities where your audience is based, not your home address.</small></p>
+              <MultiCityPicker
                 name="audience_city_id"
-                countries={countries}
                 cities={cities}
-                initialCity={audienceCity}
-                initialCountryCode={audienceCity?.country_code ?? null}
+                initialCityIds={audienceCityIds}
+                maxSelected={10}
               />
             </div>
             <label>
@@ -252,7 +254,7 @@ export default async function VisitorCreatorPage({
 
             <label className="creator-public-consent">
               <input name="public_profile_consent" type="checkbox" required />
-              <span>I agree that my name, introduction, specialties, audience location, platform links, follower counts, and work samples may appear on my public Rontab creator profile.</span>
+              <span>I agree that my name, introduction, specialties, audience cities, platform links, follower counts, and work samples may appear on my public Rontab creator profile.</span>
             </label>
             <button className="admin-primary-button" type="submit">{profile ? "Save and submit for review" : "Submit for review"}</button>
           </ActionForm>

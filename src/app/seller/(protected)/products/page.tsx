@@ -45,7 +45,7 @@ export default async function SellerProductsPage({
       </header>
       {updated === "approved" && <p className="admin-save-success" role="status">Changes saved. The product was approved automatically and is live.</p>}
       {updated === "review" && <p className="admin-save-success" role="status">Changes saved and sent for admin review.</p>}
-      <SellerProductList products={listProducts} canDelete={seller.status === "active"} />
+      <SellerProductList products={listProducts} canDelete={seller.status === "active"} canPromote={seller.status === "active"} />
     </main>
   );
 }

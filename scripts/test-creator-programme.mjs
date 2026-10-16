@@ -28,8 +28,8 @@ async function createAccount(email, appMetadata = {}) {
 try {
   const enabledCountries = throwOnError(await service.from("supported_countries").select("country_code").eq("is_enabled", true).limit(1));
   assert.ok(enabledCountries.length, "local Supabase needs an enabled supported country");
-  const cities = throwOnError(await service.from("supported_cities").select("city_id,country_code").eq("country_code", enabledCountries[0].country_code).eq("is_enabled", true).limit(1));
-  assert.ok(cities.length, "local Supabase needs an enabled city in a supported country");
+  const cities = throwOnError(await service.from("supported_cities").select("city_id,country_code").eq("country_code", enabledCountries[0].country_code).eq("is_enabled", true).order("city_id").limit(2));
+  assert.equal(cities.length, 2, "local Supabase needs two enabled audience cities");
 
   ids.visitor = await createAccount(`creator-test-${suffix}@example.com`);
   const visitor = createClient(url, anonKey);
@@ -41,12 +41,12 @@ try {
 
   const profileName = `Local Creator ${suffix.slice(0, 8)}`;
   const firstPlatformHandle = `creator_${suffix.slice(0, 8)}`;
-  const initial = throwOnError(await visitor.rpc("save_creator_application", {
+  const initial = throwOnError(await visitor.rpc("save_creator_application_with_audience_cities", {
     p_display_name: profileName,
     p_bio: "I create useful local food and home content for an engaged community.",
     p_specialties: ["food", "local"],
     p_platform_accounts: [{ platform: "instagram", handle: firstPlatformHandle, profile_url: `https://www.instagram.com/${firstPlatformHandle}/`, follower_count: 12000 }],
-    p_audience_city_id: cities[0].city_id,
+    p_audience_city_ids: cities.map((city) => city.city_id),
     p_portfolio_items: [{ title: "Approved sample", url: "https://www.instagram.com/example/reel/" }],
     p_public_profile_consent: true,
   }));
@@ -61,6 +61,9 @@ try {
     .eq("id", ids.creator).single());
   assert.equal(firstPublic.published_display_name, profileName);
   assert.equal(firstPublic.published_audience_city_id, cities[0].city_id);
+  const publishedAudienceCities = throwOnError(await publicClient.from("creator_profile_audience_cities")
+    .select("city_id").eq("creator_profile_id", ids.creator).eq("is_published", true).order("city_id"));
+  assert.deepEqual(publishedAudienceCities.map((city) => city.city_id), cities.map((city) => city.city_id).sort(), "creator approval publishes all selected audience cities");
   const approvalNotifications = throwOnError(await visitor.rpc("get_creator_collaboration_notifications"));
   assert.ok(approvalNotifications.some((notification) => notification.title === "Creator profile approved"), "creator receives profile review decisions");
 

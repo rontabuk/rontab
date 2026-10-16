@@ -196,6 +196,26 @@ export type Database = {
         { audience_city_id: string | null; bio: string; created_at: string; display_name: string; id: string; is_public: boolean; owner_id: string; public_profile_consent_at: string | null; published_audience_city_id: string | null; published_bio: string | null; published_display_name: string | null; published_specialties: string[] | null; referral_code: string | null; reviewed_at: string | null; slug: string; specialties: string[]; status: string; submitted_at: string; suspended_from_status: string | null; updated_at: string },
         never
       >;
+      creator_profile_audience_cities: Table<
+        { city_id: string; created_at: string; creator_profile_id: string; is_published: boolean },
+        never,
+        [{ foreignKeyName: "creator_profile_audience_cities_city_id_fkey"; columns: ["city_id"]; isOneToOne: false; referencedRelation: "supported_cities"; referencedColumns: ["city_id"] }, { foreignKeyName: "creator_profile_audience_cities_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }]
+      >;
+      creator_product_opportunities: Table<
+        { brief: string; budget: number; contact_methods: string[]; created_at: string; currency: string; deadline: string | null; id: string; is_nationwide: boolean; product_id: string; product_provided: boolean; seller_profile_id: string; status: "open" | "awarded" | "closed"; target_city_ids: string[]; target_specialties: string[]; updated_at: string },
+        never,
+        [{ foreignKeyName: "creator_product_opportunities_product_id_fkey"; columns: ["product_id"]; isOneToOne: false; referencedRelation: "products"; referencedColumns: ["id"] }, { foreignKeyName: "creator_product_opportunities_seller_profile_id_fkey"; columns: ["seller_profile_id"]; isOneToOne: false; referencedRelation: "seller_profiles"; referencedColumns: ["id"] }]
+      >;
+      creator_product_opportunity_proposals: Table<
+        { amount: number; created_at: string; creator_profile_id: string; id: string; offer_details: string; opportunity_id: string; share_email: boolean; share_phone: boolean; status: "pending" | "selected" | "not_selected" | "withdrawn"; updated_at: string },
+        never,
+        [{ foreignKeyName: "creator_product_opportunity_proposals_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }, { foreignKeyName: "creator_product_opportunity_proposals_opportunity_id_fkey"; columns: ["opportunity_id"]; isOneToOne: false; referencedRelation: "creator_product_opportunities"; referencedColumns: ["id"] }]
+      >;
+      creator_product_opportunity_contacts: Table<
+        { phone: string | null; proposal_id: string; updated_at: string },
+        never,
+        [{ foreignKeyName: "creator_product_opportunity_contacts_proposal_id_fkey"; columns: ["proposal_id"]; isOneToOne: true; referencedRelation: "creator_product_opportunity_proposals"; referencedColumns: ["id"] }]
+      >;
       creator_platform_accounts: Table<
         { created_at: string; creator_profile_id: string; followers_updated_at: string; follower_count: number; handle: string; id: string; is_published: boolean; platform: string; profile_url: string },
         never,
@@ -330,6 +350,14 @@ export type Database = {
       creator_get_my_follows: { Args: Record<PropertyKey, never>; Returns: { audience_city_name: string | null; country_code: string | null; creator_profile_id: string; display_name: string; followed_at: string; referral_code: string; slug: string; specialties: string[] }[] };
       creator_get_my_fan_stats: { Args: Record<PropertyKey, never>; Returns: { fan_count: number; first_referral_count: number }[] };
       creator_get_public_fan_count: { Args: { p_creator_profile_id: string }; Returns: number | null };
+      save_creator_application_with_audience_cities: { Args: { p_audience_city_ids: string[]; p_bio: string; p_display_name: string; p_platform_accounts: Json; p_portfolio_items: Json; p_public_profile_consent: boolean; p_specialties: string[] }; Returns: string };
+      creator_can_view_product_opportunity: { Args: { p_opportunity_id: string }; Returns: boolean };
+      seller_create_creator_product_opportunity: { Args: { p_brief: string; p_budget: number; p_contact_methods: string[]; p_deadline: string | null; p_is_nationwide: boolean; p_product_id: string; p_product_provided: boolean; p_target_city_ids: string[]; p_target_specialties: string[] }; Returns: string };
+      creator_submit_product_opportunity_proposal: { Args: { p_amount: number; p_contact_phone: string | null; p_offer_details: string; p_opportunity_id: string; p_share_email: boolean; p_share_phone: boolean }; Returns: string };
+      creator_withdraw_product_opportunity_proposal: { Args: { p_proposal_id: string }; Returns: undefined };
+      seller_select_creator_product_opportunity_proposal: { Args: { p_proposal_id: string }; Returns: string };
+      seller_close_creator_product_opportunity: { Args: { p_opportunity_id: string }; Returns: undefined };
+      get_creator_product_opportunity_contact: { Args: { p_proposal_id: string }; Returns: { email: string | null; phone: string | null }[] };
       is_creator_profile_owner: { Args: { p_creator_profile_id: string }; Returns: boolean };
       get_visitor_seller_offer_coupons: { Args: Record<PropertyKey, never>; Returns: { branch_address: string | null; branch_name: string; can_cancel: boolean; city_name: string; coupon_code: string; created_at: string; ends_at: string; id: string; offer_date: string; offer_id: string; points_cost: number; starts_at: string; status: string; title: string }[] };
       admin_decide_seller_offer_request: { Args: { p_decision: string; p_final_terms: string; p_points_cost: number; p_request_id: string; p_review_note: string | null; p_schedule_capacities: Json }; Returns: string | null };

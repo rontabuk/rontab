@@ -25,7 +25,7 @@ type SellerProduct = {
 
 type Filter = { id: string; label: string; kind: "all" | "category" | "image" | "video"; value?: string };
 
-export function SellerProductList({ products, canDelete }: { products: SellerProduct[]; canDelete: boolean }) {
+export function SellerProductList({ products, canDelete, canPromote }: { products: SellerProduct[]; canDelete: boolean; canPromote: boolean }) {
   const [activeFilter, setActiveFilter] = useState("all");
   const [pendingDelete, setPendingDelete] = useState<SellerProduct | null>(null);
   const displayedPendingDelete = pendingDelete && products.some((product) => product.id === pendingDelete.id)
@@ -95,6 +95,7 @@ export function SellerProductList({ products, canDelete }: { products: SellerPro
                   <td>
                     <div className="seller-product-row-actions">
                       <Link className="seller-product-edit-link" href={`/seller/products/${product.id}/edit`}>Edit</Link>
+                      {canPromote && product.status === "approved" && <Link className="seller-product-edit-link" href={`/seller/products/${product.id}/creator-opportunity`}>Promote to creators</Link>}
                       {canDelete && (
                         <button className="seller-product-delete-button" type="button" onClick={() => setPendingDelete(product)}>Delete</button>
                       )}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { ArrowLeft, ArrowRight, ArrowUpRight, ListFilter, UsersRound } from "lucide-react";
+import { CreatorVerificationBadge } from "@/components/creator/CreatorVerificationBadge";
 import { creatorSpecialties } from "@/lib/creator/catalog";
 import { formatNumber } from "@/lib/format";
 import { createSupabasePublicClient } from "@/lib/supabase/server";
@@ -23,10 +24,10 @@ export default async function CreatorsDirectoryPage({
   const supabase = createSupabasePublicClient();
   async function loadProfilesBatch(offset: number) {
     const { data, error } = await supabase.from("creator_profiles")
-      .select("id,slug,published_display_name,published_bio,published_specialties,published_audience_city_id,creator_platform_accounts(id,platform,profile_url,follower_count),creator_portfolio_items(id,title,url,position)")
+      .select("id,slug,published_display_name,published_specialties,published_audience_city_id,creator_profile_audience_cities(city_id,is_published),creator_platform_accounts(follower_count)")
       .eq("is_public", true)
       .eq("creator_platform_accounts.is_published", true)
-      .eq("creator_portfolio_items.is_published", true)
+      .eq("creator_profile_audience_cities.is_published", true)
       .order("id")
       .range(offset, offset + 199);
     if (error) throw new Error(error.message);
@@ -38,22 +39,29 @@ export default async function CreatorsDirectoryPage({
     profiles.push(...batch);
     if (batch.length < 200) break;
   }
-  const audienceCityIds = [...new Set(profiles.map((profile) => profile.published_audience_city_id).filter((cityId): cityId is string => Boolean(cityId)))];
+  const profilesWithAudienceCities = profiles.map((profile) => ({
+    ...profile,
+    audienceCityIds: [...new Set([
+      ...profile.creator_profile_audience_cities.map((city) => city.city_id),
+      ...(profile.published_audience_city_id ? [profile.published_audience_city_id] : []),
+    ])],
+  }));
+  const audienceCityIds = [...new Set(profilesWithAudienceCities.flatMap((profile) => profile.audienceCityIds))];
   const citiesById = new Map<string, string>();
   for (let offset = 0; offset < audienceCityIds.length; offset += 200) {
     const { data, error } = await supabase.from("supported_cities")
-      .select("city_id,city_name,country_code")
+      .select("city_id,city_name")
       .in("city_id", audienceCityIds.slice(offset, offset + 200));
     if (error) throw new Error(error.message);
-    for (const city of data) citiesById.set(city.city_id, `${city.city_name}, ${city.country_code}`);
+    for (const city of data) citiesById.set(city.city_id, city.city_name);
   }
   const cities = [...citiesById].sort((left, right) => left[1].localeCompare(right[1]));
   const city = audienceCityIds.includes(requestedCity ?? "") ? requestedCity : undefined;
-  const matchingProfiles = profiles.map((profile) => ({
+  const matchingProfiles = profilesWithAudienceCities.map((profile) => ({
     ...profile,
     totalFollowers: profile.creator_platform_accounts.reduce((total, account) => total + account.follower_count, 0),
   })).filter((profile) => (!specialty || profile.published_specialties?.includes(specialty))
-    && (!city || profile.published_audience_city_id === city)
+    && (!city || profile.audienceCityIds.includes(city))
     && (!minimumFollowers || profile.totalFollowers > minimumFollowers))
     .sort((left, right) => (sort === "followers" ? right.totalFollowers - left.totalFollowers : 0)
       || (left.published_display_name ?? "").localeCompare(right.published_display_name ?? "")
@@ -62,6 +70,11 @@ export default async function CreatorsDirectoryPage({
   const pageNumber = Number(requestedPage);
   const page = Number.isSafeInteger(pageNumber) && pageNumber > 0 ? Math.min(pageNumber, pageCount) : 1;
   const visibleProfiles = matchingProfiles.slice((page - 1) * 60, page * 60);
+  const fanCountsById = new Map(await Promise.all(visibleProfiles.map(async (profile) => {
+    const { data, error } = await supabase.rpc("creator_get_public_fan_count", { p_creator_profile_id: profile.id });
+    if (error) throw new Error(error.message);
+    return [profile.id, data ?? 0] as const;
+  })));
   const hasFilters = Boolean(specialty || city || minimumFollowers || sort === "name");
   function pageHref(targetPage: number) {
     const params = new URLSearchParams({ sort, page: String(targetPage) });
@@ -113,32 +126,16 @@ export default async function CreatorsDirectoryPage({
       </div>
       {visibleProfiles.length ? (
         <div className="creator-directory-list">
-          {visibleProfiles.map((profile) => {
-            const profileAccounts = [...profile.creator_platform_accounts].sort((left, right) => left.platform.localeCompare(right.platform));
-            const portfolio = [...profile.creator_portfolio_items].sort((left, right) => left.position - right.position);
-            return (
+          {visibleProfiles.map((profile) => (
               <article className="creator-directory-item" key={profile.id}>
                 <div className="creator-directory-item-main">
-                  <p className="creator-directory-specialties">{(profile.published_specialties ?? []).map((value) => creatorSpecialties.find((item) => item.value === value)?.label ?? value).join(" · ")}</p>
-                  <h2><Link href={`/creators/${profile.slug}`}>{profile.published_display_name}<ArrowUpRight size={16} aria-hidden="true" /></Link></h2>
-                  <p className="creator-directory-bio">{profile.published_bio}</p>
-                  {profile.published_audience_city_id && <p className="creator-directory-location">Audience: {citiesById.get(profile.published_audience_city_id) ?? profile.published_audience_city_id}</p>}
-                  <p className="creator-directory-total"><strong>{formatNumber(profile.totalFollowers)}</strong> total social followers <small>Self-reported, unverified</small></p>
-                  <div className="creator-directory-platforms">
-                    {profileAccounts.map((account) => (
-                      <a href={account.profile_url} target="_blank" rel="noreferrer" key={account.id}>
-                        <span>{account.platform === "x" ? "X" : account.platform}</span>
-                        <strong>{formatNumber(account.follower_count)}</strong>
-                        <small>self-reported</small>
-                      </a>
-                    ))}
-                  </div>
-                  {portfolio.length > 0 && <div className="creator-directory-portfolio">{portfolio.map((item) => <a href={item.url} target="_blank" rel="noreferrer" key={item.id}>{item.title}<ArrowUpRight size={13} aria-hidden="true" /></a>)}</div>}
+                  <h2 className="creator-directory-name"><Link href={`/creators/${profile.slug}`}>{profile.published_display_name}</Link><CreatorVerificationBadge fanCount={fanCountsById.get(profile.id) ?? 0} /></h2>
+                  {profile.audienceCityIds.some((cityId) => citiesById.has(cityId)) && <p className="creator-directory-location">{profile.audienceCityIds.map((cityId) => citiesById.get(cityId)).filter((cityName): cityName is string => Boolean(cityName)).join(", ")}</p>}
+                  <p className="creator-directory-total"><strong>{formatNumber(profile.totalFollowers)}</strong> social followers</p>
                 </div>
                 <Link className="creator-directory-view" href={`/creators/${profile.slug}`}>View profile <ArrowUpRight size={14} aria-hidden="true" /></Link>
               </article>
-            );
-          })}
+          ))}
         </div>
       ) : (
         <div className="creator-directory-empty"><h2>No creators found</h2><p>{hasFilters ? "No published creators match these filters." : "There are no published creator profiles yet."}</p>{hasFilters && <Link href="/creators">Clear filters</Link>}</div>
@@ -148,7 +145,6 @@ export default async function CreatorsDirectoryPage({
         <span>Page {formatNumber(page)} of {formatNumber(pageCount)}</span>
         {page < pageCount ? <Link href={pageHref(page + 1)}>Next<ArrowRight size={14} aria-hidden="true" /></Link> : <span />}
       </nav>}
-      <p className="creator-directory-note">Social follower totals are supplied by creators and are unverified. They may include the same person on multiple platforms and exclude Rontab code followers.</p>
     </main>
   );
 }

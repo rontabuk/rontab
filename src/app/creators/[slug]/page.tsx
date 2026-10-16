@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ArrowLeft, BadgeCheck, ExternalLink, MapPin, Send } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
-import { CreatorFanTools, CreatorVerificationBadge } from "@/components/creator/CreatorFanTools";
+import { CreatorFanTools } from "@/components/creator/CreatorFanTools";
+import { CreatorVerificationBadge } from "@/components/creator/CreatorVerificationBadge";
 import { sendCreatorCollaborationRequest } from "@/app/seller/(protected)/creator-actions";
 import { getViewer } from "@/lib/auth/viewer";
 import { creatorSpecialties } from "@/lib/creator/catalog";
@@ -50,16 +51,22 @@ export default async function CreatorProfilePage({
     .order("platform");
   if (accountsError) throw new Error(accountsError.message);
 
-  const [portfolioResult, audienceCityResult, fanCountResult] = await Promise.all([
+  const [portfolioResult, audienceCitiesResult, fanCountResult] = await Promise.all([
     supabase.from("creator_portfolio_items").select("id,title,url,position").eq("creator_profile_id", profile.id).eq("is_published", true).order("position"),
-    profile.published_audience_city_id
-      ? supabase.from("supported_cities").select("city_name,country_code").eq("city_id", profile.published_audience_city_id).maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
+    supabase.from("creator_profile_audience_cities").select("city_id").eq("creator_profile_id", profile.id).eq("is_published", true),
     supabase.rpc("creator_get_public_fan_count", { p_creator_profile_id: profile.id }),
   ]);
   if (portfolioResult.error) throw new Error(portfolioResult.error.message);
-  if (audienceCityResult.error) throw new Error(audienceCityResult.error.message);
+  if (audienceCitiesResult.error) throw new Error(audienceCitiesResult.error.message);
   if (fanCountResult.error) throw new Error(fanCountResult.error.message);
+  const audienceCityIds = [...new Set([
+    ...(audienceCitiesResult.data ?? []).map((city) => city.city_id),
+    ...(profile.published_audience_city_id ? [profile.published_audience_city_id] : []),
+  ])];
+  const { data: audienceCities, error: audienceCityNamesError } = audienceCityIds.length
+    ? await supabase.from("supported_cities").select("city_id,city_name").in("city_id", audienceCityIds)
+    : { data: [], error: null };
+  if (audienceCityNamesError) throw new Error(audienceCityNamesError.message);
 
   let sellerProfile: { id: string; status: string } | null = null;
   let sellerRequest: { id: string; status: string; created_at: string } | null = null;
@@ -91,7 +98,7 @@ export default async function CreatorProfilePage({
           {(profile.published_specialties ?? []).map((value) => creatorSpecialties.find((item) => item.value === value)?.label ?? value).join(" · ")}
         </p>
         <p className="creator-profile-bio">{profile.published_bio}</p>
-        {audienceCityResult.data && <p className="creator-profile-audience"><MapPin size={14} aria-hidden="true" />Audience: {audienceCityResult.data.city_name}, {audienceCityResult.data.country_code}</p>}
+        {audienceCities.length > 0 && <p className="creator-profile-audience"><MapPin size={14} aria-hidden="true" />Audience: {audienceCities.map((city) => city.city_name).join(", ")}</p>}
         <p className="creator-approved-mark"><BadgeCheck size={15} aria-hidden="true" />Profile reviewed by Rontab</p>
         {profile.referral_code && <CreatorFanTools
           displayName={profile.published_display_name ?? "Rontab Creator"}
@@ -144,7 +151,7 @@ export default async function CreatorProfilePage({
         </section>
       )}
       {viewer.role !== "seller" && <p className="creator-directory-note creator-seller-invite">Rontab sellers can <Link href="/seller/login">sign in</Link> to send a private collaboration request.</p>}
-      <p className="creator-directory-note">Rontab reviews creator applications. Follower counts are self-reported and not independently verified.</p>
+      <p className="creator-directory-note">Rontab reviews creator applications. Social follower counts are supplied by creators and are not independently verified. Totals may include the same person on multiple platforms and exclude Rontab code followers.</p>
     </main>
   );
 }
