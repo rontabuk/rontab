@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { BadgeCheck, Coins, ExternalLink } from "lucide-react";
+import { CreatorVerificationBadge } from "@/components/creator/CreatorVerificationBadge";
 import { grantCreatorPoints, reviewCreatorProfile } from "@/app/admin/(protected)/creator-actions";
 import { requireAdmin } from "@/lib/admin/access";
 import { creatorSpecialties } from "@/lib/creator/catalog";
@@ -61,6 +62,11 @@ export default async function AdminCreatorsPage({
     if (!latestNotes.has(review.creator_profile_id)) latestNotes.set(review.creator_profile_id, review.review_note);
   }
   const balances = new Map((pointsResult.data ?? []).map((account) => [account.creator_profile_id, account.points_balance]));
+  const fanCounts = new Map(await Promise.all(approved.map(async (profile) => {
+    const { data, error } = await supabase.rpc("creator_get_public_fan_count", { p_creator_profile_id: profile.id });
+    if (error) throw new Error(error.message);
+    return [profile.id, data ?? 0] as const;
+  })));
   const citiesById = new Map((citiesResult.data ?? []).map((city) => [city.city_id, `${city.city_name}, ${city.country_code}`]));
   const specialtyLabel = (value: string) => creatorSpecialties.find((item) => item.value === value)?.label ?? value;
 
@@ -151,7 +157,7 @@ export default async function AdminCreatorsPage({
               <article className="creator-admin-approved" key={profile.id}>
                 <div>
                   <span className="admin-status admin-status-approved">{profile.status === "approved" ? "Approved" : "Public · update under review"}</span>
-                  <h3>{profile.published_display_name ?? profile.display_name}</h3>
+                  <h3>{profile.published_display_name ?? profile.display_name}<CreatorVerificationBadge fanCount={fanCounts.get(profile.id) ?? 0} /></h3>
                   {profile.published_audience_city_id && <small>{citiesById.get(profile.published_audience_city_id) ?? profile.published_audience_city_id}</small>}
                   <a href={`/creators/${profile.slug}`} target="_blank" rel="noreferrer">Open public profile <ExternalLink size={12} aria-hidden="true" /></a>
                 </div>

@@ -101,7 +101,7 @@ begin
 			raise exception 'Collaboration-only seller phones must not be returned to visitors.';
 		end if;
 		first_opportunity_id := public.seller_create_creator_product_opportunity(
-			product_id, 100, array['food'], false, array[first_city_id, second_city_id],
+			product_id, 100, array['food'], false, array[first_city_id],
 			'Create one short product video and publish it on an approved social platform.', false, null, array['email']
 		);
 		perform set_config('request.jwt.claim.sub', creator_one_user::text, true);
@@ -130,6 +130,9 @@ begin
 		if (follow_result ->> 'already_following')::boolean is distinct from true then
 			raise exception 'Following the same shop twice must remain idempotent.';
 		end if;
+		if public.get_public_seller_follower_count(seller_id) <> 1 then
+			raise exception 'The public shop page should expose its aggregate follower count.';
+		end if;
 		select count(*) into followed_shop_count from public.visitor_get_my_followed_shops();
 		if followed_shop_count <> 1 then raise exception 'The visitor should see the followed shop in their private list.'; end if;
 		perform set_config('request.jwt.claim.sub', seller_user::text, true);
@@ -143,6 +146,9 @@ begin
 		select count(*) into followed_shop_count from public.visitor_get_my_followed_shops();
 		if public.visitor_is_following_seller_shop(seller_id) or followed_shop_count <> 0 then
 			raise exception 'Hiding a shop should clear follows and remove it from visitor lists.';
+		end if;
+		if public.get_public_seller_follower_count(seller_id) <> 0 then
+			raise exception 'Hidden shops should not expose a follower count.';
 		end if;
 		if public.creator_can_view_product_opportunity(first_opportunity_id) then
 			raise exception 'Campaigns must not be visible when the shop profile is hidden.';
@@ -196,29 +202,24 @@ begin
 		);
 		perform set_config('request.jwt.claim.sub', creator_other_user::text, true);
 		perform set_config('request.jwt.claims', jsonb_build_object('sub', creator_other_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
-		if exists (
+		if not exists (
 			select 1 from public.get_creator_collaboration_notifications() notification
 			where notification.title = 'New creator opportunity'
 				and notification.body like '%Opportunity smoke product%'
 		) then
-			raise exception 'Creators outside the specialty and audience city must not receive the opportunity notification.';
+			raise exception 'Every approved public creator should receive new opportunity notifications.';
 		end if;
-		if public.creator_can_view_product_opportunity(first_opportunity_id) then
-			raise exception 'A creator outside the selected specialty must not see the opportunity.';
+		if not public.creator_can_view_product_opportunity(first_opportunity_id) then
+			raise exception 'A creator outside the selected specialty and audience city should see the opportunity.';
 		end if;
-		begin
-			perform public.creator_submit_product_opportunity_proposal(
-				first_opportunity_id, 100, 'One edited product video and publication on the creator social platform.', true, false, null
-			);
-			raise exception 'A creator outside the selected specialty must not submit an offer.';
-		exception when insufficient_privilege then
-			null;
-		end;
+		perform public.creator_submit_product_opportunity_proposal(
+			first_opportunity_id, 100, 'One edited product video and publication on the creator social platform.', true, false, null
+		);
 
 		perform set_config('request.jwt.claim.sub', seller_user::text, true);
 		perform set_config('request.jwt.claims', jsonb_build_object('sub', seller_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
-		if (select count(*) from public.creator_product_opportunity_proposals where opportunity_id = first_opportunity_id) <> 2 then
-			raise exception 'The seller should receive both lower and higher creator offers.';
+		if (select count(*) from public.creator_product_opportunity_proposals where opportunity_id = first_opportunity_id) <> 3 then
+			raise exception 'The seller should receive offers from creators outside campaign specialties and cities.';
 		end if;
 		result_creator_id := public.seller_select_creator_product_opportunity_proposal(second_proposal_id);
 		if result_creator_id <> creator_two_id

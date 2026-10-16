@@ -70,7 +70,7 @@ export const getPublicCatalog = cache(async (): Promise<{
   const sellerIds = [...new Set(productRows.map((product) => product.seller_profile_id))];
   const productIds = productRows.map((product) => product.id);
 
-  const [sellersResult, mediaResult, sellerPhonesResult] = await Promise.all([
+  const [sellersResult, mediaResult, sellerPhonesResult, sellerBadgesResult] = await Promise.all([
     sellerIds.length
       ? supabase.from("seller_profiles").select("id,slug,shop_name,shop_url,logo_url").in("id", sellerIds)
       : Promise.resolve({ data: [], error: null }),
@@ -84,14 +84,19 @@ export const getPublicCatalog = cache(async (): Promise<{
       sellerIds.length
         ? supabase.rpc("get_public_seller_contact_phones", { p_seller_profile_ids: sellerIds })
         : Promise.resolve({ data: [], error: null }),
+    sellerIds.length
+      ? supabase.rpc("get_public_seller_verification_badges", { p_seller_profile_ids: sellerIds })
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (sellersResult.error) throw sellersResult.error;
   if (mediaResult.error) throw mediaResult.error;
       if (sellerPhonesResult.error) throw sellerPhonesResult.error;
+  if (sellerBadgesResult.error) throw sellerBadgesResult.error;
 
       const sellerPhones = new Map((sellerPhonesResult.data ?? []).map((contact) => [contact.seller_profile_id, contact.phone]));
-      const sellers = new Map(sellersResult.data.map((seller) => [seller.id, { ...seller, phone: sellerPhones.get(seller.id) ?? null }]));
+      const sellerBadges = new Map((sellerBadgesResult.data ?? []).filter((badge) => badge.is_verified).map((badge) => [badge.seller_profile_id, badge.is_blue ? "blue" as const : "grey" as const]));
+      const sellers = new Map(sellersResult.data.map((seller) => [seller.id, { ...seller, phone: sellerPhones.get(seller.id) ?? null, badge: sellerBadges.get(seller.id) }]));
   const categoryById = new Map(categoriesResult.data.map((category) => [category.id, category]));
   const leadMediaByProduct = pickLeadMedia(mediaResult.data);
   const mediaUrls = await createProductMediaUrls(
@@ -126,6 +131,7 @@ export const getPublicCatalog = cache(async (): Promise<{
         shopSlug: seller?.slug ?? null,
         shopUrl: seller?.shop_url ?? null,
         shopPhone: seller?.phone ?? null,
+        sellerBadge: seller?.badge,
         makerImage: seller?.logo_url?.startsWith("https://") ? seller.logo_url : "",
         overlayTone: getOverlayTone(category?.slug),
       };

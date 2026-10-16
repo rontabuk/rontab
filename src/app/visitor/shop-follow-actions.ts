@@ -33,7 +33,6 @@ export async function toggleShopFollow(
 
   if (result.error) return { ...result, following: state.following };
   revalidatePath(`/shops/${shopSlug}`);
-  revalidatePath("/visitor/shops-following");
   revalidatePath("/seller/profile");
   return { error: null, following: requestedAction === "follow" };
 }

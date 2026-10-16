@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Ron.Tab",
-    short_name: "Ron.Tab",
+    name: "RonTab",
+    short_name: "RonTab",
     description: "The marketplace where independent shops and shoppers meet.",
     id: "/",
     start_url: "/products",

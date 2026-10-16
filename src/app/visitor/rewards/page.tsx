@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
-import { CalendarDays, Gift, MapPin, Ticket } from "lucide-react";
+import { ArrowLeft, CalendarDays, Gift, MapPin, Ticket } from "lucide-react";
 import { joinLoyaltyOffer, reportLoyaltyClaimIssue } from "@/app/visitor/actions";
 import { OfferNotificationReadMarker } from "@/components/OfferNotificationReadMarker";
 import { formatDateTime, formatNumber as formatPoints } from "@/lib/format";
@@ -87,10 +87,10 @@ export default async function VisitorRewardsPage({
   return (
     <main className="admin-overview visitor-rewards-page">
       {unreadOfferNotificationIds.length > 0 && <OfferNotificationReadMarker userId={user.id} notificationIds={unreadOfferNotificationIds} />}
+      <Link className="visitor-rewards-back" href="/visitor"><ArrowLeft size={14} aria-hidden="true" />My profile</Link>
       <header className="admin-page-heading visitor-rewards-heading">
         <p className="admin-eyebrow">POINTS & REWARDS</p>
         <h1>Good things add up.</h1>
-        <p>Earn points through eligible product visits and choose how to use them.</p>
       </header>
 
       {offerMessage === "joined" && <p className="admin-save-success" role="status">Your points were used and your place is confirmed.</p>}
@@ -102,13 +102,12 @@ export default async function VisitorRewardsPage({
       {supportError === "details" && <p className="visitor-rewards-error" role="alert">Choose an issue and describe it in at least 10 characters.</p>}
       {supportError === "unavailable" && <p className="visitor-rewards-error" role="alert">This reward cannot be reported right now. Your points were not changed.</p>}
       {supportError === "submit" && <p className="visitor-rewards-error" role="alert">We could not submit your report. Please try again.</p>}
-      {!isEligible && <p className="visitor-rewards-error" role="status">Points and rewards are available to visitors in supported countries. Update your country in <Link href="/visitor">your profile</Link> to check eligibility.</p>}
+      {!isEligible && <p className="visitor-rewards-error" role="status">Points and rewards are available to members in supported countries. Update your country in <Link href="/visitor">your profile</Link> to check eligibility.</p>}
       {isEligible && !dailyStatus && <p className="visitor-rewards-error" role="status">Your eligibility is confirmed, but daily points are temporarily unavailable. Please try again shortly.</p>}
 
       <section className="visitor-rewards-overview" aria-label="Points summary">
-        <div className="visitor-points-gauge" style={{ "--points-progress": `${progress}%` } as React.CSSProperties}>
+        <div className="visitor-points-gauge" role="img" aria-label={`${formatPoints(summary.points_balance)} available points`} style={{ "--points-progress": `${progress}%` } as React.CSSProperties}>
           <div className="visitor-points-gauge-core">
-            <span>Available</span>
             <strong>{formatPoints(summary.points_balance)}</strong>
             <small>points</small>
           </div>
@@ -134,7 +133,6 @@ export default async function VisitorRewardsPage({
               {dailyStatus.points_earned >= dailyStatus.daily_cap && <small>The limit is reached. Points resume as earlier visits leave the 24-hour window.</small>}
             </div>
           )}
-          <p className="visitor-rewards-location"><MapPin size={14} aria-hidden="true" />{profileResult.data.city ? `${profileResult.data.city}, ${profileResult.data.country_code}` : "Add a city to see local offers"}<Link href="/visitor">Edit profile</Link></p>
         </div>
       </section>
 
@@ -245,9 +243,9 @@ export default async function VisitorRewardsPage({
         <p className="admin-eyebrow">HOW POINTS WORK</p>
         <h2 id="visitor-points-explainer-title">One point for a first visit</h2>
         {dailyStatus
-          ? <p>Earn one point the first time you visit each eligible product while signed in with a confirmed visitor account, up to {formatPoints(dailyStatus.daily_cap)} visit points in any rolling 24-hour period. Shop visits after the cap do not earn points. Returning to a product does not earn another point. Guests and seller accounts do not earn visitor rewards.</p>
+          ? <p>Earn one point the first time you visit each eligible product while signed in with a confirmed account, up to {formatPoints(dailyStatus.daily_cap)} visit points in any rolling 24-hour period. Shop visits after the cap do not earn points. Returning to a product does not earn another point. Guests and seller accounts do not earn these rewards.</p>
           : !isEligible
-            ? <p>Visit points and offers are available only to visitors in currently supported countries. Update your country in <Link href="/visitor">your profile</Link> to check eligibility.</p>
+            ? <p>Visit points and offers are available only to members in currently supported countries. Update your country in <Link href="/visitor">your profile</Link> to check eligibility.</p>
             : <p>Your account is eligible for rewards, but daily points are temporarily unavailable. Please try again shortly.</p>}
         <p>Joining a limited offer spends its stated points whether or not you are selected. Choosing not to join never costs points. A guaranteed redemption spends points only when your gift is successfully claimed.</p>
       </section>

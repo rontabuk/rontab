@@ -24,11 +24,11 @@ async function ProtectedVisitorShell({ children }: { children: ReactNode }) {
 
   return (
     <WorkspaceShell
-      area="VISITOR"
       sectionLabel="YOUR ACCOUNT"
-      navigation={<WorkspaceNavigation label="Visitor navigation" links={visitorLinks} />}
+      navigation={<WorkspaceNavigation label="Account navigation" links={visitorLinks} />}
       accountLabel={user.email ?? ""}
       signOutTo="/"
+      hideMobileAccountDetails
     >
       {children}
     </WorkspaceShell>

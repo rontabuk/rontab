@@ -1,24 +1,19 @@
-import { informationPages } from "@/data/information";
 import { adminAreas } from "@/lib/admin/areas";
 import { getViewer } from "@/lib/auth/viewer";
 import { formatNumber } from "@/lib/format";
 import { getNotificationFeed } from "@/lib/notifications/feed";
 import { MobileBottomNavBar, type MobileNavConfig } from "@/components/MobileBottomNavBar";
 
-const infoLinks = informationPages.map((page) => ({ href: `/${page.slug}`, label: page.label }));
-
 const guestNav: MobileNavConfig = {
-  label: "Visitor navigation",
+  label: "Main navigation",
   items: [
     { href: "/products", label: "Home", icon: "home", exact: true },
-    { href: "/riders", label: "Riders", icon: "riders", disabled: true },
-    { href: "/account", label: "Account", icon: "account", exact: true },
+    { href: "/creators", label: "Creators", icon: "creators" },
   ],
   menuLinks: [
+    { href: "/account?next=%2Fvisitor", label: "Sign in" },
     { href: "/account?mode=register&next=%2Fvisitor", label: "Create a free account" },
     { href: "/seller/register", label: "Sell on Rontab" },
-    { href: "/seller/login", label: "Seller sign in" },
-    ...infoLinks,
   ],
 };
 
@@ -34,7 +29,7 @@ export async function MobileBottomNav() {
     return (
       <MobileBottomNavBar
         config={{
-          label: "Visitor navigation",
+          label: "Account navigation",
           items: [
             { href: "/products", label: "Home", icon: "home", exact: true },
             { href: "/visitor/offers", label: "Offers", icon: "ticket" },
@@ -45,16 +40,15 @@ export async function MobileBottomNav() {
               badge: unreadOfferCount ? formatNumber(unreadOfferCount) : undefined,
               ariaLabel: unreadOfferCount ? `Rewards, ${unreadOfferCount} new offers` : "Rewards",
             },
-            { href: "/visitor", label: "Account", icon: "account", exact: true },
+            { href: "/visitor/creator/opportunities", label: "Creator", icon: "creators" },
           ],
           menuLinks: [
+            { href: "/visitor", label: "My account" },
             { href: "/visitor/creator", label: "Introduce yourself" },
-            { href: "/visitor/creator/opportunities", label: "Creator opportunities" },
             { href: "/visitor/fans", label: "I'm a fan of" },
             { href: "/visitor/shops-following", label: "Shops I follow" },
             { href: "/visitor/offers?view=vouchers", label: "My vouchers" },
             { href: "/seller/register", label: "Sell on Rontab" },
-            ...infoLinks,
           ],
           signOutTo: "/",
         }}
@@ -73,7 +67,7 @@ export async function MobileBottomNav() {
             { href: "/seller", label: "Add", icon: "add", exact: true, highlight: true, ariaLabel: "Add a product" },
             { href: "/seller/products", label: "Products", icon: "products" },
           ],
-          menuLinks: [{ href: "/seller/offers", label: "Offer requests" }, { href: "/seller/profile", label: "Profile" }, ...infoLinks],
+          menuLinks: [{ href: "/seller/offers", label: "Offer requests" }, { href: "/seller/profile", label: "Profile" }],
           signOutTo: "/seller/login",
         }}
       />

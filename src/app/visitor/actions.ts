@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getVisitorAccount } from "@/lib/visitor/access";
 import { getSafeVisitorPath } from "@/lib/visitor/paths";
 import { FormError, runFormAction, type FormState } from "@/lib/form-state";
-import { getProfileImageProblem, isCityId, isUuid, PROFILE_IMAGE_TYPES } from "@/lib/validation";
+import { getProfileImageProblem, isCityId, isHttpsUrl, isUuid, PROFILE_IMAGE_TYPES } from "@/lib/validation";
 
 export async function saveVisitorProfile(_state: FormState, formData: FormData) {
   return runFormAction(() => persistVisitorProfile(formData));
@@ -15,12 +15,32 @@ async function persistVisitorProfile(formData: FormData) {
   const displayName = String(formData.get("display_name") ?? "").trim();
   const cityId = String(formData.get("city_id") ?? "").trim() || null;
   const requestedCountryCode = String(formData.get("city_id_country_code") ?? "").trim().toUpperCase() || null;
+  const contactPhone = String(formData.get("contact_phone") ?? "").trim();
+  const contactVisibility = String(formData.get("contact_visibility") ?? "private");
   const locationSubmitted = formData.has("city_id");
   const removeAvatar = formData.get("remove_avatar") === "on";
   const avatarFileValue = formData.get("avatar_image");
   const avatarFile = avatarFileValue instanceof File && avatarFileValue.size > 0 ? avatarFileValue : null;
   if (displayName.length > 100) throw new FormError("Display name must be 100 characters or fewer.");
   if (cityId && !isCityId(cityId)) throw new FormError("Choose a city from the supported UK locations.");
+  if (contactPhone && !/^\+?[0-9() -]{7,32}$/.test(contactPhone)) throw new FormError("Enter a valid phone number.");
+  if (!["private", "sellers", "creators", "public"].includes(contactVisibility)) {
+    throw new FormError("Choose who can see your contact details.");
+  }
+  const socialPlatforms = ["instagram", "tiktok", "youtube", "facebook", "x", "other"] as const;
+  const socialLinks = [1, 2, 3].flatMap((position) => {
+    const platform = String(formData.get(`social_${position}_platform`) ?? "").trim();
+    const profileUrl = String(formData.get(`social_${position}_url`) ?? "").trim();
+    if (!platform && !profileUrl) return [];
+    if (!socialPlatforms.some((supportedPlatform) => supportedPlatform === platform)
+      || !isHttpsUrl(profileUrl) || profileUrl.length > 500) {
+      throw new FormError("Choose a social platform and enter a valid HTTPS profile link for each row.");
+    }
+    return [{ platform, profile_url: profileUrl }];
+  });
+  if (new Set(socialLinks.map((socialLink) => socialLink.platform)).size !== socialLinks.length) {
+    throw new FormError("Choose each social platform only once.");
+  }
   const avatarProblem = avatarFile && getProfileImageProblem(avatarFile, "Profile picture");
   if (avatarProblem) throw new FormError(avatarProblem);
 
@@ -84,11 +104,20 @@ async function persistVisitorProfile(formData: FormData) {
     throw new Error(error.message);
   }
 
+  const { error: contactError } = await supabase.rpc("save_my_member_contact_profile", {
+    p_phone: contactPhone || null,
+    p_contact_visibility: contactVisibility,
+    p_social_links: socialLinks,
+  });
+  if (contactError?.code === "22023" || contactError?.code === "42501") throw new FormError(contactError.message);
+  if (contactError) throw new Error(contactError.message);
+
   if (existingAvatarPath && existingAvatarPath !== avatarPath) {
     await supabase.storage.from("visitor-avatars").remove([existingAvatarPath]);
   }
 
   revalidatePath("/visitor");
+  revalidatePath(`/members/${user.id}`);
   redirect("/visitor?saved=1");
 }
 

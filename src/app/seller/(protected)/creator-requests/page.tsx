@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { ArrowUpRight, RotateCcw, UsersRound } from "lucide-react";
+import { CreatorVerificationBadge } from "@/components/creator/CreatorVerificationBadge";
 import { withdrawCreatorCollaborationRequest } from "@/app/seller/(protected)/creator-actions";
 import { getSellerAccount } from "@/lib/seller/access";
 import { createSupabasePublicClient } from "@/lib/supabase/server";
@@ -40,6 +41,11 @@ export default async function SellerCreatorRequestsPage({
   ]);
   if (creatorsError) throw new Error(creatorsError.message);
   const creatorsById = new Map((creators ?? []).map((creator) => [creator.id, creator]));
+  const creatorFanCounts = new Map(await Promise.all((creators ?? []).map(async (creator) => {
+    const { data, error } = await publicClient.rpc("creator_get_public_fan_count", { p_creator_profile_id: creator.id });
+    if (error) throw new Error(error.message);
+    return [creator.id, data ?? 0] as const;
+  })));
 
   return (
     <main className="admin-overview seller-overview seller-creator-requests">
@@ -66,7 +72,7 @@ export default async function SellerCreatorRequestsPage({
               <li key={request.id}>
                 <div className="seller-creator-request-heading">
                   <div><span className={`creator-collaboration-status is-${request.status}`}>{request.status.replaceAll("_", " ")}</span><time>{formatDateTime(request.created_at)}</time></div>
-                  {creator && <Link href={`/creators/${creator.slug}`}>{creator.published_display_name}<ArrowUpRight size={14} aria-hidden="true" /></Link>}
+                  {creator && <><Link href={`/creators/${creator.slug}`}>{creator.published_display_name}<ArrowUpRight size={14} aria-hidden="true" /></Link><CreatorVerificationBadge fanCount={creatorFanCounts.get(creator.id) ?? 0} /></>}
                 </div>
                 <h2>{request.title}</h2>
                 <p>{request.brief}</p>

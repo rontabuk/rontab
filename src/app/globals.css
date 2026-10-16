@@ -37,6 +37,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .creator-verification-badge svg { flex: 0 0 auto; }
 .creator-verification-badge.is-grey { background: #eceeea; color: #5d665e; }
 .creator-verification-badge.is-blue { background: #e8f0fa; color: #315f91; }
+.seller-verification-badge { display: inline-flex; width: 19px; height: 19px; flex: 0 0 auto; align-items: center; justify-content: center; vertical-align: middle; }
+.seller-verification-badge.is-grey { color: #707a72; }
+.seller-verification-badge.is-blue { color: #2875c7; }
 .creator-fan-tools-label { margin: 0; color: #60715d; font-size: 10px; font-weight: 700; }
 .creator-fan-tools-code { color: #34483a; font-family: var(--font-display), Georgia, serif; font-size: 36px; font-weight: 400; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .creator-fan-tools-referrals { color: #737c71; font-size: 10px; }
@@ -199,7 +202,6 @@ li[data-unread] .notification-copy time { color: #065fd4; font-weight: 700; }
 @keyframes notification-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 @keyframes notification-pop { from { transform: scale(.4); } to { transform: scale(1); } }
 .wordmark { flex: 0 0 auto; font-family: var(--font-display), Georgia, serif; font-size: 34px; line-height: 1; }
-.wordmark span { color: var(--clay); }
 .header-actions { display: flex; align-items: center; gap: 16px; }
 .header-account-link { display: inline-flex; min-height: 40px; align-items: center; gap: 8px; padding: 0 14px; border: 1px solid #d4d3ca; border-radius: 40px; color: var(--green-dark); font-size: 12px; font-weight: 600; white-space: nowrap; transition: border-color 160ms ease, background-color 160ms ease; }
 .header-account-link:hover { border-color: var(--green-dark); background: #e9eee5; }
@@ -308,8 +310,12 @@ li[data-unread] .notification-copy time { color: #065fd4; font-weight: 700; }
 .description-panel { --overlay-start: 247 239 222; --overlay-end: 190 157 123; position: absolute; z-index: 2; right: 12px; bottom: 54px; left: 12px; padding: 14px 15px; overflow: hidden; border: 1px solid rgb(var(--overlay-end) / 52%); border-radius: 4px; background: linear-gradient(125deg, rgb(var(--overlay-start) / 94%) 0%, rgb(var(--overlay-start) / 84%) 56%, rgb(var(--overlay-end) / 72%) 100%); box-shadow: 0 5px 20px rgb(28 35 29 / 15%); color: var(--ink); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .description-panel p { display: -webkit-box; margin: 0; overflow: hidden; overflow-wrap: anywhere; font-size: 13px; font-weight: 500; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .shop-follow-control { display: grid; justify-items: start; gap: 5px; margin-top: 10px; }
-.shop-follow-control button { display: inline-flex; min-height: 32px; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid rgb(52 72 58 / 48%); border-radius: 3px; background: #34483a; color: #fffdf8; cursor: pointer; font: inherit; font-size: 10px; font-weight: 700; }
+.shop-follow-control button { display: inline-flex; min-height: 26px; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; color: #39754b; cursor: pointer; font: inherit; font-size: 10px; font-weight: 700; }
+.shop-follow-control button:hover { text-decoration: underline; text-underline-offset: 3px; }
+.shop-follow-control button > span { font-size: 14px; font-weight: 700; line-height: 1; }
 .shop-follow-control button:disabled { cursor: wait; opacity: .72; }
+.shop-follow-control-status { display: inline-flex; align-items: center; gap: 5px; color: #405745; font-size: 10px; font-weight: 700; }
+.shop-follow-confirmation-icon { display: grid; width: 18px; height: 18px; place-items: center; border-radius: 50%; background: #39754b; color: #fff; }
 .shop-follow-control p { margin: 0; color: #7d3028; font-size: 10px; line-height: 1.35; }
 .product-visit-button { display: inline-flex; min-height: 32px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 5px; padding-inline: 7px 3px; border: 0; border-left: 1px solid rgb(52 72 58 / 18%); background: transparent; color: var(--green-dark); font-size: 10px; white-space: nowrap; transition: color 150ms ease; }
 .product-visit-price { font-size: 15px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -326,7 +332,6 @@ li[data-unread] .notification-copy time { color: #065fd4; font-weight: 700; }
 .site-footer { background: #252f28; color: #f5f2eb; }
 .footer-inner { padding-block: 45px 20px; }
 .footer-top { display: flex; justify-content: space-between; gap: 50px; padding-bottom: 42px; }
-.wordmark-light span { color: #d99879; }
 .footer-brand p { margin: 9px 0 0; color: #bdc4ba; font-size: 12px; }
 .footer-links { display: grid; grid-template-columns: repeat(3, max-content); gap: 12px 29px; align-content: start; }
 .footer-links a { color: #d4d9d1; font-size: 12px; }

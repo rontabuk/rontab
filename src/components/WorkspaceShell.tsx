@@ -8,21 +8,23 @@ export function WorkspaceShell({
   navigation,
   accountLabel,
   signOutTo,
+  hideMobileAccountDetails = false,
   children,
 }: {
-  area: string;
+  area?: string;
   sectionLabel: string;
   navigation: ReactNode;
   accountLabel: string;
   signOutTo: SignOutDestination;
+  hideMobileAccountDetails?: boolean;
   children: ReactNode;
 }) {
   return (
-    <div className="admin-shell">
+    <div className={`admin-shell${hideMobileAccountDetails ? " admin-shell-hide-mobile-account" : ""}`}>
       <aside className="admin-sidebar">
         <Link className="admin-brand" href="/products">
-          <span className="admin-brand-word">rontab<span>.</span></span>
-          <small>{area}</small>
+          <span className="admin-brand-word">RonTab</span>
+          {area && <small>{area}</small>}
         </Link>
         <p className="admin-sidebar-label">{sectionLabel}</p>
         {navigation}

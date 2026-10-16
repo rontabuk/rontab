@@ -18,12 +18,12 @@ const dmSerifDisplay = DM_Serif_Display({
 
 export const metadata: Metadata = {
   title: {
-    default: "Rontab | Good things, well found",
-    template: "%s | Rontab",
+    default: "RonTab | Good things, well found",
+    template: "%s | RonTab",
   },
   description:
     "A considered edit of useful, characterful finds for the everyday home.",
-  appleWebApp: { capable: true, title: "Ron.Tab", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "RonTab", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

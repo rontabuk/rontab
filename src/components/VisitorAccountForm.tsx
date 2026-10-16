@@ -117,7 +117,7 @@ export function VisitorAccountForm({ nextPath, notice, initialMode = "login", co
   return (
     <main className="visitor-account-page">
       <section className="visitor-account-panel" aria-labelledby="visitor-account-title">
-        <Link className="visitor-account-wordmark" href="/products" aria-label="Rontab products">rontab<span>.</span></Link>
+        <Link className="visitor-account-wordmark" href="/products" aria-label="RonTab products">RonTab</Link>
 
         <div className="visitor-account-tabs" role="group" aria-label="Account options">
           <button type="button" aria-pressed={mode === "login"} onClick={() => switchMode("login")}>Sign in</button>

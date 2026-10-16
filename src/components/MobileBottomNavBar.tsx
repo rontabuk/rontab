@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bike,
+  UsersRound,
   CircleUserRound,
   Gift,
   House,
@@ -25,6 +26,7 @@ import { signOut, type SignOutDestination } from "@/lib/auth/actions";
 const icons = {
   home: House,
   riders: Bike,
+  creators: UsersRound,
   join: UserPlus,
   signin: LogIn,
   rewards: Gift,

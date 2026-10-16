@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { ArrowUpRight, BadgeCheck, Check, Coins, ExternalLink, MessageSquareText, X } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
+import { SellerVerificationBadge } from "@/components/seller/SellerVerificationBadge";
 import { CreatorFanTools } from "@/components/creator/CreatorFanTools";
 import { MultiCityPicker } from "@/components/MultiCityPicker";
 import { respondToCreatorCollaborationRequest, saveCreatorContactPreferences, withdrawCreatorProfile } from "@/app/visitor/creator-actions";
@@ -107,11 +108,16 @@ export default async function VisitorCreatorPage({
   const accountsByPlatform = new Map(formAccounts.map((account) => [account.platform, account]));
   const portfolioByPosition = new Map(formPortfolio.map((item) => [item.position, item]));
   const requestSellerIds = [...new Set(collaborationRequests.map((request) => request.seller_profile_id))];
-  const { data: requestSellers, error: requestSellersError } = requestSellerIds.length
-    ? await supabase.from("seller_profiles").select("id,shop_name").in("id", requestSellerIds)
-    : { data: [], error: null };
+  const [{ data: requestSellers, error: requestSellersError }, { data: requestSellerBadges, error: requestSellerBadgesError }] = requestSellerIds.length
+    ? await Promise.all([
+        supabase.from("seller_profiles").select("id,shop_name").in("id", requestSellerIds),
+        supabase.rpc("get_public_seller_verification_badges", { p_seller_profile_ids: requestSellerIds }),
+      ])
+    : [{ data: [], error: null }, { data: [], error: null }];
   if (requestSellersError) throw new Error(requestSellersError.message);
+  if (requestSellerBadgesError) throw new Error(requestSellerBadgesError.message);
   const sellerNames = new Map((requestSellers ?? []).map((seller) => [seller.id, seller.shop_name]));
+  const sellerBadges = new Map((requestSellerBadges ?? []).filter((badge) => badge.is_verified).map((badge) => [badge.seller_profile_id, badge]));
   const statusDescription = profile?.status === "submitted" && profile.is_public
     ? "Your updates are being reviewed. Your previously approved profile remains public."
     : profile?.status === "submitted"
@@ -315,7 +321,7 @@ export default async function VisitorCreatorPage({
               <div>
                 <span className={`creator-collaboration-status is-${request.status}`}>{request.status}</span>
                 <h3>{request.title}</h3>
-                <p>From {sellerNames.get(request.seller_profile_id) ?? "Rontab seller"} · {formatDateTime(request.created_at)}</p>
+                <p>From {sellerNames.get(request.seller_profile_id) ?? "Rontab seller"} {sellerBadges.has(request.seller_profile_id) && <SellerVerificationBadge isBlue={sellerBadges.get(request.seller_profile_id)?.is_blue ?? false} />} · {formatDateTime(request.created_at)}</p>
                 <p>{request.brief}</p>
                 {request.proposed_compensation && <p><strong>Proposed compensation:</strong> {request.proposed_compensation}</p>}
               </div>

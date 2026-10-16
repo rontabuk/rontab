@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Page not found", robots: { index: fa
 export default function NotFound() {
   return (
     <main className="status-page">
-      <Link className="wordmark" href="/products" aria-label="Rontab products">rontab<span>.</span></Link>
+      <Link className="wordmark" href="/products" aria-label="RonTab products">RonTab</Link>
       <p className="eyebrow">404 · Page not found</p>
       <h1>This find has moved on.</h1>
       <p>The link may be out of date, or the product is no longer listed. The rest of the catalogue is still here.</p>

@@ -317,6 +317,26 @@ export async function setSellerStatus(formData: FormData) {
   revalidatePath("/visitor/offers");
 }
 
+export async function setSellerVerificationBadge(formData: FormData) {
+  const sellerId = String(formData.get("seller_id") ?? "");
+  const badgeMode = String(formData.get("badge_mode") ?? "");
+  if (!isUuid(sellerId) || !["automatic", "granted", "hidden"].includes(badgeMode)) {
+    throw new Error("Choose a valid seller verification badge setting.");
+  }
+
+  const supabase = await requireAdminClient();
+  const { error } = await supabase.rpc("admin_set_seller_verification_badge", {
+    p_seller_profile_id: sellerId,
+    p_badge_mode: badgeMode,
+  });
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/sellers");
+  revalidatePath("/products");
+  revalidatePath("/shops");
+  revalidatePath("/visitor/creator/opportunities");
+}
+
 export async function setVisitorAccountStatus(formData: FormData) {
   const visitorId = String(formData.get("visitor_id") ?? "");
   const status = String(formData.get("status") ?? "");

@@ -26,6 +26,7 @@ export type Product = {
   shopSlug?: string | null;
   shopUrl?: string | null;
   shopPhone?: string | null;
+  sellerBadge?: "blue" | "grey";
   makerImage: string;
   overlayTone: ProductOverlayTone;
 };

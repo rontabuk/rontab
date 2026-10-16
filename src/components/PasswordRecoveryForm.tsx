@@ -13,7 +13,7 @@ export function PasswordRecoveryForm({ mode, returnTo, expired = false }: { mode
 
   return <main className="visitor-account-page">
     <section className="visitor-account-panel" aria-labelledby="password-recovery-title">
-      <Link className="visitor-account-wordmark" href="/products" aria-label="Rontab products">rontab<span>.</span></Link>
+      <Link className="visitor-account-wordmark" href="/products" aria-label="RonTab products">RonTab</Link>
       <div className="password-recovery-icon"><Icon size={25} aria-hidden="true" /></div>
       <h1 id="password-recovery-title">{state.success ? mode === "request" ? "Check your inbox" : "Password updated" : mode === "request" ? "Forgot your password?" : "Set a new password"}</h1>
       <p className="visitor-account-intro">{state.success

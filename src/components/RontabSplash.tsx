@@ -48,7 +48,7 @@ export function RontabSplash({ showOnly = false, destination = "/products" }: { 
           </nav>
         )}
       </section>
-      <p className="splash-footer">Ron.Tab · Independent commerce</p>
+      <p className="splash-footer">RonTab · Independent commerce</p>
     </main>
   );
 }

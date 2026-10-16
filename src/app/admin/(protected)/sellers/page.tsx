@@ -6,7 +6,8 @@ import { requireAdmin } from "@/lib/admin/access";
 import { formatNumber } from "@/lib/format";
 import { ADMIN_LIST_PAGE_SIZE, buildAdminListHref, normalizeAdminSearch, parseAdminListPage } from "@/lib/admin/listing";
 import { AdminListPagination } from "@/components/admin/AdminListPagination";
-import { grantSellerAdCredits, setSellerStatus } from "@/app/admin/(protected)/actions";
+import { SellerVerificationBadge } from "@/components/seller/SellerVerificationBadge";
+import { grantSellerAdCredits, setSellerStatus, setSellerVerificationBadge } from "@/app/admin/(protected)/actions";
 
 export const metadata: Metadata = { title: "Sellers", robots: { index: false, follow: false } };
 export const instant = false;
@@ -39,6 +40,9 @@ export default async function AdminSellersPage({
   if (page > totalPages) redirect(buildAdminListHref("/admin/sellers", filters, totalPages));
 
   const sellerIds = (sellers ?? []).map((seller) => seller.id);
+  const { data: verificationBadges, error: verificationError } = sellerIds.length
+    ? await supabase.rpc("admin_get_seller_verification_badges", { p_seller_profile_ids: sellerIds })
+    : { data: [], error: null };
   const [{ data: contactDetails, error: contactError }, { data: adAccounts, error: adAccountsError }] = sellerIds.length
     ? await Promise.all([
         supabase
@@ -52,11 +56,13 @@ export default async function AdminSellersPage({
       ])
     : [{ data: [], error: null }, { data: [], error: null }];
 
+  if (verificationError) throw new Error(verificationError.message);
   if (contactError) throw new Error(contactError.message);
   if (adAccountsError) throw new Error(adAccountsError.message);
 
   const contactBySellerId = new Map((contactDetails ?? []).map((details) => [details.seller_profile_id, details]));
   const adAccountBySellerId = new Map((adAccounts ?? []).map((account) => [account.seller_profile_id, account]));
+  const verificationBySellerId = new Map((verificationBadges ?? []).map((badge) => [badge.seller_profile_id, badge]));
 
   return (
     <main className="admin-overview">
@@ -75,11 +81,33 @@ export default async function AdminSellersPage({
       {sellers?.length ? (
         <div className="admin-table-wrap">
           <table className="admin-table">
-            <thead><tr><th>Shop</th><th>Seller contact details</th><th>Click credits</th><th>Status</th><th>Public</th><th>Access</th></tr></thead>
+            <thead><tr><th>Shop</th><th>Verification badge</th><th>Seller contact details</th><th>Click credits</th><th>Status</th><th>Public</th><th>Access</th></tr></thead>
             <tbody>
               {sellers.map((seller) => (
                 <tr key={seller.id}>
                   <td><strong>{seller.shop_name}</strong><small>{seller.slug}</small>{seller.shop_url && <a className="admin-seller-shop-url" href={seller.shop_url} target="_blank" rel="noreferrer">Shop website</a>}</td>
+                  <td>
+                    {(() => {
+                      const badge = verificationBySellerId.get(seller.id);
+                      const isVerified = Boolean(badge && badge.badge_mode !== "hidden");
+                      const isBlue = badge?.badge_mode === "granted" || (badge?.badge_mode === "automatic" && badge.follower_count >= 1000);
+                      return (
+                        <div className="admin-seller-verification">
+                          {isVerified ? <SellerVerificationBadge isBlue={isBlue} /> : <span className="admin-muted">Hidden</span>}
+                          <small>{formatNumber(badge?.follower_count ?? 0)} followers</small>
+                          <form className="admin-inline-form" action={setSellerVerificationBadge}>
+                            <input type="hidden" name="seller_id" value={seller.id} />
+                            <select name="badge_mode" defaultValue={badge?.badge_mode ?? "automatic"} aria-label={`Verification badge for ${seller.shop_name}`}>
+                              <option value="automatic">Automatic · 1,000 followers</option>
+                              <option value="granted">Grant badge</option>
+                              <option value="hidden">Hide badge</option>
+                            </select>
+                            <button className="admin-approve-button" type="submit">Save badge</button>
+                          </form>
+                        </div>
+                      );
+                    })()}
+                  </td>
                   <td>
                     {(() => {
                       const contact = contactBySellerId.get(seller.id);

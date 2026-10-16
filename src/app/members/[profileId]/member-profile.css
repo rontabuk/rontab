@@ -1,0 +1,24 @@
+.member-public-profile { width: min(calc(100% - 36px), 820px); min-height: 55vh; margin-inline: auto; padding: 16px 0 64px; color: #29332a; }
+.member-profile-back { display: inline-flex; align-items: center; gap: 6px; color: #526b50; font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
+.member-profile-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; margin-top: 10px; padding: 17px 0; border-block: 1px solid #dde2d9; }
+.member-profile-heading .admin-eyebrow { margin-bottom: 5px; }
+.member-profile-heading h1 { margin: 0; color: #29332a; font-family: var(--font-display), Georgia, serif; font-size: 36px; font-weight: 400; line-height: 1.12; overflow-wrap: anywhere; }
+.member-profile-location { display: flex; align-items: center; gap: 5px; margin: 7px 0 0; color: #687267; font-size: 11px; }
+.member-profile-followers { display: inline-flex; align-items: center; gap: 6px; width: fit-content; margin: 11px 0 0; padding-top: 8px; border-top: 1px solid #e2e6df; color: #405745; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.member-profile-actions form { margin: 0; }
+.member-profile-actions a, .member-profile-actions button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border: 1px solid #34483a; border-radius: 3px; background: #34483a; color: #fffdf8; cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; }
+.member-profile-actions a:hover, .member-profile-actions button:hover { background: #405c46; }
+.member-profile-feedback { margin: 12px 0 0; color: #405745; font-size: 11px; }
+.member-profile-feedback.is-error { color: #823d33; }
+.member-profile-contact { display: grid; max-width: 620px; gap: 0; margin-top: 24px; }
+.member-profile-contact h2 { margin: 0 0 8px; color: #354137; font-family: var(--font-display), Georgia, serif; font-size: 22px; font-weight: 400; }
+.member-profile-contact a { display: inline-flex; min-height: 47px; align-items: center; gap: 10px; border-bottom: 1px solid #e2e6df; color: #405745; font-size: 12px; overflow-wrap: anywhere; }
+.member-profile-contact a svg { flex: 0 0 auto; }
+.member-profile-no-contact { margin: 22px 0 0; color: #737c71; font-size: 12px; }
+@media (max-width: 520px) {
+  .member-public-profile { width: min(calc(100% - 28px), 760px); padding-top: 12px; }
+  .member-profile-heading { grid-template-columns: minmax(0, 1fr); gap: 12px; padding-block: 14px; }
+  .member-profile-heading h1 { font-size: 27px; }
+  .member-profile-actions { grid-column: 1 / -1; justify-self: start; }
+  .member-profile-actions a, .member-profile-actions button { min-height: 40px; }
+}

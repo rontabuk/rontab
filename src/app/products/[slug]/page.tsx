@@ -94,7 +94,7 @@ async function ProductPageContent({ params, searchParams }: ProductPageProps) {
                 <h2 id="marketplace-report-title">Something wrong?</h2>
                 <details>
                   <summary>Report this product or seller</summary>
-                  <p>Reports are reviewed by the Rontab team. Sign in with a verified visitor account to submit one.</p>
+                  <p>Reports are reviewed by the Rontab team. Sign in with an email-confirmed account to submit one.</p>
                   {report === "sent" && <p className="marketplace-report-feedback" role="status">Thank you. Your report was sent for review. <Link href="/visitor/support">View my reports</Link></p>}
                   {report === "verification" && <p className="marketplace-report-feedback is-error" role="alert">Confirm your email from the notification bell before sending a report.</p>}
                   {report === "invalid" && <p className="marketplace-report-feedback is-error" role="alert">Choose a reason and add a description of at least 10 characters.</p>}

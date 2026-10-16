@@ -3,8 +3,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { ArrowLeft, ArrowUpRight, Heart, HeartOff, MapPin, Phone } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Minus, Phone, MapPin, Plus, UsersRound } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
+import { SellerVerificationBadge } from "@/components/seller/SellerVerificationBadge";
 import { ProductCard } from "@/components/ProductCard";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { followShop, unfollowShop } from "@/app/visitor/shop-follow-actions";
@@ -51,14 +52,20 @@ export default async function PublicShopPage({
   if (sellerError) throw new Error(sellerError.message);
   if (!seller) notFound();
 
-  const [{ data: city, error: cityError }, { data: phone, error: phoneError }] = await Promise.all([
+  const [{ data: city, error: cityError }, { data: phone, error: phoneError }, { data: badges, error: badgesError }, { data: followerCount, error: followerCountError }] = await Promise.all([
     seller.shop_city_id
       ? supabase.from("supported_cities").select("city_name").eq("city_id", seller.shop_city_id).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     supabase.rpc("get_public_seller_contact_phone", { p_seller_profile_id: seller.id }),
+    supabase.rpc("get_public_seller_verification_badges", { p_seller_profile_ids: [seller.id] }),
+    supabase.rpc("get_public_seller_follower_count", { p_seller_profile_id: seller.id }),
   ]);
   if (cityError) throw new Error(cityError.message);
   if (phoneError) throw new Error(phoneError.message);
+  if (badgesError) throw new Error(badgesError.message);
+  if (followerCountError) throw new Error(followerCountError.message);
+  const sellerBadge = badges?.find((badge) => badge.is_verified);
+  const followers = followerCount ?? 0;
   const products = catalog.products.filter((product) => product.sellerProfileId === seller.id);
   let isFollowing = false;
   if (viewer.role === "visitor") {
@@ -78,27 +85,29 @@ export default async function PublicShopPage({
             ? <Image className="public-shop-logo" src={seller.logo_url} alt={`${seller.shop_name} logo`} width={104} height={104} unoptimized />
             : <span className="public-shop-logo public-shop-logo-fallback" aria-hidden="true">{seller.shop_name.slice(0, 1).toUpperCase()}</span>}
           <div>
-            <p className="public-shop-kicker">RONTAB SHOP</p>
-            <h1>{seller.shop_name}</h1>
+            <div className="public-shop-title-row">
+              <h1 className="public-shop-name">{seller.shop_name}{sellerBadge && <SellerVerificationBadge isBlue={sellerBadge.is_blue} />}</h1>
+              {viewer.role === "visitor" ? (
+                <ActionForm className="public-shop-follow-form" action={isFollowing ? unfollowShop : followShop}>
+                  <input type="hidden" name="seller_profile_id" value={seller.id} />
+                  <input type="hidden" name="shop_slug" value={seller.slug} />
+                  <button className={`public-shop-follow-icon-button${isFollowing ? " is-following" : ""}`} type="submit" aria-label={`${isFollowing ? "Unfollow" : "Follow"} ${seller.shop_name}`} title={`${isFollowing ? "Unfollow" : "Follow"} ${seller.shop_name}`}>
+                    {isFollowing ? <Minus size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
+                  </button>
+                </ActionForm>
+              ) : viewer.role === "guest" ? (
+                <Link className="public-shop-follow-icon-link" href={`/account?next=${encodeURIComponent(`/shops/${seller.slug}`)}`} aria-label={`Sign in to follow ${seller.shop_name}`} title={`Sign in to follow ${seller.shop_name}`}><Plus size={16} aria-hidden="true" /></Link>
+              ) : null}
+            </div>
             {seller.description && <p className="public-shop-description">{seller.description}</p>}
             <div className="public-shop-meta">
               {city && <span><MapPin size={14} aria-hidden="true" />{city.city_name}</span>}
+              <span><UsersRound size={14} aria-hidden="true" />{formatNumber(followers)} {followers === 1 ? "follower" : "followers"}</span>
               {seller.shop_url && <a href={seller.shop_url} target="_blank" rel="noreferrer">Shop website<ArrowUpRight size={13} aria-hidden="true" /></a>}
               {phone && <a href={`tel:${phone}`}><Phone size={14} aria-hidden="true" />{phone}</a>}
             </div>
             {followed === "1" && <p className="public-shop-feedback" role="status">Shop added to your following list.</p>}
             {unfollowed === "1" && <p className="public-shop-feedback" role="status">Shop removed from your following list.</p>}
-            {viewer.role === "visitor" ? (
-              <ActionForm className="public-shop-follow-form" action={isFollowing ? unfollowShop : followShop}>
-                <input type="hidden" name="seller_profile_id" value={seller.id} />
-                <input type="hidden" name="shop_slug" value={seller.slug} />
-                <button type="submit">{isFollowing ? <HeartOff size={15} aria-hidden="true" /> : <Heart size={15} aria-hidden="true" />}{isFollowing ? "Unfollow shop" : "Follow shop"}</button>
-              </ActionForm>
-            ) : viewer.role === "guest" ? (
-              <Link className="public-shop-follow-link" href={`/account?next=${encodeURIComponent(`/shops/${seller.slug}`)}`}><Heart size={15} aria-hidden="true" />Sign in to follow this shop</Link>
-            ) : (
-              <p className="public-shop-follow-note">Shop following is available from a visitor account.</p>
-            )}
           </div>
         </header>
         <section aria-labelledby="public-shop-products-title">

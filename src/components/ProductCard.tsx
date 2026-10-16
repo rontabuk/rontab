@@ -7,6 +7,7 @@ import { ArrowUpRight, Image as ImageIcon, Play, Volume2, VolumeX } from "lucide
 import type { Product } from "@/data/products";
 import { ShopFollowButton } from "@/components/ShopFollowButton";
 import { ShopVisitLink } from "@/components/ShopVisitLink";
+import { SellerVerificationBadge } from "@/components/seller/SellerVerificationBadge";
 import { formatCompactNumber, formatPrice } from "@/lib/format";
 
 export function ProductCard({
@@ -223,7 +224,7 @@ export function ProductCard({
             onPointerEnter={() => descriptionOpen && resetCloseTimer()}
           >
             <span className="product-description-name">{product.name}</span>
-            <span className="product-description-maker">{product.maker}</span>
+            <span className="product-description-maker">{product.maker}{product.sellerBadge && <SellerVerificationBadge isBlue={product.sellerBadge === "blue"} />}</span>
           </button>
           {previewOnly ? (
             <span className="product-visit-button">{visitLabel}</span>

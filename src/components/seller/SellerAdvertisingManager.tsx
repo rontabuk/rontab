@@ -104,7 +104,7 @@ export function SellerAdvertisingManager({
           <p className="admin-eyebrow">CLICK BALANCE</p>
           <h2 id="seller-ad-balance-title">{formatNumber(balance)} clicks</h2>
           <p>Remaining balance · {formatGbp(balance, clickPricePencePer1000)} equivalent</p>
-          <p>A credit covers an eligible first visit from a confirmed visitor account to a product. Repeat visits do not use another credit, and a click does not mean a purchase.</p>
+          <p>A credit covers an eligible first visit from a confirmed member account to a product. Repeat visits do not use another credit, and a click does not mean a purchase.</p>
         </div>
         <div className="seller-ad-balance-rule">
           <strong>1,000 clicks</strong>

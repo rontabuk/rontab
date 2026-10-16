@@ -55,7 +55,6 @@
 
 .catalog-theme .site-header { background: var(--cream); }
 .catalog-theme .wordmark { color: var(--espresso); }
-.catalog-theme .wordmark span { color: var(--mocha); }
 .catalog-theme .site-menu-trigger, .catalog-theme .header-account-link { border-color: var(--border); color: var(--espresso); }
 .catalog-theme .site-menu-trigger:hover, .catalog-theme .site-menu[open] .site-menu-trigger, .catalog-theme .header-account-link:hover { border-color: var(--taupe); background: var(--beige); }
 .catalog-theme .site-menu-panel { border-color: var(--border); border-radius: 5px; background: var(--surface); box-shadow: 0 14px 38px rgb(12 12 12 / 12%); }
@@ -105,7 +104,6 @@
 
 .catalog-theme .site-footer { background: var(--espresso); color: var(--cream); }
 .catalog-theme .wordmark-light { color: var(--cream); }
-.catalog-theme .wordmark-light span { color: var(--yt-red); }
 .catalog-theme .footer-brand p, .catalog-theme .footer-bottom { color: #aaaaaa; }
 .catalog-theme .footer-links a { color: #f1f1f1; }
 .catalog-theme .footer-links a:hover { color: var(--cream); }

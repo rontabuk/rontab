@@ -40,7 +40,8 @@ export async function submitCreatorProductOpportunityProposal(_state: FormState,
     }
     if (error) throw new Error(error.message);
     revalidatePath("/visitor/creator/opportunities");
-    redirect("/visitor/creator/opportunities?submitted=1");
+    revalidatePath(`/visitor/creator/opportunities/${opportunityId}`);
+    redirect(`/visitor/creator/opportunities/${opportunityId}?submitted=1`);
   });
 }
 
@@ -48,9 +49,14 @@ export async function withdrawCreatorProductOpportunityProposal(formData: FormDa
   const proposalId = String(formData.get("proposal_id") ?? "");
   if (!isUuid(proposalId)) throw new FormError("Invalid creator offer.");
   const { supabase } = await getVisitorAccount("/visitor/creator/opportunities");
+  const { data: proposal, error: proposalError } = await supabase.from("creator_product_opportunity_proposals")
+    .select("opportunity_id").eq("id", proposalId).maybeSingle();
+  if (proposalError) throw new Error(proposalError.message);
+  if (!proposal) throw new FormError("Creator offer not found.");
   const { error } = await supabase.rpc("creator_withdraw_product_opportunity_proposal", { p_proposal_id: proposalId });
   if (error?.code === "55000" || error?.code === "42501") throw new FormError(error.message);
   if (error) throw new Error(error.message);
   revalidatePath("/visitor/creator/opportunities");
-  redirect("/visitor/creator/opportunities?withdrawn=1");
+  revalidatePath(`/visitor/creator/opportunities/${proposal.opportunity_id}`);
+  redirect(`/visitor/creator/opportunities/${proposal.opportunity_id}?withdrawn=1`);
 }

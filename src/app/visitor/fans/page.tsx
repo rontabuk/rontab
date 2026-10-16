@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { ArrowUpRight, Heart, UserRoundMinus } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
+import { CreatorVerificationBadge } from "@/components/creator/CreatorVerificationBadge";
 import { creatorSpecialties } from "@/lib/creator/catalog";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import { getVisitorAccount } from "@/lib/visitor/access";
@@ -30,6 +31,11 @@ export default async function VisitorFansPage({
   if (metricsResult.error) throw new Error(metricsResult.error.message);
   const follows: CreatorFollow[] = followsResult.data ?? [];
   const metrics = metricsResult.data?.[0] ?? { fan_count: 0, first_referral_count: 0 };
+  const creatorFanCounts = new Map(await Promise.all(follows.map(async (creator) => {
+    const { data, error } = await supabase.rpc("creator_get_public_fan_count", { p_creator_profile_id: creator.creator_profile_id });
+    if (error) throw new Error(error.message);
+    return [creator.creator_profile_id, data ?? 0] as const;
+  })));
 
   return (
     <main className="admin-overview visitor-fans-page">
@@ -70,7 +76,7 @@ export default async function VisitorFansPage({
               <li key={creator.creator_profile_id}>
                 <div>
                   <p className="creator-directory-specialties">{creator.specialties.map((value) => creatorSpecialties.find((item) => item.value === value)?.label ?? value).join(" · ")}</p>
-                  <h3><Link href={`/creators/${creator.slug}`}>{creator.display_name}<ArrowUpRight size={15} aria-hidden="true" /></Link></h3>
+                  <h3><Link href={`/creators/${creator.slug}`}>{creator.display_name}<ArrowUpRight size={15} aria-hidden="true" /></Link><CreatorVerificationBadge fanCount={creatorFanCounts.get(creator.creator_profile_id) ?? 0} /></h3>
                   {creator.audience_city_name && <p>{creator.audience_city_name}, {creator.country_code}</p>}
                   <small>Following since {formatDateTime(creator.followed_at)}</small>
                   <span className="visitor-fan-code">{creator.referral_code}</span>

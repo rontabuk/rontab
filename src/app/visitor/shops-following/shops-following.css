@@ -1,21 +1,29 @@
 .visitor-shops-following-page > .admin-page-heading { margin-bottom: 20px; }
 .visitor-shop-follow-summary { display: flex; align-items: baseline; gap: 7px; margin: 17px 0; color: #697268; font-size: 11px; }
 .visitor-shop-follow-summary strong { color: #34483a; font-size: 17px; font-variant-numeric: tabular-nums; }
+.visitor-shop-follow-filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(130px, .38fr); gap: 8px; margin-bottom: 12px; }
+.visitor-shop-follow-search, .visitor-shop-follow-city { display: flex; min-width: 0; align-items: center; gap: 7px; padding: 0 9px; border: 1px solid #d9ded5; background: #fff; color: #687267; }
+.visitor-shop-follow-search input, .visitor-shop-follow-city select { width: 100%; min-width: 0; min-height: 38px; padding: 0; border: 0; outline-offset: 2px; background: transparent; color: #354137; font: inherit; font-size: 11px; }
+.visitor-shop-follow-city select { cursor: pointer; }
+.visitor-shop-follow-clear { margin-top: 10px; padding: 0; border: 0; background: transparent; color: #405f45; cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
 .visitor-shop-follow-list { display: grid; margin: 0; padding: 0; border-top: 1px solid #dfe4dc; list-style: none; }
 .visitor-shop-follow-list > li { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 15px 4px; border-bottom: 1px solid #dfe4dc; }
-.visitor-shop-follow-identity { display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: start; gap: 12px; min-width: 0; }
+.visitor-shop-follow-identity { display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: start; gap: 12px; min-width: 0; flex: 1 1 auto; }
 .visitor-shop-follow-logo { display: grid; width: 58px; height: 58px; place-items: center; overflow: hidden; border: 1px solid #dce1d7; border-radius: 50%; background: #edf1e9; color: #526a52; }
 .visitor-shop-follow-logo img { width: 100%; height: 100%; object-fit: cover; }
 .visitor-shop-follow-identity > div { min-width: 0; }
+.visitor-shop-follow-name-row { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 10px; }
 .visitor-shop-follow-identity h2 { margin: 0; color: #354137; font-family: var(--font-display), Georgia, serif; font-size: 21px; font-weight: 400; overflow-wrap: anywhere; }
 .visitor-shop-follow-identity h2 a { display: inline-flex; align-items: center; gap: 4px; color: inherit; }
 .visitor-shop-follow-identity p { display: -webkit-box; max-width: 640px; overflow: hidden; margin: 5px 0 0; color: #626c60; font-size: 11px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .visitor-shop-follow-identity small { display: block; margin-top: 4px; color: #737c71; font-size: 10px; }
-.visitor-shop-unfollow-form { flex: 0 0 auto; }
-.visitor-shop-unfollow-form button { display: inline-flex; min-height: 36px; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid #dce2d8; border-radius: 3px; background: #f7f9f5; color: #536354; cursor: pointer; font: inherit; font-size: 10px; font-weight: 700; }
-.visitor-shop-unfollow-form button:hover { background: #eef1eb; }
+.visitor-shop-follow-toggle { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; padding: 0; border: 1px solid #39754b; border-radius: 50%; background: #39754b; color: #fff; cursor: pointer; }
+.visitor-shop-follow-toggle:hover { background: #2f643e; }
+.visitor-shop-follow-toggle.is-following { border-color: #e5b9b2; background: #f8e9e6; color: #a34239; }
+.visitor-shop-follow-toggle.is-following:hover { background: #f1d8d3; }
+.visitor-shop-follow-toggle:disabled { cursor: wait; opacity: .65; }
 .visitor-shops-following-page .admin-empty-state > a { display: inline-flex; align-items: center; gap: 5px; margin-top: 12px; color: #405f45; font-size: 11px; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
 @media (max-width: 560px) {
-  .visitor-shop-follow-list > li { align-items: flex-start; flex-direction: column; gap: 10px; }
-  .visitor-shop-unfollow-form { align-self: flex-start; margin-left: 70px; }
+  .visitor-shop-follow-list > li { align-items: center; flex-direction: row; gap: 10px; }
+  .visitor-shop-follow-filters { grid-template-columns: minmax(0, 1fr) minmax(110px, .55fr); }
 }

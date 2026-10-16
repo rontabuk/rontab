@@ -51,9 +51,17 @@ export type Database = {
         { avatar_url: string | null; city: string | null; city_id: string | null; country_code: string | null; created_at: string; display_name: string | null; email_verified_at: string | null; id: string; updated_at: string },
         { avatar_url?: string | null; city?: string | null; city_id?: string | null; country_code?: string | null; created_at?: string; display_name?: string | null; id: string; updated_at?: string }
       >;
+      member_contact_preferences: Table<
+        { contact_visibility: "private" | "sellers" | "creators" | "public"; phone: string | null; updated_at: string; user_id: string },
+        never
+      >;
+      member_social_links: Table<
+        { platform: "instagram" | "tiktok" | "youtube" | "facebook" | "x" | "other"; position: number; profile_url: string; user_id: string },
+        never
+      >;
       seller_profiles: Table<
-        { created_at: string; description: string | null; id: string; is_public: boolean; logo_url: string | null; shop_city_id: string | null; shop_name: string; shop_url: string | null; slug: string; status: Database["public"]["Enums"]["seller_status"]; updated_at: string; user_id: string },
-        { created_at?: string; description?: string | null; id?: string; is_public?: boolean; logo_url?: string | null; shop_city_id?: string | null; shop_name: string; shop_url?: string | null; slug: string; status?: Database["public"]["Enums"]["seller_status"]; updated_at?: string; user_id: string }
+        { created_at: string; description: string | null; id: string; is_public: boolean; logo_url: string | null; shop_city_id: string | null; shop_name: string; shop_url: string | null; slug: string; status: Database["public"]["Enums"]["seller_status"]; updated_at: string; user_id: string; verification_badge_mode: "automatic" | "granted" | "hidden" },
+        { created_at?: string; description?: string | null; id?: string; is_public?: boolean; logo_url?: string | null; shop_city_id?: string | null; shop_name: string; shop_url?: string | null; slug: string; status?: Database["public"]["Enums"]["seller_status"]; updated_at?: string; user_id: string; verification_badge_mode?: "automatic" | "granted" | "hidden" }
       >;
       seller_contact_details: Table<
         { business_address: string | null; contact_name: string | null; instagram_url: string | null; phone: string | null; phone_contact_confirmed_at: string | null; phone_visibility: "collaborations" | "public"; registered_email: string; registered_email_confirmed_at: string | null; seller_profile_id: string; updated_at: string; website_url: string | null },
@@ -333,6 +341,15 @@ export type Database = {
       admin_delete_top_video_ad: { Args: { p_ad_id: string }; Returns: string };
       admin_save_category: { Args: { p_category_id: string | null; p_description: string | null; p_image_url: string | null; p_is_active: boolean; p_name: string; p_slug: string; p_sort_order: number }; Returns: string };
       admin_set_seller_status: { Args: { p_is_public: boolean; p_next_status: Database["public"]["Enums"]["seller_status"]; p_seller_id: string }; Returns: undefined };
+      get_public_seller_verification_badges: { Args: { p_seller_profile_ids: string[] }; Returns: { is_blue: boolean; is_verified: boolean; seller_profile_id: string }[] };
+      get_public_seller_follower_count: { Args: { p_seller_profile_id: string }; Returns: number };
+      save_my_member_contact_profile: { Args: { p_contact_visibility: string; p_phone: string | null; p_social_links: Json }; Returns: undefined };
+      get_member_contact_profile: { Args: { p_member_user_id: string }; Returns: { city_name: string | null; contact_email: string | null; contact_visibility: string; country_code: string | null; display_name: string | null; phone: string | null; profile_user_id: string; social_platform: string | null; social_profile_url: string | null }[] };
+      get_member_profile_follower_summary: { Args: { p_member_user_id: string }; Returns: { follower_count: number; is_following: boolean }[] };
+      follow_member_profile: { Args: { p_member_user_id: string }; Returns: boolean };
+      unfollow_member_profile: { Args: { p_member_user_id: string }; Returns: boolean };
+      admin_get_seller_verification_badges: { Args: { p_seller_profile_ids: string[] }; Returns: { badge_mode: string; follower_count: number; seller_profile_id: string }[] };
+      admin_set_seller_verification_badge: { Args: { p_badge_mode: string; p_seller_profile_id: string }; Returns: undefined };
       admin_grant_seller_ad_credits: { Args: { p_clicks: number; p_note: string; p_seller_id: string }; Returns: number };
       seller_has_new_ad_credit_grants: { Args: Record<PropertyKey, never>; Returns: boolean };
       seller_mark_ad_credit_grants_seen: { Args: Record<PropertyKey, never>; Returns: undefined };

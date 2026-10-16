@@ -3,7 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { ArrowLeft, ArrowUpRight, BadgeCheck, CalendarDays, MapPin, PackageCheck, UsersRound } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, CalendarDays, MapPin, PackageCheck, UsersRound } from "lucide-react";
+import { CreatorVerificationBadge } from "@/components/creator/CreatorVerificationBadge";
 import { ActionForm } from "@/components/ActionForm";
 import { OpportunityTargeting } from "@/components/creator-opportunities/OpportunityTargeting";
 import { closeCreatorProductOpportunity, createCreatorProductOpportunity, selectCreatorProductOpportunityProposal } from "@/app/seller/(protected)/creator-opportunity-actions";
@@ -147,7 +148,7 @@ export default async function SellerProductCreatorOpportunityPage({
             </form>}
             {visibleProposals.length ? <ol className="creator-opportunity-proposal-list">{visibleProposals.map((proposal) => (
               <li key={proposal.id}>
-                <header><div><h3><Link href={`/creators/${proposal.creator.slug}`} target="_blank">{proposal.creator.published_display_name}<ArrowUpRight size={14} aria-hidden="true" /></Link><BadgeCheck size={14} aria-label="Rontab-approved creator" /></h3><p>{proposal.audienceCities.map((city) => city.city_name).join(", ") || "No audience cities listed"}</p></div><strong>{formatPrice(proposal.amount, opportunity.currency)}</strong></header>
+                <header><div><h3><Link href={`/creators/${proposal.creator.slug}`} target="_blank">{proposal.creator.published_display_name}<ArrowUpRight size={14} aria-hidden="true" /></Link><CreatorVerificationBadge fanCount={proposal.fanCount} /></h3><p>{proposal.audienceCities.map((city) => city.city_name).join(", ") || "No audience cities listed"}</p></div><strong>{formatPrice(proposal.amount, opportunity.currency)}</strong></header>
                 <p className="creator-opportunity-follower-count"><UsersRound size={14} aria-hidden="true" />{formatNumber(proposal.totalFollowers)} self-reported social followers</p>
                 <p>{proposal.offer_details}</p>
                 <span className={`creator-opportunity-proposal-status is-${proposal.status}`}>{proposal.status.replaceAll("_", " ")}</span>
@@ -178,6 +179,11 @@ async function loadProposals(supabase: Awaited<ReturnType<typeof getSellerAccoun
     supabase.from("creator_profile_audience_cities").select("creator_profile_id,city_id").in("creator_profile_id", creatorIds).eq("is_published", true),
   ]);
   for (const result of [creatorsResult, accountsResult, audienceResult]) if (result.error) throw new Error(result.error.message);
+  const fanCounts = new Map(await Promise.all(creatorIds.map(async (creatorId) => {
+    const { data, error } = await supabase.rpc("creator_get_public_fan_count", { p_creator_profile_id: creatorId });
+    if (error) throw new Error(error.message);
+    return [creatorId, data ?? 0] as const;
+  })));
   const creators = new Map((creatorsResult.data ?? []).map((creator) => [creator.id, creator]));
   const followersByCreator = new Map<string, number>();
   for (const account of accountsResult.data ?? []) followersByCreator.set(account.creator_profile_id, (followersByCreator.get(account.creator_profile_id) ?? 0) + account.follower_count);
@@ -188,6 +194,6 @@ async function loadProposals(supabase: Awaited<ReturnType<typeof getSellerAccoun
     const creator = creators.get(proposal.creator_profile_id);
     if (!creator) return [];
     const audienceCities = (audienceByCreator.get(creator.id) ?? []).flatMap((cityId) => cityById.has(cityId) ? [cityById.get(cityId)!] : []);
-    return [{ ...proposal, creator, audienceCities, totalFollowers: followersByCreator.get(creator.id) ?? 0 }];
+    return [{ ...proposal, creator, audienceCities, totalFollowers: followersByCreator.get(creator.id) ?? 0, fanCount: fanCounts.get(creator.id) ?? 0 }];
   });
 }

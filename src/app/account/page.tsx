@@ -7,7 +7,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSafeVisitorPath } from "@/lib/visitor/paths";
 import "./account.css";
 
-export const metadata: Metadata = { title: "Visitor account", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Account", robots: { index: false, follow: false } };
 export const instant = false;
 
 export default async function VisitorAccountPage({

@@ -28,6 +28,7 @@ export default async function VisitorOfferGalleryPage({
     supabase.rpc("get_visitor_seller_offer_coupons"),
     supabase.from("seller_voucher_support_cases").select("coupon_id,issue_type,status,resolution_note,created_at,updated_at").eq("visitor_id", user.id),
   ]);
+  const couponsUnavailable = couponsResult.error?.code === "42501";
   if ([summaryResult.error, offersResult.error, couponsResult.error].some(isSellerOfferSchemaUnavailable)) {
     return (
       <main className="admin-overview visitor-offer-gallery">
@@ -39,7 +40,7 @@ export default async function VisitorOfferGalleryPage({
   if (profileResult.error) throw new Error(profileResult.error.message);
   if (summaryResult.error) throw new Error(summaryResult.error.message);
   if (offersResult.error) throw new Error(offersResult.error.message);
-  if (couponsResult.error) throw new Error(couponsResult.error.message);
+  if (couponsResult.error && !couponsUnavailable) throw new Error(couponsResult.error.message);
   if (supportCasesResult.error) throw new Error(supportCasesResult.error.message);
 
   const offers = offersResult.data ?? [];
@@ -71,7 +72,7 @@ export default async function VisitorOfferGalleryPage({
   const locationsByOffer = groupBy(locations, (location) => location.offer_id);
   const quotasByLocation = groupBy(quotasResult.data ?? [], (quota) => quota.location_id);
   const citiesById = new Map((citiesResult.data ?? []).map((city) => [city.city_id, `${city.city_name}, ${city.country_code}`]));
-  const coupons = couponsResult.data ?? [];
+  const coupons = couponsUnavailable ? [] : couponsResult.data ?? [];
   const supportCasesByCouponId = new Map((supportCasesResult.data ?? []).map((supportCase) => [supportCase.coupon_id, supportCase]));
   const couponsByOfferDate = new Map(coupons.map((coupon) => [`${coupon.offer_id}:${coupon.offer_date}`, coupon]));
   const summary = summaryResult.data?.[0] ?? { points_balance: 0, points_earned: 0, points_spent: 0 };
@@ -107,6 +108,7 @@ export default async function VisitorOfferGalleryPage({
         <Link href="/visitor/offers" aria-current={view === "offers" ? "page" : undefined}>Available offers</Link>
         <Link href="/visitor/offers?view=vouchers" aria-current={view === "vouchers" ? "page" : undefined}>My vouchers <span>{coupons.length}</span></Link>
       </nav>
+      {couponsUnavailable && <p className="visitor-rewards-error" role="status">Confirm your email and choose a supported country to access vouchers. <Link href="/visitor">Update your profile</Link>.</p>}
 
       {view === "offers" ? (
         <section className="seller-offer-gallery-grid" aria-label="Published seller offers">
@@ -172,7 +174,9 @@ export default async function VisitorOfferGalleryPage({
       ) : (
         <section className="seller-offer-voucher-list" aria-label="My vouchers">
           <p className="seller-offer-voucher-policy">Vouchers cannot be transferred. Cancel before the offer window starts to return the points and place. Unused vouchers expire when the window ends without a refund.</p>
-          {coupons.length ? coupons.map((coupon) => (
+          {couponsUnavailable ? (
+            <div className="visitor-rewards-empty"><Ticket size={23} aria-hidden="true" /><h2>Vouchers are unavailable for this account</h2><p>Confirm your email and set a country supported by Rontab before reserving or viewing vouchers.</p><Link href="/visitor">Update your profile</Link></div>
+          ) : coupons.length ? coupons.map((coupon) => (
             <article className="seller-offer-voucher" key={coupon.id}>
               <div className="seller-offer-voucher-heading">
                 <div><span className={`admin-loyalty-status is-${coupon.status}`}>{coupon.status}</span><h2>{coupon.title}</h2></div>

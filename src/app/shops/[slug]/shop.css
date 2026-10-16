@@ -3,18 +3,20 @@
 .public-shop-hero { display: grid; grid-template-columns: 104px minmax(0, 1fr); align-items: center; gap: 19px; margin: 22px 0 32px; padding: 22px 0; border-block: 1px solid #dde2d9; }
 .public-shop-logo { width: 104px; height: 104px; border: 1px solid #dce1d7; border-radius: 50%; background: #edf1e9; object-fit: cover; }
 .public-shop-logo-fallback { display: grid; place-items: center; color: #526a52; font-family: var(--font-display), Georgia, serif; font-size: 40px; }
-.public-shop-kicker { margin: 0 0 7px; color: #60715d; font-size: 10px; font-weight: 700; }
+.public-shop-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
 .public-shop-hero h1 { margin: 0; color: #29332a; font-family: var(--font-display), Georgia, serif; font-size: 38px; font-weight: 400; line-height: 1.1; overflow-wrap: anywhere; }
+.public-shop-name { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .public-shop-description { max-width: 680px; margin: 8px 0 0; color: #626c60; font-size: 13px; line-height: 1.7; white-space: pre-line; }
 .public-shop-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 12px; }
 .public-shop-meta a { display: inline-flex; align-items: center; gap: 6px; color: #405f45; font-size: 11px; font-weight: 700; overflow-wrap: anywhere; }
 .public-shop-meta > span { display: inline-flex; align-items: center; gap: 6px; color: #687267; font-size: 11px; }
 .public-shop-feedback { margin: 10px 0 0; color: #356b3b; font-size: 11px; }
-.public-shop-follow-form { display: inline-block; margin-top: 13px; }
-.public-shop-follow-form > button, .public-shop-follow-link { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border: 1px solid #34483a; border-radius: 3px; background: #34483a; color: #fffdf8; cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; text-decoration: none; }
+.public-shop-follow-form { display: inline-block; margin: 0; }
+.public-shop-follow-form > button, .public-shop-follow-icon-link { display: grid; width: 34px; height: 34px; place-items: center; padding: 0; border: 1px solid #39754b; border-radius: 50%; background: #39754b; color: #fff; cursor: pointer; }
+.public-shop-follow-form > button:hover, .public-shop-follow-icon-link:hover { background: #2f643e; }
+.public-shop-follow-form > button.is-following { border-color: #d6aaa3; background: #f9eae7; color: #a43f36; }
+.public-shop-follow-form > button.is-following:hover { background: #f2dcd8; }
 .public-shop-follow-form > button[aria-busy="true"] { cursor: wait; opacity: .7; }
-.public-shop-follow-link { margin-top: 13px; border-color: #d7ddd2; background: #f7f9f5; color: #405f45; }
-.public-shop-follow-note { margin: 12px 0 0; color: #737c71; font-size: 10px; }
 .public-shop-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 15px; }
 .public-shop-section-heading h2 { margin: 0; color: #354137; font-family: var(--font-display), Georgia, serif; font-size: 26px; font-weight: 400; }
 .public-shop-section-heading span { color: #737c71; font-size: 11px; }

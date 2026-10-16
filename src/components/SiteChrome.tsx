@@ -11,7 +11,7 @@ export function SiteHeader() {
   return (
     <header className="site-header">
       <div className="site-header-inner page-shell">
-        <Link className="wordmark" href="/products" aria-label="Rontab products">rontab<span>.</span></Link>
+        <Link className="wordmark" href="/products" aria-label="RonTab products">RonTab</Link>
 
         <Suspense fallback={<AccountLinksFallback />}>
           <AccountLinks />
@@ -118,7 +118,7 @@ export function SiteFooter() {
       <div className="footer-inner page-shell">
         <div className="footer-top">
           <div className="footer-brand">
-            <Link className="wordmark wordmark-light" href="/products">rontab<span>.</span></Link>
+            <Link className="wordmark wordmark-light" href="/products">RonTab</Link>
             <p>Good things for the everyday home.</p>
           </div>
           <nav className="footer-links" aria-label="Information">
