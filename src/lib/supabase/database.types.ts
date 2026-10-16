@@ -56,8 +56,13 @@ export type Database = {
         { created_at?: string; description?: string | null; id?: string; is_public?: boolean; logo_url?: string | null; shop_city_id?: string | null; shop_name: string; shop_url?: string | null; slug: string; status?: Database["public"]["Enums"]["seller_status"]; updated_at?: string; user_id: string }
       >;
       seller_contact_details: Table<
-        { business_address: string | null; contact_name: string | null; instagram_url: string | null; phone: string | null; phone_contact_confirmed_at: string | null; registered_email: string; registered_email_confirmed_at: string | null; seller_profile_id: string; updated_at: string; website_url: string | null },
-        { business_address?: string | null; contact_name?: string | null; instagram_url?: string | null; phone?: string | null; phone_contact_confirmed_at?: string | null; registered_email: string; registered_email_confirmed_at?: string | null; seller_profile_id: string; updated_at?: string; website_url?: string | null }
+        { business_address: string | null; contact_name: string | null; instagram_url: string | null; phone: string | null; phone_contact_confirmed_at: string | null; phone_visibility: "collaborations" | "public"; registered_email: string; registered_email_confirmed_at: string | null; seller_profile_id: string; updated_at: string; website_url: string | null },
+        { business_address?: string | null; contact_name?: string | null; instagram_url?: string | null; phone?: string | null; phone_contact_confirmed_at?: string | null; phone_visibility?: "collaborations" | "public"; registered_email: string; registered_email_confirmed_at?: string | null; seller_profile_id: string; updated_at?: string; website_url?: string | null }
+      >;
+      creator_contact_details: Table<
+        { creator_profile_id: string; phone: string | null; phone_visibility: "collaborations" | "public"; updated_at: string },
+        never,
+        [{ foreignKeyName: "creator_contact_details_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: true; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }]
       >;
       seller_ad_accounts: Table<
         { admin_clicks_remaining: number; clicks_remaining: number; seller_profile_id: string; updated_at: string; welcome_bonus_granted_at: string | null; welcome_clicks_remaining: number },
@@ -350,6 +355,11 @@ export type Database = {
       creator_get_my_follows: { Args: Record<PropertyKey, never>; Returns: { audience_city_name: string | null; country_code: string | null; creator_profile_id: string; display_name: string; followed_at: string; referral_code: string; slug: string; specialties: string[] }[] };
       creator_get_my_fan_stats: { Args: Record<PropertyKey, never>; Returns: { fan_count: number; first_referral_count: number }[] };
       creator_get_public_fan_count: { Args: { p_creator_profile_id: string }; Returns: number | null };
+      creator_save_contact_preferences: { Args: { p_phone: string | null; p_phone_visibility: string }; Returns: undefined };
+      get_public_creator_contact_phone: { Args: { p_creator_profile_id: string }; Returns: string | null };
+      seller_set_phone_visibility: { Args: { p_phone_visibility: string }; Returns: undefined };
+      get_public_seller_contact_phone: { Args: { p_seller_profile_id: string }; Returns: string | null };
+      get_public_seller_contact_phones: { Args: { p_seller_profile_ids: string[] }; Returns: { phone: string; seller_profile_id: string }[] };
       save_creator_application_with_audience_cities: { Args: { p_audience_city_ids: string[]; p_bio: string; p_display_name: string; p_platform_accounts: Json; p_portfolio_items: Json; p_public_profile_consent: boolean; p_specialties: string[] }; Returns: string };
       creator_can_view_product_opportunity: { Args: { p_opportunity_id: string }; Returns: boolean };
       seller_create_creator_product_opportunity: { Args: { p_brief: string; p_budget: number; p_contact_methods: string[]; p_deadline: string | null; p_is_nationwide: boolean; p_product_id: string; p_product_provided: boolean; p_target_city_ids: string[]; p_target_specialties: string[] }; Returns: string };

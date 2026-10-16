@@ -1,0 +1,27 @@
+.public-shop-page { width: min(calc(100% - 40px), 1180px); margin-inline: auto; padding: 38px 0 60px; color: #29332a; }
+.public-shop-back { display: inline-flex; align-items: center; gap: 6px; color: #526b50; font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
+.public-shop-hero { display: grid; grid-template-columns: 104px minmax(0, 1fr); align-items: center; gap: 19px; margin: 22px 0 32px; padding: 22px 0; border-block: 1px solid #dde2d9; }
+.public-shop-logo { width: 104px; height: 104px; border: 1px solid #dce1d7; border-radius: 50%; background: #edf1e9; object-fit: cover; }
+.public-shop-logo-fallback { display: grid; place-items: center; color: #526a52; font-family: var(--font-display), Georgia, serif; font-size: 40px; }
+.public-shop-kicker { margin: 0 0 7px; color: #60715d; font-size: 10px; font-weight: 700; }
+.public-shop-hero h1 { margin: 0; color: #29332a; font-family: var(--font-display), Georgia, serif; font-size: 38px; font-weight: 400; line-height: 1.1; overflow-wrap: anywhere; }
+.public-shop-description { max-width: 680px; margin: 8px 0 0; color: #626c60; font-size: 13px; line-height: 1.7; white-space: pre-line; }
+.public-shop-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 12px; }
+.public-shop-meta a { display: inline-flex; align-items: center; gap: 6px; color: #405f45; font-size: 11px; font-weight: 700; overflow-wrap: anywhere; }
+.public-shop-meta > span { display: inline-flex; align-items: center; gap: 6px; color: #687267; font-size: 11px; }
+.public-shop-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 15px; }
+.public-shop-section-heading h2 { margin: 0; color: #354137; font-family: var(--font-display), Georgia, serif; font-size: 26px; font-weight: 400; }
+.public-shop-section-heading span { color: #737c71; font-size: 11px; }
+.public-shop-products { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+.public-shop-empty { padding: 38px 15px; border: 1px dashed #cfd7cb; color: #697268; font-size: 12px; text-align: center; }
+@media (max-width: 900px) { .public-shop-products { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; } }
+@media (max-width: 620px) {
+  .public-shop-page { width: min(calc(100% - 28px), 1180px); padding-block: 28px 42px; }
+  .public-shop-hero { grid-template-columns: 68px minmax(0, 1fr); gap: 12px; margin-block: 17px 25px; padding-block: 17px; }
+  .public-shop-logo { width: 68px; height: 68px; }
+  .public-shop-logo-fallback { font-size: 28px; }
+  .public-shop-hero h1 { font-size: 29px; }
+  .public-shop-description { font-size: 12px; }
+  .public-shop-products { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .public-shop-section-heading h2 { font-size: 23px; }
+}

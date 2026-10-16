@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { connection } from "next/server";
 import { saveSellerProfile, sendSellerPhoneConfirmation } from "@/app/seller/(protected)/actions";
 import { ActionForm } from "@/components/ActionForm";
@@ -23,7 +25,7 @@ export default async function SellerProfilePage({
     supabase.auth.getUser(),
     supabase
       .from("seller_contact_details")
-      .select("contact_name,phone,phone_contact_confirmed_at,website_url,instagram_url,business_address")
+      .select("contact_name,phone,phone_contact_confirmed_at,phone_visibility,website_url,instagram_url,business_address")
       .eq("seller_profile_id", seller.id)
       .maybeSingle(),
     getSupportedLocations(),
@@ -41,6 +43,7 @@ export default async function SellerProfilePage({
         <p className="admin-eyebrow">SHOP WORKSPACE</p>
         <h1>Seller profile</h1>
         <p>Manage your shop identity and private contact information for the Rontab team.</p>
+        {seller.status === "active" && seller.is_public && <Link className="seller-public-profile-link" href={`/shops/${seller.slug}`}>View public shop profile<ArrowUpRight size={14} aria-hidden="true" /></Link>}
       </header>
       {saved === "1" && <p className="admin-save-success" role="status">Seller profile saved successfully.</p>}
       {phoneConfirmed === "1" && <p className="admin-save-success" role="status">Phone contact confirmed through your registered email.</p>}
@@ -97,8 +100,8 @@ export default async function SellerProfilePage({
           <small>Leave blank to keep the current logo, unless you select Remove current shop logo.</small>
         </label>
         <div className="seller-profile-section-heading">
-          <h2>Private contact details</h2>
-          <p>These details are visible to Rontab administration, not public shop visitors.</p>
+          <h2>Contact details</h2>
+          <p>Your phone stays private unless you choose to show it on public product pages.</p>
         </div>
         <label>
           Registered email
@@ -115,6 +118,14 @@ export default async function SellerProfilePage({
           Phone number
           <input name="phone" type="tel" autoComplete="tel" defaultValue={contact?.phone ?? ""} maxLength={32} placeholder="+44…" />
           <small>A confirmation link will be sent to your registered email to confirm this contact number.</small>
+        </label>
+        <label>
+          Phone visibility
+          <select name="phone_visibility" defaultValue={contact?.phone_visibility ?? "collaborations"}>
+            <option value="collaborations">Only creators you select for a campaign</option>
+            <option value="public">Public on my product pages</option>
+          </select>
+          <small>Collaboration-only numbers stay hidden from ordinary visitors. Public visibility requires a confirmed phone.</small>
         </label>
         <label>
           Business website

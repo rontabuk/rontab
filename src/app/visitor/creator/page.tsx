@@ -5,7 +5,7 @@ import { ArrowUpRight, BadgeCheck, Check, Coins, ExternalLink, MessageSquareText
 import { ActionForm } from "@/components/ActionForm";
 import { CreatorFanTools } from "@/components/creator/CreatorFanTools";
 import { MultiCityPicker } from "@/components/MultiCityPicker";
-import { respondToCreatorCollaborationRequest, withdrawCreatorProfile } from "@/app/visitor/creator-actions";
+import { respondToCreatorCollaborationRequest, saveCreatorContactPreferences, withdrawCreatorProfile } from "@/app/visitor/creator-actions";
 import { creatorPlatforms, creatorSpecialties } from "@/lib/creator/catalog";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import { getSupportedLocations } from "@/lib/locations";
@@ -47,10 +47,10 @@ const statusCopy: Record<string, string> = {
 export default async function VisitorCreatorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ submitted?: string; replied?: string; withdrawn?: string }>;
+  searchParams: Promise<{ submitted?: string; replied?: string; withdrawn?: string; contactSaved?: string }>;
 }) {
   await connection();
-  const [{ submitted, replied, withdrawn }, { supabase }, { cities }] = await Promise.all([
+  const [{ submitted, replied, withdrawn, contactSaved }, { supabase }, { cities }] = await Promise.all([
     searchParams,
     getVisitorAccount("/visitor/creator"),
     getSupportedLocations(),
@@ -68,8 +68,9 @@ export default async function VisitorCreatorPage({
   let portfolioItems: CreatorPortfolioItem[] = [];
   let collaborationRequests: CreatorCollaborationRequest[] = [];
   let audienceCityIds: string[] = [];
+  let creatorContact: Pick<Database["public"]["Tables"]["creator_contact_details"]["Row"], "phone" | "phone_visibility"> | null = null;
   if (profileId) {
-    const [profileResult, accountsResult, reviewsResult, pointsResult, historyResult, portfolioResult, collaborationResult, fanStatsResult, audienceCitiesResult] = await Promise.all([
+    const [profileResult, accountsResult, reviewsResult, pointsResult, historyResult, portfolioResult, collaborationResult, fanStatsResult, audienceCitiesResult, contactResult] = await Promise.all([
       supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,public_profile_consent_at,referral_code").eq("id", profileId).single(),
       supabase.from("creator_platform_accounts").select("id,creator_profile_id,platform,handle,profile_url,follower_count,followers_updated_at,is_published").eq("creator_profile_id", profileId).order("platform"),
       supabase.from("creator_profile_reviews").select("review_note").eq("creator_profile_id", profileId).order("created_at", { ascending: false }).limit(1),
@@ -79,8 +80,9 @@ export default async function VisitorCreatorPage({
       supabase.from("creator_collaboration_requests").select("id,seller_profile_id,title,brief,proposed_compensation,status,created_at,creator_response").eq("creator_profile_id", profileId).order("created_at", { ascending: false }).limit(20),
       supabase.rpc("creator_get_my_fan_stats"),
       supabase.from("creator_profile_audience_cities").select("city_id,is_published").eq("creator_profile_id", profileId),
+      supabase.from("creator_contact_details").select("phone,phone_visibility").eq("creator_profile_id", profileId).maybeSingle(),
     ]);
-    for (const result of [profileResult, accountsResult, reviewsResult, pointsResult, historyResult, portfolioResult, collaborationResult, fanStatsResult, audienceCitiesResult]) {
+    for (const result of [profileResult, accountsResult, reviewsResult, pointsResult, historyResult, portfolioResult, collaborationResult, fanStatsResult, audienceCitiesResult, contactResult]) {
       if (result.error) throw new Error(result.error.message);
     }
     if (!profileResult.data) throw new Error("Creator profile is unavailable.");
@@ -94,6 +96,7 @@ export default async function VisitorCreatorPage({
     collaborationRequests = collaborationResult.data ?? [];
     fanCount = fanStatsResult.data?.[0]?.fan_count ?? 0;
     firstReferralCount = fanStatsResult.data?.[0]?.first_referral_count ?? 0;
+    creatorContact = contactResult.data;
     audienceCityIds = (audienceCitiesResult.data ?? []).filter((city) => !city.is_published).map((city) => city.city_id);
     if (!audienceCityIds.length && savedProfile.audience_city_id) audienceCityIds = [savedProfile.audience_city_id];
   }
@@ -160,6 +163,30 @@ export default async function VisitorCreatorPage({
           firstReferralCount={firstReferralCount}
           platforms={accounts.filter((account) => account.is_published).map((account) => account.platform === "x" ? "X" : account.platform)}
         />
+      )}
+
+      {contactSaved === "1" && <p className="admin-save-success" role="status">Creator phone and visibility preferences saved.</p>}
+      {profile && (
+        <section className="creator-contact-section" aria-labelledby="creator-contact-title">
+          <div className="visitor-profile-heading">
+            <p className="admin-eyebrow">CONTACT PREFERENCES</p>
+            <h2 id="creator-contact-title">Your phone number</h2>
+            <p>Choose whether everyone can see it on your public creator profile or only a seller whose offer you choose to share it with.</p>
+          </div>
+          <ActionForm className="creator-application-form creator-contact-preferences" action={saveCreatorContactPreferences}>
+            <label>Phone number
+              <input name="phone" type="tel" autoComplete="tel" defaultValue={creatorContact?.phone ?? ""} maxLength={32} placeholder="+44…" />
+            </label>
+            <label>Who can see your phone?
+              <select name="phone_visibility" defaultValue={creatorContact?.phone_visibility ?? "collaborations"}>
+                <option value="collaborations">Only a seller after I share it in an offer and they select me</option>
+                <option value="public">Anyone viewing my public creator profile</option>
+              </select>
+              <small>Public visibility requires a confirmed account email. Collaboration-only numbers are never shown to ordinary visitors.</small>
+            </label>
+            <button className="admin-primary-button" type="submit">Save phone preferences</button>
+          </ActionForm>
+        </section>
       )}
 
       {profile && profile.status !== "suspended" && profile.status !== "withdrawn" && (

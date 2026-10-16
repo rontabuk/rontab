@@ -70,9 +70,9 @@ export const getPublicCatalog = cache(async (): Promise<{
   const sellerIds = [...new Set(productRows.map((product) => product.seller_profile_id))];
   const productIds = productRows.map((product) => product.id);
 
-  const [sellersResult, mediaResult] = await Promise.all([
+  const [sellersResult, mediaResult, sellerPhonesResult] = await Promise.all([
     sellerIds.length
-      ? supabase.from("seller_profiles").select("id,shop_name,shop_url,logo_url").in("id", sellerIds)
+      ? supabase.from("seller_profiles").select("id,slug,shop_name,shop_url,logo_url").in("id", sellerIds)
       : Promise.resolve({ data: [], error: null }),
     productIds.length
       ? supabase
@@ -81,12 +81,17 @@ export const getPublicCatalog = cache(async (): Promise<{
           .in("product_id", productIds)
           .order("sort_order", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
+      sellerIds.length
+        ? supabase.rpc("get_public_seller_contact_phones", { p_seller_profile_ids: sellerIds })
+        : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (sellersResult.error) throw sellersResult.error;
   if (mediaResult.error) throw mediaResult.error;
+      if (sellerPhonesResult.error) throw sellerPhonesResult.error;
 
-  const sellers = new Map(sellersResult.data.map((seller) => [seller.id, seller]));
+      const sellerPhones = new Map((sellerPhonesResult.data ?? []).map((contact) => [contact.seller_profile_id, contact.phone]));
+      const sellers = new Map(sellersResult.data.map((seller) => [seller.id, { ...seller, phone: sellerPhones.get(seller.id) ?? null }]));
   const categoryById = new Map(categoriesResult.data.map((category) => [category.id, category]));
   const leadMediaByProduct = pickLeadMedia(mediaResult.data);
   const mediaUrls = await createProductMediaUrls(
@@ -118,7 +123,9 @@ export const getPublicCatalog = cache(async (): Promise<{
         imageAlt: media?.alt_text || row.name,
         mediaType: media?.media_type ?? "image",
         maker: seller?.shop_name ?? "Independent maker",
+        shopSlug: seller?.slug ?? null,
         shopUrl: seller?.shop_url ?? null,
+        shopPhone: seller?.phone ?? null,
         makerImage: seller?.logo_url?.startsWith("https://") ? seller.logo_url : "",
         overlayTone: getOverlayTone(category?.slug),
       };

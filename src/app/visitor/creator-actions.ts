@@ -90,6 +90,38 @@ export async function saveCreatorApplication(_state: FormState, formData: FormDa
   });
 }
 
+export async function saveCreatorContactPreferences(_state: FormState, formData: FormData) {
+  return runFormAction(async () => {
+    const phone = String(formData.get("phone") ?? "").trim();
+    const phoneVisibility = String(formData.get("phone_visibility") ?? "collaborations");
+    if (phone && (phone.length > 32 || !/^\+?[0-9() -]{7,32}$/.test(phone))) {
+      throw new FormError("Enter a valid phone number, preferably with its country code.");
+    }
+    if (!["collaborations", "public"].includes(phoneVisibility)) {
+      throw new FormError("Choose whether your phone is public or visible only to selected sellers.");
+    }
+    if (phoneVisibility === "public" && !phone) throw new FormError("Add a phone number before making it public.");
+
+    const { supabase } = await getVisitorAccount("/visitor/creator");
+    const { error } = await supabase.rpc("creator_save_contact_preferences", {
+      p_phone: phone || null,
+      p_phone_visibility: phoneVisibility,
+    });
+    if (error?.code === "22023" || error?.code === "55000" || error?.code === "42501") throw new FormError(error.message);
+    if (error) throw new Error(error.message);
+    const { data: profileId, error: profileError } = await supabase.rpc("get_my_creator_profile_id");
+    if (profileError) throw new Error(profileError.message);
+    if (profileId) {
+      const { data: profile, error: profileLookupError } = await supabase.from("creator_profiles").select("slug").eq("id", profileId).maybeSingle();
+      if (profileLookupError) throw new Error(profileLookupError.message);
+      if (profile) revalidatePath(`/creators/${profile.slug}`);
+    }
+    revalidatePath("/creators");
+    revalidatePath("/visitor/creator");
+    redirect("/visitor/creator?contactSaved=1");
+  });
+}
+
 export async function withdrawCreatorProfile() {
   const { supabase } = await getVisitorAccount("/visitor/creator");
   const { error } = await supabase.rpc("creator_withdraw_public_profile");

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { ArrowLeft, BadgeCheck, ExternalLink, MapPin, Send } from "lucide-react";
+import { ArrowLeft, BadgeCheck, ExternalLink, MapPin, Phone, Send } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
 import { CreatorFanTools } from "@/components/creator/CreatorFanTools";
 import { CreatorVerificationBadge } from "@/components/creator/CreatorVerificationBadge";
@@ -51,14 +51,16 @@ export default async function CreatorProfilePage({
     .order("platform");
   if (accountsError) throw new Error(accountsError.message);
 
-  const [portfolioResult, audienceCitiesResult, fanCountResult] = await Promise.all([
+  const [portfolioResult, audienceCitiesResult, fanCountResult, publicPhoneResult] = await Promise.all([
     supabase.from("creator_portfolio_items").select("id,title,url,position").eq("creator_profile_id", profile.id).eq("is_published", true).order("position"),
     supabase.from("creator_profile_audience_cities").select("city_id").eq("creator_profile_id", profile.id).eq("is_published", true),
     supabase.rpc("creator_get_public_fan_count", { p_creator_profile_id: profile.id }),
+    supabase.rpc("get_public_creator_contact_phone", { p_creator_profile_id: profile.id }),
   ]);
   if (portfolioResult.error) throw new Error(portfolioResult.error.message);
   if (audienceCitiesResult.error) throw new Error(audienceCitiesResult.error.message);
   if (fanCountResult.error) throw new Error(fanCountResult.error.message);
+  if (publicPhoneResult.error) throw new Error(publicPhoneResult.error.message);
   const audienceCityIds = [...new Set([
     ...(audienceCitiesResult.data ?? []).map((city) => city.city_id),
     ...(profile.published_audience_city_id ? [profile.published_audience_city_id] : []),
@@ -99,6 +101,7 @@ export default async function CreatorProfilePage({
         </p>
         <p className="creator-profile-bio">{profile.published_bio}</p>
         {audienceCities.length > 0 && <p className="creator-profile-audience"><MapPin size={14} aria-hidden="true" />Audience: {audienceCities.map((city) => city.city_name).join(", ")}</p>}
+        {publicPhoneResult.data && <a className="creator-profile-phone" href={`tel:${publicPhoneResult.data}`}><Phone size={14} aria-hidden="true" />{publicPhoneResult.data}</a>}
         <p className="creator-approved-mark"><BadgeCheck size={15} aria-hidden="true" />Profile reviewed by Rontab</p>
         {profile.referral_code && <CreatorFanTools
           displayName={profile.published_display_name ?? "Rontab Creator"}

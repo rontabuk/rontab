@@ -64,6 +64,23 @@ try {
   const publishedAudienceCities = throwOnError(await publicClient.from("creator_profile_audience_cities")
     .select("city_id").eq("creator_profile_id", ids.creator).eq("is_published", true).order("city_id"));
   assert.deepEqual(publishedAudienceCities.map((city) => city.city_id), cities.map((city) => city.city_id).sort(), "creator approval publishes all selected audience cities");
+  throwOnError(await visitor.rpc("creator_save_contact_preferences", {
+    p_phone: "+441234000001",
+    p_phone_visibility: "collaborations",
+  }));
+  assert.equal(throwOnError(await publicClient.rpc("get_public_creator_contact_phone", { p_creator_profile_id: ids.creator })), null, "creator collaboration-only phone stays hidden from public visitors");
+  assert.equal(throwOnError(await publicClient.from("creator_contact_details").select("phone").eq("creator_profile_id", ids.creator)).length, 0, "RLS hides collaboration-only creator phone rows from anonymous visitors");
+  throwOnError(await visitor.rpc("creator_save_contact_preferences", {
+    p_phone: "+441234000001",
+    p_phone_visibility: "public",
+  }));
+  assert.equal(throwOnError(await publicClient.rpc("get_public_creator_contact_phone", { p_creator_profile_id: ids.creator })), "+441234000001", "creator public phone appears only after explicit opt-in");
+  assert.equal(throwOnError(await publicClient.from("creator_contact_details").select("phone").eq("creator_profile_id", ids.creator)).length, 1, "RLS exposes a creator phone row to anonymous visitors only after public opt-in");
+  throwOnError(await visitor.rpc("creator_save_contact_preferences", {
+    p_phone: "+441234000001",
+    p_phone_visibility: "collaborations",
+  }));
+  assert.equal(throwOnError(await publicClient.rpc("get_public_creator_contact_phone", { p_creator_profile_id: ids.creator })), null, "creator can revoke public phone visibility");
   const approvalNotifications = throwOnError(await visitor.rpc("get_creator_collaboration_notifications"));
   assert.ok(approvalNotifications.some((notification) => notification.title === "Creator profile approved"), "creator receives profile review decisions");
 
@@ -220,6 +237,10 @@ try {
     is_public: true,
   }).select("id").single());
   ids.sellerProfile = sellerProfile.id;
+  const publicSellerProfile = throwOnError(await publicClient.from("seller_profiles")
+    .select("id,slug,shop_name,description,logo_url,shop_url,shop_city_id")
+    .eq("id", ids.sellerProfile).single());
+  assert.equal(publicSellerProfile.shop_name, `Local Test Shop ${suffix.slice(0, 8)}`, "anonymous visitors can read the public shop identity");
   const seller = createClient(url, anonKey);
   throwOnError(await seller.auth.signInWithPassword({ email: `creator-seller-${suffix}@example.com`, password }));
   ids.request = throwOnError(await seller.rpc("seller_create_creator_collaboration_request", {

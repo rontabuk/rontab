@@ -23,6 +23,7 @@ declare
 	second_city_id text;
 	contact_email text;
 	contact_phone text;
+	public_phone text;
 	result_creator_id uuid;
 begin
 	begin
@@ -70,13 +71,48 @@ begin
 			(creator_other_id, creator_other_user, 'creator-other-' || replace(creator_other_id::text, '-', ''), 'Creator Other', 'A rollback-only creator opportunity test profile.', array['travel'], 'approved', true, 'Creator Other', 'A rollback-only creator opportunity test profile.', array['travel'], second_city_id);
 		insert into public.creator_profile_audience_cities (creator_profile_id, city_id, is_published)
 		values (creator_one_id, first_city_id, true), (creator_two_id, second_city_id, true), (creator_other_id, second_city_id, true);
+		insert into public.creator_contact_details (creator_profile_id, phone, phone_visibility)
+		values
+			(creator_one_id, '+441111111111', 'collaborations'),
+			(creator_two_id, '+442222222222', 'public'),
+			(creator_other_id, '+443333333333', 'collaborations');
+		if public.get_public_creator_contact_phone(creator_one_id) is not null
+			or public.get_public_creator_contact_phone(creator_two_id) <> '+442222222222' then
+			raise exception 'Only creators who opt in to public visibility should expose a phone.';
+		end if;
 
 		perform set_config('request.jwt.claim.sub', seller_user::text, true);
 		perform set_config('request.jwt.claims', jsonb_build_object('sub', seller_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		if public.get_public_seller_contact_phone(seller_id) is not null
+			or (select count(*) from public.get_public_seller_contact_phones(array[seller_id])) <> 0 then
+			raise exception 'Seller phones should be hidden from product pages until the seller opts in.';
+		end if;
+		perform public.seller_set_phone_visibility('public');
+		if public.get_public_seller_contact_phone(seller_id) <> '+441234567890'
+			or (select count(*) from public.get_public_seller_contact_phones(array[seller_id])) <> 1 then
+			raise exception 'An active seller opt-in should expose the confirmed phone on public products.';
+		end if;
+		perform public.seller_set_phone_visibility('collaborations');
+		if public.get_public_seller_contact_phone(seller_id) is not null then
+			raise exception 'Collaboration-only seller phones must not be returned to visitors.';
+		end if;
 		first_opportunity_id := public.seller_create_creator_product_opportunity(
 			product_id, 100, array['food'], false, array[first_city_id, second_city_id],
 			'Create one short product video and publish it on an approved social platform.', false, null, array['email']
 		);
+		perform set_config('request.jwt.claim.sub', admin_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', admin_user::text, 'role', 'authenticated', 'app_metadata', '{"role":"admin"}'::jsonb)::text, true);
+		update public.seller_profiles set is_public = false where id = seller_id;
+		perform set_config('request.jwt.claim.sub', creator_one_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', creator_one_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		if public.creator_can_view_product_opportunity(first_opportunity_id) then
+			raise exception 'Campaigns must not be visible when the shop profile is hidden.';
+		end if;
+		perform set_config('request.jwt.claim.sub', admin_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', admin_user::text, 'role', 'authenticated', 'app_metadata', '{"role":"admin"}'::jsonb)::text, true);
+		update public.seller_profiles set is_public = true where id = seller_id;
+		perform set_config('request.jwt.claim.sub', seller_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', seller_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
 		begin
 			perform public.seller_create_creator_product_opportunity(
 				product_id, 100, array['food'], true, '{}'::text[],
@@ -89,6 +125,18 @@ begin
 
 		perform set_config('request.jwt.claim.sub', creator_one_user::text, true);
 		perform set_config('request.jwt.claims', jsonb_build_object('sub', creator_one_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		perform public.creator_save_contact_preferences('+441234000001', 'collaborations');
+		if public.get_public_creator_contact_phone(creator_one_id) is not null then
+			raise exception 'A creator contact number must remain hidden by default.';
+		end if;
+		perform public.creator_save_contact_preferences('+441234000001', 'public');
+		if public.get_public_creator_contact_phone(creator_one_id) <> '+441234000001' then
+			raise exception 'A creator should be able to explicitly publish a contact phone.';
+		end if;
+		perform public.creator_save_contact_preferences('+441234000001', 'collaborations');
+		if public.get_public_creator_contact_phone(creator_one_id) is not null then
+			raise exception 'Switching back to collaboration-only should hide the creator phone.';
+		end if;
 		if not public.creator_can_view_product_opportunity(first_opportunity_id) then
 			raise exception 'A matching specialty and audience city should see the opportunity.';
 		end if;

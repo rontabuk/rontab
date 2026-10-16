@@ -332,8 +332,9 @@ li[data-unread] .notification-copy time { color: #065fd4; font-weight: 700; }
 .detail-image { position: relative; width: 100%; min-height: 0; max-height: min(72svh, 760px); aspect-ratio: 1; overflow: hidden; background: #e3dfd6; }
 .detail-copy { min-width: 0; max-width: 520px; padding-block: 20px; }
 .detail-actions { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 17px; }
-.detail-shop-link { display: inline-flex; min-width: 0; max-width: 100%; align-items: center; gap: 5px; color: var(--green-dark); font-size: 12px; font-weight: 700; text-underline-offset: 3px; overflow-wrap: anywhere; }
-.detail-shop-link:hover { color: var(--clay); }
+.detail-shop-link, .detail-shop-phone { display: inline-flex; min-width: 0; max-width: 100%; align-items: center; gap: 5px; color: var(--green-dark); font-size: 12px; font-weight: 700; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.detail-shop-link:hover, .detail-shop-phone:hover { color: var(--clay); }
+.detail-maker-link { display: inline-flex; width: fit-content; align-items: center; gap: 4px; color: var(--green-dark); font-size: 13px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .detail-copy .eyebrow { margin-bottom: 12px; }
 .detail-copy h1 { font-size: 52px; line-height: 1.05; overflow-wrap: anywhere; }
 .information-copy h1 { font-size: 58px; line-height: 1.02; }

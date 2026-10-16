@@ -23,7 +23,9 @@ export type Product = {
   image: string;
   imageAlt: string;
   maker: string;
+  shopSlug?: string | null;
   shopUrl?: string | null;
+  shopPhone?: string | null;
   makerImage: string;
   overlayTone: ProductOverlayTone;
 };

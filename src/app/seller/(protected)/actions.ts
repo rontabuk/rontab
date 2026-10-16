@@ -22,6 +22,7 @@ async function persistSellerProfile(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   const contactName = String(formData.get("contact_name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
+  const phoneVisibility = String(formData.get("phone_visibility") ?? "collaborations");
   const websiteUrl = String(formData.get("website_url") ?? "").trim();
   const instagramUrl = String(formData.get("instagram_url") ?? "").trim();
   const businessAddress = String(formData.get("business_address") ?? "").trim();
@@ -45,6 +46,9 @@ async function persistSellerProfile(formData: FormData) {
   if (phone && !/^\+?[0-9() -]{7,32}$/.test(phone)) {
     throw new FormError("Enter a valid phone number, preferably with its country code.");
   }
+  if (!["collaborations", "public"].includes(phoneVisibility)) {
+    throw new FormError("Choose whether your phone is public or shared only with selected creators.");
+  }
   if (websiteUrl && !isHttpsUrl(websiteUrl)) {
     throw new FormError("Business website must use HTTPS.");
   }
@@ -57,6 +61,17 @@ async function persistSellerProfile(formData: FormData) {
 
   const { supabase, seller } = await getSellerAccount();
   if (seller.status === "suspended") throw new FormError("Suspended sellers cannot update their profile.");
+  if (phoneVisibility === "public") {
+    const { data: existingContact, error: existingContactError } = await supabase
+      .from("seller_contact_details")
+      .select("phone,phone_contact_confirmed_at")
+      .eq("seller_profile_id", seller.id)
+      .maybeSingle();
+    if (existingContactError) throw new Error(existingContactError.message);
+    if (!phone || phone !== existingContact?.phone || !existingContact.phone_contact_confirmed_at) {
+      throw new FormError("Save and confirm this phone number first, then choose public visibility.");
+    }
+  }
   if (shopCityId) {
     if (!isCityId(shopCityId)) throw new FormError("Choose a supported United Kingdom city.");
     const { data: selectedCity, error: selectedCityError } = await supabase
@@ -121,6 +136,11 @@ async function persistSellerProfile(formData: FormData) {
     p_business_address: businessAddress || null,
   });
   if (contactError) throw new Error(contactError.message);
+  const { error: visibilityError } = await supabase.rpc("seller_set_phone_visibility", { p_phone_visibility: phoneVisibility });
+  if (visibilityError?.code === "22023" || visibilityError?.code === "55000" || visibilityError?.code === "42501") {
+    throw new FormError(visibilityError.message);
+  }
+  if (visibilityError) throw new Error(visibilityError.message);
 
   const oldLogoPrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/seller-logos/`;
   if (existingProfile.logo_url?.startsWith(oldLogoPrefix) && existingProfile.logo_url !== logoUrl) {
@@ -133,6 +153,8 @@ async function persistSellerProfile(formData: FormData) {
   revalidatePath("/seller/products");
   revalidatePath("/admin/sellers");
   revalidatePath("/");
+  revalidatePath("/products", "page");
+  revalidatePath("/products/[slug]", "page");
   redirect("/seller/profile?saved=1");
 }
 

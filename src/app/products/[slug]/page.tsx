@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { io } from "next/cache";
-import { ArrowLeft, ArrowUpRight, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Image as ImageIcon, Phone } from "lucide-react";
 import { notFound } from "next/navigation";
 import { reportMarketplaceItem } from "@/app/visitor/actions";
 import { ProductCard } from "@/components/ProductCard";
@@ -61,7 +61,9 @@ async function ProductPageContent({ params, searchParams }: ProductPageProps) {
           <div className="detail-copy">
             <p className="eyebrow">{product.categoryName}</p>
             <h1>{product.name}</h1>
-            <p className="detail-maker">{product.maker}</p>
+            {product.shopSlug
+              ? <Link className="detail-maker-link" href={`/shops/${product.shopSlug}`}>{product.maker}<ArrowUpRight size={13} aria-hidden="true" /></Link>
+              : <p className="detail-maker">{product.maker}</p>}
             <p className="detail-price">{formatPrice(product.price)}</p>
             {product.audioScript && <BrowserSpeechPlayer text={product.audioScript} />}
             <p className="detail-description">{product.description}</p>
@@ -74,6 +76,7 @@ async function ProductPageContent({ params, searchParams }: ProductPageProps) {
                   {product.maker}&apos;s website <ArrowUpRight size={14} aria-hidden="true" />
                 </a>
               )}
+              {product.shopPhone && <a className="detail-shop-phone" href={`tel:${product.shopPhone}`}><Phone size={14} aria-hidden="true" />Call {product.maker}</a>}
             </div>
             <p className="detail-note">Prices and availability are set by the shop and may change. Purchases are completed on the seller&apos;s website, not on Rontab.</p>
             {product.id && product.sellerProfileId && (

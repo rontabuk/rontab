@@ -30,6 +30,7 @@
 .creator-application-form { display: grid; gap: 18px; max-width: 720px; padding-top: 19px; }
 .creator-application-form > label { display: grid; gap: 6px; color: #626c60; font-size: 12px; font-weight: 700; }
 .creator-application-form input:not([type="checkbox"]), .creator-application-form textarea { width: 100%; min-height: 40px; padding: 9px 10px; border: 1px solid #d9ded5; border-radius: 3px; background: #fff; color: #29332a; font: inherit; font-size: 13px; }
+.creator-application-form select { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid #d9ded5; border-radius: 3px; background: #fff; color: #29332a; font: inherit; font-size: 13px; }
 .creator-application-form textarea { min-height: 128px; resize: vertical; line-height: 1.6; }
 .creator-application-form small { color: #7d857b; font-size: 11px; font-weight: 400; }
 .creator-specialties, .creator-platforms { min-width: 0; margin: 0; padding: 0; border: 0; }
@@ -74,6 +75,10 @@
 .creator-collaboration-response svg { flex: 0 0 auto; margin-top: 2px; }
 .creator-metrics-disclaimer { margin: 8px 0 0; color: #737c71; font-size: 11px; line-height: 1.5; }
 .creator-application-form .admin-primary-button { justify-self: start; min-width: 190px; padding-inline: 15px; }
+.creator-contact-section { max-width: 760px; margin: 22px 0; padding-block: 17px; border-block: 1px solid #dfe4dc; }
+.creator-contact-section .visitor-profile-heading { margin-bottom: 14px; }
+.creator-contact-section .visitor-profile-heading > p:last-child { max-width: 620px; margin: 6px 0 0; color: #697268; font-size: 11px; line-height: 1.55; }
+.creator-contact-preferences { max-width: 560px; }
 .creator-points-history { margin-top: 30px; }
 .creator-points-history ul { margin: 12px 0 0; padding: 0; border-top: 1px solid #e1e5de; list-style: none; }
 .creator-points-history li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 4px; border-bottom: 1px solid #e1e5de; }

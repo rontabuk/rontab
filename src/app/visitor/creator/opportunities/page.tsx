@@ -36,26 +36,38 @@ export default async function CreatorOpportunitiesPage({
 
   let proposals: Awaited<ReturnType<typeof loadProposals>> = [];
   let opportunityRows: Awaited<ReturnType<typeof loadOpenOpportunities>> = [];
+  let creatorPhone = "";
   if (creator?.is_public && creator.status === "approved") {
-    const proposalsResult = await loadProposals(supabase, creator.id);
+    const [proposalsResult, open, contactResult] = await Promise.all([
+      loadProposals(supabase, creator.id),
+      loadOpenOpportunities(supabase),
+      supabase.from("creator_contact_details").select("phone").eq("creator_profile_id", creator.id).maybeSingle(),
+    ]);
+    if (contactResult.error) throw new Error(contactResult.error.message);
+    creatorPhone = contactResult.data?.phone ?? "";
     proposals = proposalsResult;
-    const open = await loadOpenOpportunities(supabase);
     const historyIds = proposals.map((proposal) => proposal.opportunity_id);
     const history = historyIds.length ? await loadOpportunitiesById(supabase, historyIds) : [];
     opportunityRows = [...new Map([...open, ...history].map((opportunity) => [opportunity.id, opportunity])).values()];
   }
   const productIds = [...new Set(opportunityRows.map((opportunity) => opportunity.product_id))];
-  const [productsResult, imageResult] = await Promise.all([
+  const sellerIds = [...new Set(opportunityRows.map((opportunity) => opportunity.seller_profile_id))];
+  const [productsResult, imageResult, sellersResult] = await Promise.all([
     productIds.length
       ? supabase.from("products").select("id,name,slug,description,price,currency,category_id").in("id", productIds).eq("status", "approved")
       : Promise.resolve({ data: [], error: null }),
     productIds.length
       ? supabase.from("product_images").select("id,product_id,storage_path,media_type,alt_text,sort_order").in("product_id", productIds).order("sort_order")
       : Promise.resolve({ data: [], error: null }),
+    sellerIds.length
+      ? supabase.from("seller_profiles").select("id,slug,shop_name,logo_url").in("id", sellerIds).eq("status", "active").eq("is_public", true)
+      : Promise.resolve({ data: [], error: null }),
   ]);
   if (productsResult.error) throw new Error(productsResult.error.message);
   if (imageResult.error) throw new Error(imageResult.error.message);
+  if (sellersResult.error) throw new Error(sellersResult.error.message);
   const products = new Map((productsResult.data ?? []).map((product) => [product.id, product]));
+  const sellers = new Map((sellersResult.data ?? []).map((seller) => [seller.id, seller]));
   const visibleOpportunityRows = opportunityRows.filter((opportunity) => products.has(opportunity.product_id));
   const categoryIds = [...new Set([...products.values()].map((product) => product.category_id))];
   const { data: categories, error: categoriesError } = categoryIds.length
@@ -95,13 +107,14 @@ export default async function CreatorOpportunitiesPage({
         <div className="creator-opportunity-feed">
           {visibleOpportunityRows.map((opportunity) => {
             const product = products.get(opportunity.product_id)!;
+            const seller = sellers.get(opportunity.seller_profile_id);
             const proposal = proposalsByOpportunity.get(opportunity.id);
             const image = leadImages.get(product.id);
             return (
               <article className="creator-opportunity-card" key={opportunity.id}>
                 <div className="creator-opportunity-card-product">
                   {image && <Image src={image.url} alt={image.alt || product.name} width={100} height={118} unoptimized />}
-                  <div><p className="creator-opportunity-category">{categoryNames.get(product.category_id) ?? "Product"}</p><h2>{product.name}</h2><p>{formatPrice(product.price, product.currency)}</p><Link href={`/products/${product.slug}`} target="_blank">View product<ArrowUpRight size={13} aria-hidden="true" /></Link></div>
+                  <div><p className="creator-opportunity-category">{categoryNames.get(product.category_id) ?? "Product"}</p>{seller && <Link className="creator-opportunity-seller-link" href={`/shops/${seller.slug}`}>{seller.shop_name}<ArrowUpRight size={13} aria-hidden="true" /></Link>}<h2>{product.name}</h2><p>{formatPrice(product.price, product.currency)}</p><Link href={`/products/${product.slug}`} target="_blank">View product<ArrowUpRight size={13} aria-hidden="true" /></Link></div>
                 </div>
                 <div className="creator-opportunity-card-terms">
                   <p className="creator-opportunity-budget-line"><strong>{formatPrice(opportunity.budget, opportunity.currency)}</strong><span>Promotion budget</span></p>
@@ -118,7 +131,7 @@ export default async function CreatorOpportunitiesPage({
                     <input type="hidden" name="opportunity_id" value={opportunity.id} />
                     <label>Your offer amount ({opportunity.currency})<input name="amount" type="number" min="0.01" max="1000000" step="0.01" inputMode="decimal" required /></label>
                     <label>What you will deliver<textarea name="offer_details" minLength={30} maxLength={2000} rows={4} required placeholder="Describe the platform, content format, and what is included in your price." /></label>
-                    <fieldset><legend>Contact details shared only if selected</legend><label><input type="checkbox" name="share_email" />Share my confirmed account email</label><label><input type="checkbox" name="share_phone" />Share my phone number</label><input name="contact_phone" type="tel" maxLength={32} placeholder="Phone number, if selected" /></fieldset>
+                    <fieldset><legend>Contact details shared only if selected</legend><label><input type="checkbox" name="share_email" />Share my confirmed account email</label><label><input type="checkbox" name="share_phone" />Share my phone number</label><input name="contact_phone" type="tel" maxLength={32} defaultValue={creatorPhone} placeholder="Add a phone in your creator profile" /></fieldset>
                     <p>Payment is agreed directly with the seller. Rontab does not collect campaign payments.</p>
                     <button type="submit"><Send size={14} aria-hidden="true" />Send offer</button>
                   </ActionForm>}
@@ -145,7 +158,7 @@ async function loadProposals(supabase: Awaited<ReturnType<typeof getVisitorAccou
 
 async function loadOpenOpportunities(supabase: Awaited<ReturnType<typeof getVisitorAccount>>["supabase"]) {
   const { data, error } = await supabase.from("creator_product_opportunities")
-    .select("id,product_id,budget,currency,target_specialties,is_nationwide,target_city_ids,brief,product_provided,deadline,contact_methods,status,created_at")
+    .select("id,product_id,seller_profile_id,budget,currency,target_specialties,is_nationwide,target_city_ids,brief,product_provided,deadline,contact_methods,status,created_at")
     .eq("status", "open").order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -153,7 +166,7 @@ async function loadOpenOpportunities(supabase: Awaited<ReturnType<typeof getVisi
 
 async function loadOpportunitiesById(supabase: Awaited<ReturnType<typeof getVisitorAccount>>["supabase"], opportunityIds: string[]) {
   const { data, error } = await supabase.from("creator_product_opportunities")
-    .select("id,product_id,budget,currency,target_specialties,is_nationwide,target_city_ids,brief,product_provided,deadline,contact_methods,status,created_at")
+    .select("id,product_id,seller_profile_id,budget,currency,target_specialties,is_nationwide,target_city_ids,brief,product_provided,deadline,contact_methods,status,created_at")
     .in("id", opportunityIds);
   if (error) throw new Error(error.message);
   return data ?? [];
