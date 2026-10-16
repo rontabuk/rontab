@@ -24,6 +24,8 @@ declare
 	contact_email text;
 	contact_phone text;
 	public_phone text;
+	opportunity_notification_id text;
+	read_notification_ids text[];
 	result_creator_id uuid;
 	follow_result jsonb;
 	followed_shop_count bigint;
@@ -104,6 +106,20 @@ begin
 		);
 		perform set_config('request.jwt.claim.sub', creator_one_user::text, true);
 		perform set_config('request.jwt.claims', jsonb_build_object('sub', creator_one_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		select notification.notification_id into opportunity_notification_id
+		from public.get_creator_collaboration_notifications() notification
+		where notification.title = 'New creator opportunity'
+			and notification.body like '%Opportunity smoke product%'
+			and notification.href = '/visitor/creator/opportunities'
+		order by notification.created_at desc
+		limit 1;
+		if opportunity_notification_id is null then
+			raise exception 'A matching creator should receive a new product opportunity notification.';
+		end if;
+		read_notification_ids := public.mark_notification_items_read(array[opportunity_notification_id]);
+		if not opportunity_notification_id = any(read_notification_ids) then
+			raise exception 'Creators should be able to mark opportunity notifications as read.';
+		end if;
 		follow_result := public.visitor_follow_seller_shop(seller_id);
 		if coalesce((follow_result ->> 'already_following')::boolean, true)
 			or not public.visitor_is_following_seller_shop(seller_id)
@@ -180,6 +196,13 @@ begin
 		);
 		perform set_config('request.jwt.claim.sub', creator_other_user::text, true);
 		perform set_config('request.jwt.claims', jsonb_build_object('sub', creator_other_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		if exists (
+			select 1 from public.get_creator_collaboration_notifications() notification
+			where notification.title = 'New creator opportunity'
+				and notification.body like '%Opportunity smoke product%'
+		) then
+			raise exception 'Creators outside the specialty and audience city must not receive the opportunity notification.';
+		end if;
 		if public.creator_can_view_product_opportunity(first_opportunity_id) then
 			raise exception 'A creator outside the selected specialty must not see the opportunity.';
 		end if;

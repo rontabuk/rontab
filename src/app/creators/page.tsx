@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { ArrowLeft, ArrowRight, ArrowUpRight, ListFilter, UsersRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, ListFilter, Send, UsersRound } from "lucide-react";
 import { CreatorVerificationBadge } from "@/components/creator/CreatorVerificationBadge";
 import { creatorSpecialties } from "@/lib/creator/catalog";
 import { formatNumber } from "@/lib/format";
@@ -130,7 +130,7 @@ export default async function CreatorsDirectoryPage({
               <article className="creator-directory-item" key={profile.id}>
                 <div className="creator-directory-item-main">
                   <h2 className="creator-directory-name"><Link href={`/creators/${profile.slug}`}>{profile.published_display_name}</Link><CreatorVerificationBadge fanCount={fanCountsById.get(profile.id) ?? 0} /></h2>
-                  {profile.audienceCityIds.some((cityId) => citiesById.has(cityId)) && <p className="creator-directory-location">{profile.audienceCityIds.map((cityId) => citiesById.get(cityId)).filter((cityName): cityName is string => Boolean(cityName)).join(", ")}</p>}
+                  <Link className="creator-directory-request" href={`/creators/${profile.slug}#creator-collaboration-form-title`}><Send size={13} aria-hidden="true" />Send private request</Link>
                   <p className="creator-directory-total"><strong>{formatNumber(profile.totalFollowers)}</strong> social followers</p>
                 </div>
                 <Link className="creator-directory-view" href={`/creators/${profile.slug}`}>View profile <ArrowUpRight size={14} aria-hidden="true" /></Link>

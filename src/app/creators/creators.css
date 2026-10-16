@@ -26,7 +26,8 @@
 .creator-directory-name .creator-verification-badge > span { display: none; }
 .creator-directory-name .creator-verification-badge svg { width: 18px; height: 18px; }
 .creator-directory-item h2 a:hover { color: #607b5e; }
-.creator-directory-location { display: flex; align-items: center; gap: 5px; margin: 8px 0 0; color: #6c756a; font-size: 10px; }
+.creator-directory-request { display: inline-flex; min-height: 32px; align-items: center; gap: 6px; margin-top: 8px; padding: 0 9px; border: 1px solid #314b38; border-radius: 3px; background: #34483a; color: #fffdf8; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.creator-directory-request:hover { background: #405c46; }
 .creator-directory-view { display: inline-flex; align-items: center; gap: 5px; color: #405f45; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .creator-directory-empty { padding: 46px 16px; border: 1px dashed #cfd7cb; text-align: center; }
 .creator-directory-empty h2 { margin: 0; color: #38443b; font-family: var(--font-display), Georgia, serif; font-size: 24px; font-weight: 400; }
