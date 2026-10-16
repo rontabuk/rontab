@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Image as ImageIcon, Play, Volume2, VolumeX } from "lucide-react";
 import type { Product } from "@/data/products";
+import { ShopFollowButton } from "@/components/ShopFollowButton";
 import { ShopVisitLink } from "@/components/ShopVisitLink";
 import { formatCompactNumber, formatPrice } from "@/lib/format";
 
@@ -13,11 +14,13 @@ export function ProductCard({
   isFeatured = false,
   previewOnly = false,
   showUploadPlaceholder = false,
+  isShopFollowed = false,
 }: {
   product: Product;
   isFeatured?: boolean;
   previewOnly?: boolean;
   showUploadPlaceholder?: boolean;
+  isShopFollowed?: boolean;
 }) {
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const [visibleDetailLength, setVisibleDetailLength] = useState(0);
@@ -25,6 +28,7 @@ export function ProductCard({
   const closeTimer = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const descriptionId = `description-${product.slug}`;
+  const descriptionCloseDelay = Math.min(180_000, Math.max(15_000, product.description.length * 60 + 5_000));
 
   const clearCloseTimer = () => {
     if (closeTimer.current !== null) {
@@ -38,7 +42,7 @@ export function ProductCard({
     closeTimer.current = window.setTimeout(() => {
       setDescriptionOpen(false);
       closeTimer.current = null;
-    }, 15_000);
+    }, descriptionCloseDelay);
   };
 
   const closeDescription = () => {
@@ -192,10 +196,19 @@ export function ProductCard({
             <p title={product.description} aria-label={product.description}>
               {product.description.slice(0, visibleDetailLength)}
             </p>
+            {!previewOnly && visibleDetailLength >= product.description.length && product.sellerProfileId && product.shopSlug && (
+              <ShopFollowButton sellerProfileId={product.sellerProfileId} shopSlug={product.shopSlug} initialFollowing={isShopFollowed} />
+            )}
           </div>
         )}
         <div className="product-card-info" data-tone={product.overlayTone}>
-          {product.makerImage ? (
+          {product.shopSlug && !previewOnly ? (
+            <Link className="advertiser-avatar-link" href={`/shops/${product.shopSlug}`} aria-label={`View ${product.maker} shop profile`}>
+              {product.makerImage
+                ? <Image className="advertiser-avatar" src={product.makerImage} alt="" width={36} height={36} unoptimized />
+                : <span className="advertiser-avatar advertiser-avatar-placeholder" aria-hidden="true">{getMakerInitials(product.maker)}</span>}
+            </Link>
+          ) : product.makerImage ? (
             <Image className="advertiser-avatar" src={product.makerImage} alt="" width={36} height={36} unoptimized />
           ) : (
             <span className="advertiser-avatar advertiser-avatar-placeholder" aria-hidden="true">{getMakerInitials(product.maker)}</span>

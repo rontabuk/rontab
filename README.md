@@ -16,6 +16,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - Responsive English product-discovery storefront with search and category filters.
 - Public catalog reads active categories and approved, funded products from Supabase.
 - Seller signup starts in pending review (or automatic approval, if enabled in admin settings); approved sellers can submit products with photos or a vertical Reel.
+- Active public sellers have shareable shop profiles; confirmed visitors can follow shops and keep a private following list, while sellers see follower counts only.
 - Admin access is isolated and requires the verified `app_metadata.role = "admin"` claim, checked in every admin page and action.
 - Seller advertising balances use click credits, with a shared pool and optional per-product allocations. New sellers receive a one-time 10,000-click welcome credit; admins can grant more. Credit purchases stay disabled until a payment provider is configured.
 - Shop visits by confirmed visitor accounts are recorded on the server once per account and product; guest visits are redirected without spending seller credits or earning points. Subscription billing is not active yet.

@@ -16,6 +16,7 @@ const visitorLinks = [
   { href: "/visitor/creator", label: "Introduce yourself" },
   { href: "/visitor/creator/opportunities", label: "Creator opportunities" },
   { href: "/visitor/fans", label: "I'm a fan of" },
+  { href: "/visitor/shops-following", label: "Shops I follow" },
 ];
 
 async function ProtectedVisitorShell({ children }: { children: ReactNode }) {

@@ -9,6 +9,12 @@
 .public-shop-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 12px; }
 .public-shop-meta a { display: inline-flex; align-items: center; gap: 6px; color: #405f45; font-size: 11px; font-weight: 700; overflow-wrap: anywhere; }
 .public-shop-meta > span { display: inline-flex; align-items: center; gap: 6px; color: #687267; font-size: 11px; }
+.public-shop-feedback { margin: 10px 0 0; color: #356b3b; font-size: 11px; }
+.public-shop-follow-form { display: inline-block; margin-top: 13px; }
+.public-shop-follow-form > button, .public-shop-follow-link { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border: 1px solid #34483a; border-radius: 3px; background: #34483a; color: #fffdf8; cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; text-decoration: none; }
+.public-shop-follow-form > button[aria-busy="true"] { cursor: wait; opacity: .7; }
+.public-shop-follow-link { margin-top: 13px; border-color: #d7ddd2; background: #f7f9f5; color: #405f45; }
+.public-shop-follow-note { margin: 12px 0 0; color: #737c71; font-size: 10px; }
 .public-shop-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 15px; }
 .public-shop-section-heading h2 { margin: 0; color: #354137; font-family: var(--font-display), Georgia, serif; font-size: 26px; font-weight: 400; }
 .public-shop-section-heading span { color: #737c71; font-size: 11px; }

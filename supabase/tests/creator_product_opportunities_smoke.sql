@@ -25,6 +25,8 @@ declare
 	contact_phone text;
 	public_phone text;
 	result_creator_id uuid;
+	follow_result jsonb;
+	followed_shop_count bigint;
 begin
 	begin
 		select city.city_id into first_city_id
@@ -100,11 +102,32 @@ begin
 			product_id, 100, array['food'], false, array[first_city_id, second_city_id],
 			'Create one short product video and publish it on an approved social platform.', false, null, array['email']
 		);
+		perform set_config('request.jwt.claim.sub', creator_one_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', creator_one_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		follow_result := public.visitor_follow_seller_shop(seller_id);
+		if coalesce((follow_result ->> 'already_following')::boolean, true)
+			or not public.visitor_is_following_seller_shop(seller_id)
+			or has_table_privilege('authenticated', 'public.seller_shop_follows', 'SELECT') then
+			raise exception 'A visitor should follow a public shop without direct access to the private follow table.';
+		end if;
+		follow_result := public.visitor_follow_seller_shop(seller_id);
+		if (follow_result ->> 'already_following')::boolean is distinct from true then
+			raise exception 'Following the same shop twice must remain idempotent.';
+		end if;
+		select count(*) into followed_shop_count from public.visitor_get_my_followed_shops();
+		if followed_shop_count <> 1 then raise exception 'The visitor should see the followed shop in their private list.'; end if;
+		perform set_config('request.jwt.claim.sub', seller_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', seller_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		if public.seller_get_shop_follower_count() <> 1 then raise exception 'The shop owner should see the aggregate follower count.'; end if;
 		perform set_config('request.jwt.claim.sub', admin_user::text, true);
 		perform set_config('request.jwt.claims', jsonb_build_object('sub', admin_user::text, 'role', 'authenticated', 'app_metadata', '{"role":"admin"}'::jsonb)::text, true);
 		update public.seller_profiles set is_public = false where id = seller_id;
 		perform set_config('request.jwt.claim.sub', creator_one_user::text, true);
 		perform set_config('request.jwt.claims', jsonb_build_object('sub', creator_one_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		select count(*) into followed_shop_count from public.visitor_get_my_followed_shops();
+		if public.visitor_is_following_seller_shop(seller_id) or followed_shop_count <> 0 then
+			raise exception 'Hiding a shop should clear follows and remove it from visitor lists.';
+		end if;
 		if public.creator_can_view_product_opportunity(first_opportunity_id) then
 			raise exception 'Campaigns must not be visible when the shop profile is hidden.';
 		end if;

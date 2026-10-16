@@ -252,6 +252,11 @@ export type Database = {
         never,
         [{ foreignKeyName: "creator_first_referrals_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }]
       >;
+      seller_shop_follows: Table<
+        { followed_at: string; seller_profile_id: string; visitor_id: string },
+        never,
+        [{ foreignKeyName: "seller_shop_follows_seller_profile_id_fkey"; columns: ["seller_profile_id"]; isOneToOne: false; referencedRelation: "seller_profiles"; referencedColumns: ["id"] }, { foreignKeyName: "seller_shop_follows_visitor_id_fkey"; columns: ["visitor_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] }]
+      >;
       creator_profile_reviews: Table<
         { admin_id: string; created_at: string; creator_profile_id: string; decision: string; id: number; review_note: string | null },
         never,
@@ -357,6 +362,11 @@ export type Database = {
       creator_get_public_fan_count: { Args: { p_creator_profile_id: string }; Returns: number | null };
       creator_save_contact_preferences: { Args: { p_phone: string | null; p_phone_visibility: string }; Returns: undefined };
       get_public_creator_contact_phone: { Args: { p_creator_profile_id: string }; Returns: string | null };
+      visitor_follow_seller_shop: { Args: { p_seller_profile_id: string }; Returns: Json };
+      visitor_unfollow_seller_shop: { Args: { p_seller_profile_id: string }; Returns: boolean };
+      visitor_is_following_seller_shop: { Args: { p_seller_profile_id: string }; Returns: boolean };
+      visitor_get_my_followed_shops: { Args: Record<PropertyKey, never>; Returns: { city_id: string | null; city_name: string | null; description: string | null; followed_at: string; logo_url: string | null; seller_profile_id: string; shop_name: string; shop_url: string | null; slug: string }[] };
+      seller_get_shop_follower_count: { Args: Record<PropertyKey, never>; Returns: number };
       seller_set_phone_visibility: { Args: { p_phone_visibility: string }; Returns: undefined };
       get_public_seller_contact_phone: { Args: { p_seller_profile_id: string }; Returns: string | null };
       get_public_seller_contact_phones: { Args: { p_seller_profile_ids: string[] }; Returns: { phone: string; seller_profile_id: string }[] };

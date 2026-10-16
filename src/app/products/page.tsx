@@ -4,7 +4,9 @@ import { io } from "next/cache";
 import { ProductBrowser } from "@/components/ProductBrowser";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { TopVideoBanner } from "@/components/TopVideoBanner";
+import { getViewer } from "@/lib/auth/viewer";
 import { getPublicCatalog, getTopVideoAds } from "@/lib/supabase/catalog";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import "./catalog.css";
 
 export const metadata: Metadata = {
@@ -17,7 +19,14 @@ type ProductsPageProps = { searchParams: Promise<{ q?: string; category?: string
 async function SearchableProductBrowser({ searchParams }: ProductsPageProps) {
   const parameters = await searchParams;
   await io();
-  const { categories, products } = await getPublicCatalog();
+  const [{ categories, products }, viewer] = await Promise.all([getPublicCatalog(), getViewer()]);
+  let followedShopIds: string[] = [];
+  if (viewer.role === "visitor") {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.rpc("visitor_get_my_followed_shops");
+    if (error) throw new Error(error.message);
+    followedShopIds = (data ?? []).map((shop) => shop.seller_profile_id);
+  }
   const initialCategory = categories.some((category) => category.id === parameters.category)
     ? parameters.category!
     : "all";
@@ -36,6 +45,7 @@ async function SearchableProductBrowser({ searchParams }: ProductsPageProps) {
         initialCategory={initialCategory}
         categories={categories}
         products={products}
+        followedShopIds={followedShopIds}
       />
     </>
   );

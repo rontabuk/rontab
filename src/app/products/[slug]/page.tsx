@@ -10,8 +10,10 @@ import { ProductCard } from "@/components/ProductCard";
 import { BrowserSpeechPlayer } from "@/components/BrowserSpeechPlayer";
 import { ShopVisitLink } from "@/components/ShopVisitLink";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
+import { getViewer } from "@/lib/auth/viewer";
 import { formatPrice } from "@/lib/format";
 import { getPublicCatalog } from "@/lib/supabase/catalog";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ProductPageProps = { params: Promise<{ slug: string }>; searchParams: Promise<{ report?: string }> };
 
@@ -27,10 +29,18 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 async function ProductPageContent({ params, searchParams }: ProductPageProps) {
   const [{ slug }, { report }] = await Promise.all([params, searchParams]);
   await io();
-  const catalog = await getPublicCatalog();
+  const [catalog, viewer] = await Promise.all([getPublicCatalog(), getViewer()]);
 
   const product = catalog.products.find((item) => item.slug === slug);
   if (!product) notFound();
+  let followedShopIds: string[] = [];
+  if (viewer.role === "visitor") {
+    const sessionClient = await createSupabaseServerClient();
+    const { data, error } = await sessionClient.rpc("visitor_get_my_followed_shops");
+    if (error) throw new Error(error.message);
+    followedShopIds = (data ?? []).map((shop) => shop.seller_profile_id);
+  }
+  const followedShops = new Set(followedShopIds);
   const otherProducts = catalog.products.filter((item) => item.slug !== product.slug);
   const relatedProducts = [
     ...otherProducts.filter((item) => item.category === product.category),
@@ -119,7 +129,7 @@ async function ProductPageContent({ params, searchParams }: ProductPageProps) {
           <section className="related-section" aria-labelledby="related-title">
             <div className="section-heading"><div><p className="eyebrow">In the same corner</p><h2 id="related-title">A little more to explore.</h2></div></div>
             <div className="product-grid related-grid">
-              {relatedProducts.map((item) => <ProductCard product={item} key={item.slug} />)}
+              {relatedProducts.map((item) => <ProductCard product={item} isShopFollowed={item.sellerProfileId ? followedShops.has(item.sellerProfileId) : false} key={item.slug} />)}
             </div>
           </section>
         )}

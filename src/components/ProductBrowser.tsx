@@ -10,6 +10,7 @@ type ProductBrowserProps = {
   initialCategory: string;
   categories: readonly ProductCategory[];
   products: readonly Product[];
+  followedShopIds: readonly string[];
 };
 
 export function ProductBrowser({
@@ -17,6 +18,7 @@ export function ProductBrowser({
   initialCategory,
   categories,
   products,
+  followedShopIds,
 }: ProductBrowserProps) {
   const [query, setQuery] = useState(initialQuery);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
@@ -91,6 +93,7 @@ export function ProductBrowser({
     const matchesQuery = !normalizedQuery || `${product.name} ${product.categoryName} ${product.description} ${product.maker}`.toLowerCase().includes(normalizedQuery);
     return matchesCategory && matchesQuery;
   }).sort((first, second) => Number(isActiveUntil(second.featuredUntil)) - Number(isActiveUntil(first.featuredUntil)));
+  const followedShops = new Set(followedShopIds);
   const clearFilters = () => { setQuery(""); setActiveCategory("all"); };
 
   return (
@@ -117,6 +120,7 @@ export function ProductBrowser({
             <ProductCard
               product={product}
               isFeatured={isActiveUntil(product.featuredUntil)}
+              isShopFollowed={product.sellerProfileId ? followedShops.has(product.sellerProfileId) : false}
               key={product.slug}
             />
           ))}

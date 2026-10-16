@@ -6,7 +6,7 @@ import { connection } from "next/server";
 import { saveSellerProfile, sendSellerPhoneConfirmation } from "@/app/seller/(protected)/actions";
 import { ActionForm } from "@/components/ActionForm";
 import { CityPicker } from "@/components/CityPicker";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatNumber } from "@/lib/format";
 import { getSavedCity, getSupportedLocations } from "@/lib/locations";
 import { getSellerAccount } from "@/lib/seller/access";
 
@@ -21,19 +21,21 @@ export default async function SellerProfilePage({
   await connection();
   const { saved, verificationSent, phoneConfirmed, verificationError } = await searchParams;
   const { supabase, seller } = await getSellerAccount();
-  const [{ data: authResult, error: authError }, { data: contact, error: contactError }, { countries, cities }, savedCity] = await Promise.all([
+  const [{ data: authResult, error: authError }, { data: contact, error: contactError }, { data: shopFollowerCount, error: followerCountError }, { countries, cities }, savedCity] = await Promise.all([
     supabase.auth.getUser(),
     supabase
       .from("seller_contact_details")
       .select("contact_name,phone,phone_contact_confirmed_at,phone_visibility,website_url,instagram_url,business_address")
       .eq("seller_profile_id", seller.id)
       .maybeSingle(),
+    supabase.rpc("seller_get_shop_follower_count"),
     getSupportedLocations(),
     getSavedCity(supabase, seller.shop_city_id),
   ]);
 
   if (authError) throw new Error(authError.message);
   if (contactError) throw new Error(contactError.message);
+  if (followerCountError) throw new Error(followerCountError.message);
   const registeredEmail = authResult.user?.email ?? "";
   const isRegisteredEmailVerified = Boolean(authResult.user?.email_confirmed_at);
 
@@ -143,6 +145,7 @@ export default async function SellerProfilePage({
         <section className="seller-profile-status" aria-label="Account status">
           <span>Account status <span className={`admin-status admin-status-${seller.status}`}>{seller.status}</span></span>
           <span>Public shop <strong>{seller.is_public ? "Visible" : "Hidden"}</strong></span>
+          {seller.status === "active" && seller.is_public && <span>Shop followers <strong>{formatNumber(shopFollowerCount ?? 0)}</strong></span>}
         </section>
         <button className="admin-primary-button" type="submit">Save profile</button>
       </ActionForm>

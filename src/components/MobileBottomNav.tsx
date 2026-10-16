@@ -51,6 +51,7 @@ export async function MobileBottomNav() {
             { href: "/visitor/creator", label: "Introduce yourself" },
             { href: "/visitor/creator/opportunities", label: "Creator opportunities" },
             { href: "/visitor/fans", label: "I'm a fan of" },
+            { href: "/visitor/shops-following", label: "Shops I follow" },
             { href: "/visitor/offers?view=vouchers", label: "My vouchers" },
             { href: "/seller/register", label: "Sell on Rontab" },
             ...infoLinks,

@@ -3,12 +3,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { ArrowLeft, ArrowUpRight, MapPin, Phone } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Heart, HeartOff, MapPin, Phone } from "lucide-react";
+import { ActionForm } from "@/components/ActionForm";
 import { ProductCard } from "@/components/ProductCard";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
+import { followShop, unfollowShop } from "@/app/visitor/shop-follow-actions";
+import { getViewer } from "@/lib/auth/viewer";
 import { formatNumber } from "@/lib/format";
 import { getPublicCatalog } from "@/lib/supabase/catalog";
-import { createSupabasePublicClient } from "@/lib/supabase/server";
+import { createSupabasePublicClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import "./shop.css";
 
 export const instant = false;
@@ -26,9 +29,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     : { title: "Shop not found | Rontab" };
 }
 
-export default async function PublicShopPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function PublicShopPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ followed?: string; unfollowed?: string }>;
+}) {
   await connection();
-  const { slug } = await params;
+  const [{ slug }, { followed, unfollowed }, viewer] = await Promise.all([params, searchParams, getViewer()]);
   const supabase = createSupabasePublicClient();
   const [{ data: seller, error: sellerError }, catalog] = await Promise.all([
     supabase.from("seller_profiles")
@@ -51,6 +60,13 @@ export default async function PublicShopPage({ params }: { params: Promise<{ slu
   if (cityError) throw new Error(cityError.message);
   if (phoneError) throw new Error(phoneError.message);
   const products = catalog.products.filter((product) => product.sellerProfileId === seller.id);
+  let isFollowing = false;
+  if (viewer.role === "visitor") {
+    const sessionClient = await createSupabaseServerClient();
+    const { data, error } = await sessionClient.rpc("visitor_is_following_seller_shop", { p_seller_profile_id: seller.id });
+    if (error) throw new Error(error.message);
+    isFollowing = data;
+  }
 
   return (
     <>
@@ -70,6 +86,19 @@ export default async function PublicShopPage({ params }: { params: Promise<{ slu
               {seller.shop_url && <a href={seller.shop_url} target="_blank" rel="noreferrer">Shop website<ArrowUpRight size={13} aria-hidden="true" /></a>}
               {phone && <a href={`tel:${phone}`}><Phone size={14} aria-hidden="true" />{phone}</a>}
             </div>
+            {followed === "1" && <p className="public-shop-feedback" role="status">Shop added to your following list.</p>}
+            {unfollowed === "1" && <p className="public-shop-feedback" role="status">Shop removed from your following list.</p>}
+            {viewer.role === "visitor" ? (
+              <ActionForm className="public-shop-follow-form" action={isFollowing ? unfollowShop : followShop}>
+                <input type="hidden" name="seller_profile_id" value={seller.id} />
+                <input type="hidden" name="shop_slug" value={seller.slug} />
+                <button type="submit">{isFollowing ? <HeartOff size={15} aria-hidden="true" /> : <Heart size={15} aria-hidden="true" />}{isFollowing ? "Unfollow shop" : "Follow shop"}</button>
+              </ActionForm>
+            ) : viewer.role === "guest" ? (
+              <Link className="public-shop-follow-link" href={`/account?next=${encodeURIComponent(`/shops/${seller.slug}`)}`}><Heart size={15} aria-hidden="true" />Sign in to follow this shop</Link>
+            ) : (
+              <p className="public-shop-follow-note">Shop following is available from a visitor account.</p>
+            )}
           </div>
         </header>
         <section aria-labelledby="public-shop-products-title">
@@ -78,7 +107,7 @@ export default async function PublicShopPage({ params }: { params: Promise<{ slu
             <span>{formatNumber(products.length)}</span>
           </div>
           {products.length
-            ? <div className="public-shop-products">{products.map((product) => <ProductCard product={product} key={product.slug} />)}</div>
+            ? <div className="public-shop-products">{products.map((product) => <ProductCard product={product} isShopFollowed={isFollowing} key={product.slug} />)}</div>
             : <p className="public-shop-empty">This shop has no published products right now.</p>}
         </section>
       </main>
