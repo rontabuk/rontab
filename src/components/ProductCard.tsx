@@ -15,12 +15,14 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 export function ProductCard({
   product,
   isFeatured = false,
+  compact = false,
   previewOnly = false,
   showUploadPlaceholder = false,
   isShopFollowed = false,
 }: {
   product: Product;
   isFeatured?: boolean;
+  compact?: boolean;
   previewOnly?: boolean;
   showUploadPlaceholder?: boolean;
   isShopFollowed?: boolean;
@@ -216,8 +218,61 @@ export function ProductCard({
     </>
   );
 
+  const compactVisitLabel = (
+    <>
+      <span>Visit shop</span>
+      <span className="product-visit-meta">
+        <ArrowUpRight className="product-visit-arrow" size={16} strokeWidth={3} aria-hidden="true" />
+        {product.clickCount !== undefined && <span className="product-click-count" aria-label={`${product.clickCount} shop clicks`}>{formatCompactNumber(product.clickCount)}</span>}
+      </span>
+    </>
+  );
+
+  const productTitleButton = (
+    <button
+      className="product-description-preview animate-pulse"
+      type="button"
+      aria-expanded={descriptionOpen}
+      aria-controls={descriptionId}
+      aria-label={descriptionOpen ? "Close product description" : "Open full product description"}
+      onClick={toggleDescription}
+      onPointerEnter={() => descriptionOpen && resetCloseTimer()}
+    >
+      <span className="product-description-name">
+        <span className="product-description-name-text">{product.maker}</span>
+        {product.sellerBadge && <SellerVerificationBadge isBlue={product.sellerBadge === "blue"} />}
+      </span>
+      <span className="product-description-maker">
+        <span className="product-description-maker-name">{product.name}</span>
+      </span>
+    </button>
+  );
+
+  const descriptionPanel = descriptionOpen && (
+    <div
+      className="description-panel"
+      id={descriptionId}
+      role="region"
+      aria-label="Full product description"
+      tabIndex={0}
+      onPointerMove={resetCloseTimer}
+      onPointerDown={resetCloseTimer}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") closeDescription();
+        else resetCloseTimer();
+      }}
+    >
+      <p title={product.description} aria-label={product.description}>
+        {product.description.slice(0, visibleDetailLength)}
+      </p>
+      {!previewOnly && visibleDetailLength >= product.description.length && product.sellerProfileId && product.shopSlug && (
+        <ShopFollowButton sellerProfileId={product.sellerProfileId} shopSlug={product.shopSlug} initialFollowing={isShopFollowed} />
+      )}
+    </div>
+  );
+
   return (
-    <article ref={cardRef} className="product-card" data-product-card data-preview-only={previewOnly || undefined}>
+    <article ref={cardRef} className="product-card" data-product-card data-compact={compact || undefined} data-preview-only={previewOnly || undefined}>
       <div className="product-image" data-media-type={product.mediaType ?? "image"} data-tone={product.overlayTone}>
         {previewOnly ? (
           <div className="product-image-link">{mediaElement}</div>
@@ -234,70 +289,60 @@ export function ProductCard({
         )}
         {isFeatured && <span className="product-featured-badge">Featured</span>}
       </div>
-      <div className="product-card-footer" data-tone={product.overlayTone}>
-        <div className="product-card-info">
-          {product.shopSlug && !previewOnly ? (
-            <Link className="advertiser-avatar-link" href={`/shops/${product.shopSlug}`} aria-label={`View ${product.maker} shop profile`}>
-              {product.makerImage
-                ? <Image className="advertiser-avatar" src={product.makerImage} alt="" width={36} height={36} unoptimized />
-                : <span className="advertiser-avatar advertiser-avatar-placeholder" aria-hidden="true">{getMakerInitials(product.maker)}</span>}
-            </Link>
-          ) : product.makerImage ? (
-            <Image className="advertiser-avatar" src={product.makerImage} alt="" width={36} height={36} unoptimized />
-          ) : (
-            <span className="advertiser-avatar advertiser-avatar-placeholder" aria-hidden="true">{getMakerInitials(product.maker)}</span>
-          )}
-          <button
-            className="product-description-preview animate-pulse"
-            type="button"
-            aria-expanded={descriptionOpen}
-            aria-controls={descriptionId}
-            aria-label={descriptionOpen ? "Close product description" : "Open full product description"}
-            onClick={toggleDescription}
-            onPointerEnter={() => descriptionOpen && resetCloseTimer()}
-          >
-            <span className="product-description-name">
-              <span className="product-description-name-text">{product.maker}</span>
-              {product.sellerBadge && <SellerVerificationBadge isBlue={product.sellerBadge === "blue"} />}
-            </span>
-            <span className="product-description-maker">
-              <span className="product-description-maker-name">{product.name}</span>
-            </span>
-          </button>
-          {previewOnly ? (
-            <span className="product-visit-button">{visitLabel}</span>
-          ) : (
-            <ShopVisitLink
-              className="product-visit-button"
-              slug={product.slug}
-              productName={product.name}
-            >
-              {visitLabel}
-            </ShopVisitLink>
-          )}
-        </div>
-        {descriptionOpen && (
-          <div
-            className="description-panel"
-            id={descriptionId}
-            role="region"
-            aria-label="Full product description"
-            tabIndex={0}
-            onPointerMove={resetCloseTimer}
-            onPointerDown={resetCloseTimer}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") closeDescription();
-              else resetCloseTimer();
-            }}
-          >
-            <p title={product.description} aria-label={product.description}>
-              {product.description.slice(0, visibleDetailLength)}
-            </p>
-            {!previewOnly && visibleDetailLength >= product.description.length && product.sellerProfileId && product.shopSlug && (
-              <ShopFollowButton sellerProfileId={product.sellerProfileId} shopSlug={product.shopSlug} initialFollowing={isShopFollowed} />
+      <div className={`product-card-footer${compact ? " product-card-footer-compact" : ""}`} data-tone={product.overlayTone}>
+        {compact ? (
+          <div className="product-card-info product-card-info-compact">
+            <span className="product-card-compact-price">{product.price === null ? "On request" : formatPrice(product.price)}</span>
+            <div className="product-card-compact-title">
+              <span className="product-description-name">
+                <span className="product-description-name-text">{product.maker}</span>
+                {product.sellerBadge && <SellerVerificationBadge isBlue={product.sellerBadge === "blue"} />}
+              </span>
+              <span className="product-description-maker">
+                <span className="product-description-maker-name">{product.name}</span>
+              </span>
+            </div>
+            <p className="product-card-compact-description" title={product.description}>{product.description}</p>
+            {previewOnly ? (
+              <span className="product-visit-button product-visit-button-compact">{compactVisitLabel}</span>
+            ) : (
+              <ShopVisitLink
+                className="product-visit-button product-visit-button-compact"
+                slug={product.slug}
+                productName={product.name}
+              >
+                {compactVisitLabel}
+              </ShopVisitLink>
+            )}
+          </div>
+        ) : (
+          <div className="product-card-info">
+            {product.shopSlug && !previewOnly ? (
+              <Link className="advertiser-avatar-link" href={`/shops/${product.shopSlug}`} aria-label={`View ${product.maker} shop profile`}>
+                {product.makerImage
+                  ? <Image className="advertiser-avatar" src={product.makerImage} alt="" width={36} height={36} unoptimized />
+                  : <span className="advertiser-avatar advertiser-avatar-placeholder" aria-hidden="true">{getMakerInitials(product.maker)}</span>}
+              </Link>
+            ) : product.makerImage ? (
+              <Image className="advertiser-avatar" src={product.makerImage} alt="" width={36} height={36} unoptimized />
+            ) : (
+              <span className="advertiser-avatar advertiser-avatar-placeholder" aria-hidden="true">{getMakerInitials(product.maker)}</span>
+            )}
+            {productTitleButton}
+            {previewOnly ? (
+              <span className="product-visit-button">{visitLabel}</span>
+            ) : (
+              <ShopVisitLink
+                className="product-visit-button"
+                slug={product.slug}
+                productName={product.name}
+              >
+                {visitLabel}
+              </ShopVisitLink>
             )}
           </div>
         )}
+        {!compact && descriptionPanel}
       </div>
     </article>
   );

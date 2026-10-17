@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LayoutGrid, Search, Sparkles, X } from "lucide-react";
+import { Columns2, LayoutGrid, Rows2, Search, Sparkles, X } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import type { Product, ProductCategory } from "@/data/products";
 
@@ -23,6 +23,16 @@ export function ProductBrowser({
   const [query, setQuery] = useState(initialQuery);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [currentTime, setCurrentTime] = useState(0);
+  const [twoColumnMobileView, setTwoColumnMobileView] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 760px)");
+    const updateViewport = () => setIsMobileViewport(mediaQuery.matches);
+    updateViewport();
+    mediaQuery.addEventListener("change", updateViewport);
+    return () => mediaQuery.removeEventListener("change", updateViewport);
+  }, []);
 
   useEffect(() => {
     const updateCurrentTime = () => setCurrentTime(Date.now());
@@ -106,19 +116,33 @@ export function ProductBrowser({
             <button className={`filter-button${activeCategory === category.id ? " is-active" : ""}`} type="button" aria-pressed={activeCategory === category.id} key={category.id} onClick={() => setActiveCategory(category.id)}>{category.name}</button>
           ))}
         </div>
-        <label className="browser-search" id="product-search">
-          <Search size={16} aria-hidden="true" />
-          <span className="visually-hidden">Search by product or category</span>
-          <input id="product-search-input" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search for products, shops…" aria-controls="product-grid" />
-          {query && <button className="clear-search" type="button" aria-label="Clear search" onClick={() => setQuery("")}><X size={15} aria-hidden="true" /></button>}
-        </label>
+        <div className="browser-search-row">
+          <label className="browser-search" id="product-search">
+            <Search size={16} aria-hidden="true" />
+            <span className="visually-hidden">Search by product or category</span>
+            <input id="product-search-input" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search for products, shops…" aria-controls="product-grid" />
+            {query && <button className="clear-search" type="button" aria-label="Clear search" onClick={() => setQuery("")}><X size={15} aria-hidden="true" /></button>}
+          </label>
+          <button
+            className="product-view-toggle"
+            type="button"
+            aria-label={twoColumnMobileView ? "Show one column" : "Show two columns"}
+            aria-controls="product-grid"
+            aria-pressed={twoColumnMobileView}
+            title={twoColumnMobileView ? "Show one column" : "Show two columns"}
+            onClick={() => setTwoColumnMobileView((current) => !current)}
+          >
+            {twoColumnMobileView ? <Rows2 size={19} aria-hidden="true" /> : <Columns2 size={19} aria-hidden="true" />}
+          </button>
+        </div>
       </div>
       <p className="visually-hidden" role="status" aria-live="polite">{filteredProducts.length} {filteredProducts.length === 1 ? "find" : "finds"}</p>
       {filteredProducts.length ? (
-        <div className="product-grid" id="product-grid">
+        <div className="product-grid" id="product-grid" data-mobile-columns={twoColumnMobileView ? "two" : "one"}>
           {filteredProducts.map((product) => (
             <ProductCard
               product={product}
+              compact={isMobileViewport && twoColumnMobileView}
               isFeatured={isActiveUntil(product.featuredUntil)}
               isShopFollowed={product.sellerProfileId ? followedShops.has(product.sellerProfileId) : false}
               key={product.slug}
