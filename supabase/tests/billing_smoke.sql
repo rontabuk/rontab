@@ -1,5 +1,6 @@
 do $$
 declare
+	admin_user uuid := gen_random_uuid();
 	seller_user uuid := gen_random_uuid();
 	other_user uuid := gen_random_uuid();
 	seller_id uuid;
@@ -20,11 +21,15 @@ begin
 		requested_clicks := greatest(1000, ceil(30.0 / current_rate)::integer * 1000);
 		insert into auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 		values
+			(admin_user, 'authenticated', 'authenticated', admin_user::text || '@billing-admin-test.invalid', '', now(), '{"role":"admin"}', '{}', now(), now()),
 			(seller_user, 'authenticated', 'authenticated', seller_user::text || '@billing-test.invalid', '', now(), '{}', jsonb_build_object('account_type', 'seller', 'shop_name', 'Billing test', 'shop_slug', 'billing-' || seller_user::text), now(), now()),
 			(other_user, 'authenticated', 'authenticated', other_user::text || '@billing-test.invalid', '', now(), '{}', jsonb_build_object('account_type', 'seller', 'shop_name', 'Other billing test', 'shop_slug', 'billing-' || other_user::text), now(), now());
 		select id into seller_id from public.seller_profiles where user_id = seller_user;
 		select id into other_seller_id from public.seller_profiles where user_id = other_user;
-		update public.seller_profiles set status = 'active' where id in (seller_id, other_seller_id);
+		perform set_config('request.jwt.claim.sub', admin_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', admin_user::text, 'role', 'authenticated', 'app_metadata', '{"role":"admin"}'::jsonb)::text, true);
+		perform public.admin_set_seller_status(seller_id, 'active', true);
+		perform public.admin_set_seller_status(other_seller_id, 'active', true);
 		select clicks_remaining, welcome_clicks_remaining, admin_clicks_remaining
 		into initial_balance, initial_welcome, initial_admin from public.seller_ad_accounts where seller_profile_id = seller_id;
 		select * into purchase from public.seller_create_credit_purchase(seller_id, requested_clicks, request_id, current_rate);

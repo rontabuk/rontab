@@ -22,7 +22,10 @@ export async function GET(request: NextRequest) {
   if (flow === "verify-email") {
     const resultUrl = new URL("/products", request.nextUrl.origin);
     const supabase = await createSupabaseServerClient();
-    const { error } = code ? await supabase.auth.exchangeCodeForSession(code) : { error: true };
+    const tokenHash = request.nextUrl.searchParams.get("token_hash");
+    const { error } = tokenHash
+      ? await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "email" })
+      : code ? await supabase.auth.exchangeCodeForSession(code) : { error: true };
     const { error: verifyError } = error ? { error } : await supabase.rpc("visitor_mark_email_verified", {});
     resultUrl.searchParams.set("emailVerified", verifyError ? "0" : "1");
     revalidatePath("/", "layout");
@@ -33,10 +36,11 @@ export async function GET(request: NextRequest) {
     const nextUrl = new URL("/", request.nextUrl.origin);
     nextUrl.searchParams.set("welcome", "1");
     nextUrl.searchParams.set("next", nextPath);
-    if (!code) return NextResponse.redirect(new URL(`/account?next=${encodeURIComponent(nextPath)}`, request.nextUrl.origin));
-
     const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const tokenHash = request.nextUrl.searchParams.get("token_hash");
+    const { error } = tokenHash
+      ? await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "email" })
+      : code ? await supabase.auth.exchangeCodeForSession(code) : { error: true };
     if (error) {
       const accountUrl = new URL("/account", request.nextUrl.origin);
       accountUrl.searchParams.set("next", nextPath);
@@ -49,14 +53,17 @@ export async function GET(request: NextRequest) {
   }
 
   const profileUrl = new URL("/seller/profile", request.nextUrl.origin);
+  const tokenHash = request.nextUrl.searchParams.get("token_hash");
 
-  if (!code || flow !== "contact-phone") {
+  if ((!code && !tokenHash) || flow !== "contact-phone") {
     profileUrl.searchParams.set("verificationError", "1");
     return NextResponse.redirect(profileUrl);
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+  const { error: exchangeError } = tokenHash
+    ? await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "email" })
+    : code ? await supabase.auth.exchangeCodeForSession(code) : { error: true };
 
   if (exchangeError) {
     profileUrl.searchParams.set("verificationError", "1");

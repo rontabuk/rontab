@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
-import { ArrowLeft, CalendarDays, Gift, MapPin, Ticket } from "lucide-react";
+import { CalendarDays, Gift, MapPin, Ticket } from "lucide-react";
 import { joinLoyaltyOffer, reportLoyaltyClaimIssue } from "@/app/visitor/actions";
 import { OfferNotificationReadMarker } from "@/components/OfferNotificationReadMarker";
 import { formatDateTime, formatNumber as formatPoints } from "@/lib/format";
@@ -36,14 +36,13 @@ export default async function VisitorRewardsPage({
   const pageSize = 25;
   const activityPage = parsePage(activityPageValue);
   const offerPage = parsePage(offerPageValue);
-  const [summaryResult, offersResult, transactionsResult, claimsResult, profileResult, dailyStatusResult, eligibilityResult, supportCasesResult] = await Promise.all([
+  const [summaryResult, offersResult, transactionsResult, claimsResult, profileResult, dailyStatusResult, supportCasesResult] = await Promise.all([
     supabase.rpc("get_visitor_loyalty_summary"),
     supabase.rpc("get_visitor_loyalty_offers"),
     supabase.rpc("get_visitor_loyalty_activity", { p_limit: pageSize + 1, p_offset: activityPage * pageSize }),
     supabase.rpc("get_visitor_offer_history", { p_limit: pageSize + 1, p_offset: offerPage * pageSize }),
     supabase.from("profiles").select("city,country_code").eq("id", user.id).single(),
     supabase.rpc("get_visitor_daily_visit_points_status"),
-    supabase.rpc("is_eligible_visitor"),
     supabase.from("loyalty_claim_support_cases").select("id,claim_id,issue_type,status,resolution_note,created_at,updated_at").order("created_at", { ascending: false }),
   ]);
 
@@ -53,7 +52,6 @@ export default async function VisitorRewardsPage({
   if (claimsResult.error) throw new Error(claimsResult.error.message);
   if (profileResult.error) throw new Error(profileResult.error.message);
   if (dailyStatusResult.error) throw new Error(dailyStatusResult.error.message);
-  if (eligibilityResult.error) throw new Error(eligibilityResult.error.message);
   if (supportCasesResult.error) throw new Error(supportCasesResult.error.message);
 
   const summary = summaryResult.data?.[0] ?? { points_balance: 0, points_earned: 0, points_spent: 0 };
@@ -62,10 +60,7 @@ export default async function VisitorRewardsPage({
   const claims = ((claimsResult.data ?? []) as (OfferClaim & { title: string })[]);
   const supportCasesByClaim = new Map((supportCasesResult.data ?? []).map((supportCase) => [supportCase.claim_id, supportCase]));
   const dailyStatus = dailyStatusResult.data?.[0] ?? null;
-  const isEligible = eligibilityResult.data ?? false;
-  const dailyProgress = dailyStatus
-    ? Math.min(100, dailyStatus.points_earned / dailyStatus.daily_cap * 100)
-    : 0;
+  const dailyProgress = dailyStatus ? Math.min(100, dailyStatus.points_earned / dailyStatus.daily_cap * 100) : 0;
   const visibleTransactions = transactions.slice(0, pageSize);
   const visibleClaims = claims.slice(0, pageSize);
   const nearestTarget = offers
@@ -87,10 +82,10 @@ export default async function VisitorRewardsPage({
   return (
     <main className="admin-overview visitor-rewards-page">
       {unreadOfferNotificationIds.length > 0 && <OfferNotificationReadMarker userId={user.id} notificationIds={unreadOfferNotificationIds} />}
-      <Link className="visitor-rewards-back" href="/visitor"><ArrowLeft size={14} aria-hidden="true" />My profile</Link>
       <header className="admin-page-heading visitor-rewards-heading">
         <p className="admin-eyebrow">POINTS & REWARDS</p>
         <h1>Good things add up.</h1>
+        <p>Earn points through eligible product visits and choose how to use them.</p>
       </header>
 
       {offerMessage === "joined" && <p className="admin-save-success" role="status">Your points were used and your place is confirmed.</p>}
@@ -102,12 +97,11 @@ export default async function VisitorRewardsPage({
       {supportError === "details" && <p className="visitor-rewards-error" role="alert">Choose an issue and describe it in at least 10 characters.</p>}
       {supportError === "unavailable" && <p className="visitor-rewards-error" role="alert">This reward cannot be reported right now. Your points were not changed.</p>}
       {supportError === "submit" && <p className="visitor-rewards-error" role="alert">We could not submit your report. Please try again.</p>}
-      {!isEligible && <p className="visitor-rewards-error" role="status">Points and rewards are available to members in supported countries. Update your country in <Link href="/visitor">your profile</Link> to check eligibility.</p>}
-      {isEligible && !dailyStatus && <p className="visitor-rewards-error" role="status">Your eligibility is confirmed, but daily points are temporarily unavailable. Please try again shortly.</p>}
 
       <section className="visitor-rewards-overview" aria-label="Points summary">
-        <div className="visitor-points-gauge" role="img" aria-label={`${formatPoints(summary.points_balance)} available points`} style={{ "--points-progress": `${progress}%` } as React.CSSProperties}>
+        <div className="visitor-points-gauge" style={{ "--points-progress": `${progress}%` } as React.CSSProperties}>
           <div className="visitor-points-gauge-core">
+            <span>Available</span>
             <strong>{formatPoints(summary.points_balance)}</strong>
             <small>points</small>
           </div>
@@ -124,7 +118,7 @@ export default async function VisitorRewardsPage({
             <div><strong>{formatPoints(summary.points_earned)}</strong><span>earned</span></div>
             <div><strong>{formatPoints(summary.points_spent)}</strong><span>used</span></div>
           </div>
-          {dailyStatus && (
+          {dailyStatus ? (
             <div className="visitor-daily-points">
               <div><span>Visit points in the last 24 hours</span><strong>{formatPoints(dailyStatus.points_earned)} / {formatPoints(dailyStatus.daily_cap)}</strong></div>
               <div className="visitor-daily-points-track" role="progressbar" aria-label="Visit points earned in the last 24 hours" aria-valuemin={0} aria-valuemax={dailyStatus.daily_cap} aria-valuenow={Math.min(dailyStatus.points_earned, dailyStatus.daily_cap)}>
@@ -132,7 +126,8 @@ export default async function VisitorRewardsPage({
               </div>
               {dailyStatus.points_earned >= dailyStatus.daily_cap && <small>The limit is reached. Points resume as earlier visits leave the 24-hour window.</small>}
             </div>
-          )}
+          ) : <p className="visitor-daily-points-unavailable" role="status">Daily visit-point status is unavailable for this account. Your saved balance and activity are unchanged.</p>}
+          <p className="visitor-rewards-location"><MapPin size={14} aria-hidden="true" />{profileResult.data.city ? `${profileResult.data.city}, ${profileResult.data.country_code}` : "Add a city to see local offers"}<Link href="/visitor">Edit profile</Link></p>
         </div>
       </section>
 
@@ -243,10 +238,8 @@ export default async function VisitorRewardsPage({
         <p className="admin-eyebrow">HOW POINTS WORK</p>
         <h2 id="visitor-points-explainer-title">One point for a first visit</h2>
         {dailyStatus
-          ? <p>Earn one point the first time you visit each eligible product while signed in with a confirmed account, up to {formatPoints(dailyStatus.daily_cap)} visit points in any rolling 24-hour period. Shop visits after the cap do not earn points. Returning to a product does not earn another point. Guests and seller accounts do not earn these rewards.</p>
-          : !isEligible
-            ? <p>Visit points and offers are available only to members in currently supported countries. Update your country in <Link href="/visitor">your profile</Link> to check eligibility.</p>
-            : <p>Your account is eligible for rewards, but daily points are temporarily unavailable. Please try again shortly.</p>}
+          ? <p>Earn one point the first time you visit each eligible product while signed in with a confirmed visitor account, up to {formatPoints(dailyStatus.daily_cap)} visit points in any rolling 24-hour period. Shop visits after the cap do not earn points. Returning to a product does not earn another point. Guests and seller accounts do not earn visitor rewards.</p>
+          : <p>Daily visit-point status is temporarily unavailable for this account. Existing points and activity are not changed. Guests and seller accounts do not earn visitor rewards.</p>}
         <p>Joining a limited offer spends its stated points whether or not you are selected. Choosing not to join never costs points. A guaranteed redemption spends points only when your gift is successfully claimed.</p>
       </section>
     </main>

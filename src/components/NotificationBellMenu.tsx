@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
-import { BadgeCheck, Bell, CheckCheck, Gift, LifeBuoy, MailWarning, Megaphone, MessageSquareText, Sparkles, Volume2, VolumeX } from "lucide-react";
+import { BadgeCheck, Bell, Check, CheckCheck, Gift, LifeBuoy, MailWarning, Megaphone, MessageSquareText, Sparkles, Volume2, VolumeX } from "lucide-react";
 import { sendVisitorEmailVerification } from "@/app/account/actions";
 import { useNotificationReads } from "@/lib/notifications/read-state";
 import type { SiteNotification } from "@/lib/notifications/feed";
@@ -216,7 +216,7 @@ export function NotificationBellMenu({
         ) : hasOpened && (visibleItems.length ? (
           <ul className="notification-list">
             {visibleItems.map((item, index) => {
-              const Icon = icons[item.kind];
+              const Icon = item.completed ? BadgeCheck : icons[item.kind];
               const unreadItem = isUnread(item);
               const content = (
                 <>
@@ -229,7 +229,7 @@ export function NotificationBellMenu({
                 </>
               );
               return (
-                <li key={item.id} data-kind={item.kind} data-unread={unreadItem || undefined} style={{ animationDelay: `${Math.min(index, 8) * 25}ms` }}>
+                <li key={item.id} data-kind={item.kind} data-completed={item.completed || undefined} data-unread={unreadItem || undefined} style={{ animationDelay: `${Math.min(index, 8) * 25}ms` }}>
                   {item.href ? (
                     <Link className="notification-item" href={item.href} onClick={async (event) => {
                       if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
@@ -242,7 +242,10 @@ export function NotificationBellMenu({
                   ) : (
                     <div className="notification-item">{content}</div>
                   )}
-                  {item.kind === "verify-email" && (
+                  {item.kind === "verify-email" && item.completed && (
+                    <div className="notification-actions"><span className="notification-done"><Check size={15} aria-hidden="true" /> Done</span></div>
+                  )}
+                  {item.kind === "verify-email" && !item.completed && (
                     <div className="notification-actions">
                       <button type="button" onClick={resend} disabled={isResending}>
                         {isResending ? "Sending…" : "Resend confirmation email"}

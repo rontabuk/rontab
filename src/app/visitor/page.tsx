@@ -22,7 +22,7 @@ export default async function VisitorAccountPage({
   await connection();
   const [{ locationLocked, saved }, { supabase, user }] = await Promise.all([searchParams, getVisitorAccount()]);
   const [{ data: profile, error: profileError }, { data: summaryRows, error: summaryError }, { data: offers, error: offersError }, { data: cityLocked, error: cityLockError }, { data: followedShops, error: shopsError }, { data: followedCreators, error: creatorsError }, { data: followerSummaryRows, error: followerSummaryError }, { data: contactPreferences, error: contactError }, { data: socialLinks, error: socialLinksError }, { countries, cities }] = await Promise.all([
-    supabase.from("profiles").select("display_name,avatar_url,city,city_id,country_code").eq("id", user.id).single(),
+    supabase.from("profiles").select("display_name,avatar_url,city,city_id,country_code,email_verified_at").eq("id", user.id).single(),
     supabase.rpc("get_visitor_loyalty_summary"),
     supabase.rpc("get_visitor_loyalty_offers"),
     supabase.rpc("is_visitor_city_locked"),
@@ -94,7 +94,11 @@ export default async function VisitorAccountPage({
                     {avatarUrl && <label className="visitor-avatar-remove"><input name="remove_avatar" type="checkbox" />Remove current picture</label>}
                   </div>
                   <label>Display name<input name="display_name" defaultValue={profile.display_name ?? ""} maxLength={100} autoComplete="name" /><small>This name is for your Rontab account.</small></label>
-                  <label>Registered email<input type="email" value={user.email ?? ""} readOnly /><small className="seller-profile-verified">Email confirmed</small></label>
+                  <label>Registered email<input type="email" value={user.email ?? ""} readOnly />
+                    {profile.email_verified_at
+                      ? <small className="seller-profile-verified">Email confirmed</small>
+                      : <small role="status">Email not confirmed. Confirm it before spending points; use Notifications to resend the link.</small>}
+                  </label>
                   <label>Phone number<input name="contact_phone" type="tel" autoComplete="tel" maxLength={32} defaultValue={contactPreferences?.phone ?? ""} placeholder="+44…" /></label>
                   <label>Who can see your contact details?
                     <select name="contact_visibility" defaultValue={contactPreferences?.contact_visibility ?? "private"}>

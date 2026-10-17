@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description: "Search and filter approved home and kitchen finds from independent UK shops.",
 };
 
-type ProductsPageProps = { searchParams: Promise<{ q?: string; category?: string; emailVerified?: string }> };
+type ProductsPageProps = { searchParams: Promise<{ q?: string; category?: string; emailVerified?: string; verificationEmail?: string }> };
 
 async function SearchableProductBrowser({ searchParams }: ProductsPageProps) {
   const parameters = await searchParams;
@@ -33,11 +33,18 @@ async function SearchableProductBrowser({ searchParams }: ProductsPageProps) {
 
   return (
     <>
+      {parameters.verificationEmail && (
+        <p className="catalog-notice page-shell" data-tone={parameters.verificationEmail === "sent" ? "ok" : "error"} role="status">
+          {parameters.verificationEmail === "sent"
+            ? "We sent a confirmation link to your email. Open it on any phone or computer to confirm your address."
+            : "Your account is ready, but we couldn't send the confirmation email. Open Notifications to try again."}
+        </p>
+      )}
       {parameters.emailVerified && (
         <p className="catalog-notice page-shell" data-tone={parameters.emailVerified === "1" ? "ok" : "error"} role="status">
           {parameters.emailVerified === "1"
             ? "Your email is confirmed. You're now collecting Rontab points."
-            : "That confirmation link has expired or was opened in a different browser. Open the bell to send a new one."}
+            : "That confirmation link has expired or was already used. Open the bell to send a new one."}
         </p>
       )}
       <ProductBrowser

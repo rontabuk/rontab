@@ -127,7 +127,15 @@ export async function joinLoyaltyOffer(formData: FormData) {
     redirect("/visitor/rewards?offerError=unavailable");
   }
 
-  const { supabase } = await getVisitorAccount();
+  const { supabase, user } = await getVisitorAccount();
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("email_verified_at")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profileError) throw new Error(profileError.message);
+  if (!profile?.email_verified_at) redirect("/visitor/rewards?offerError=verifyEmail");
+
   const { data, error } = await supabase.rpc("join_loyalty_offer", { p_offer_id: offerId });
   if (error) {
     const errorType = error.code === "23514" ? "points" : error.code === "42501" ? "location" : "unavailable";
@@ -176,7 +184,15 @@ export async function reserveSellerOfferCoupon(formData: FormData) {
   }
   if (!confirmed) redirect("/visitor/offers?error=confirmation");
 
-  const { supabase } = await getVisitorAccount();
+  const { supabase, user } = await getVisitorAccount();
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("email_verified_at")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profileError) throw new Error(profileError.message);
+  if (!profile?.email_verified_at) redirect("/visitor/offers?error=verifyEmail");
+
   const { data, error } = await supabase.rpc("reserve_seller_offer_coupon", {
     p_offer_id: offerId,
     p_location_id: locationId,

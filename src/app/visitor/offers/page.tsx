@@ -89,6 +89,7 @@ export default async function VisitorOfferGalleryPage({
       {pageError === "points" && <p className="visitor-rewards-error" role="alert">You do not have enough points for this offer.</p>}
       {pageError === "location" && <p className="visitor-rewards-error" role="alert">Choose a supported city on your profile to reserve local offers.</p>}
       {pageError === "confirmation" && <p className="visitor-rewards-error" role="alert">Confirm the points cost and voucher conditions before reserving.</p>}
+      {couponsUnavailable && <p className="visitor-rewards-error" role="status">Confirm your email and choose a supported country to access vouchers. <Link href="/visitor">Update your profile</Link>.</p>}
       {pageError === "unavailable" && <p className="visitor-rewards-error" role="alert">That offer time is no longer available. Your points were not changed.</p>}
       {cancelled === "1" && <p className="admin-save-success" role="status">Reservation cancelled. Your points and the daily place were returned.</p>}
       {reported === "1" && <p className="admin-save-success" role="status">Your voucher issue was sent to the Rontab team. Your points were not changed.</p>}
@@ -108,7 +109,6 @@ export default async function VisitorOfferGalleryPage({
         <Link href="/visitor/offers" aria-current={view === "offers" ? "page" : undefined}>Available offers</Link>
         <Link href="/visitor/offers?view=vouchers" aria-current={view === "vouchers" ? "page" : undefined}>My vouchers <span>{coupons.length}</span></Link>
       </nav>
-      {couponsUnavailable && <p className="visitor-rewards-error" role="status">Confirm your email and choose a supported country to access vouchers. <Link href="/visitor">Update your profile</Link>.</p>}
 
       {view === "offers" ? (
         <section className="seller-offer-gallery-grid" aria-label="Published seller offers">
@@ -175,7 +175,7 @@ export default async function VisitorOfferGalleryPage({
         <section className="seller-offer-voucher-list" aria-label="My vouchers">
           <p className="seller-offer-voucher-policy">Vouchers cannot be transferred. Cancel before the offer window starts to return the points and place. Unused vouchers expire when the window ends without a refund.</p>
           {couponsUnavailable ? (
-            <div className="visitor-rewards-empty"><Ticket size={23} aria-hidden="true" /><h2>Vouchers are unavailable for this account</h2><p>Confirm your email and set a country supported by Rontab before reserving or viewing vouchers.</p><Link href="/visitor">Update your profile</Link></div>
+            <div className="visitor-rewards-empty"><Ticket size={23} aria-hidden="true" /><h2>Vouchers are unavailable for this account</h2><p>Confirm your email and set a supported country before reserving or viewing vouchers.</p><Link href="/visitor">Update your profile</Link></div>
           ) : coupons.length ? coupons.map((coupon) => (
             <article className="seller-offer-voucher" key={coupon.id}>
               <div className="seller-offer-voucher-heading">

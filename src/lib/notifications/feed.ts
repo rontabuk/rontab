@@ -130,17 +130,19 @@ export const getNotificationFeed = cache(async (): Promise<NotificationFeed> => 
     })),
   ].sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt));
 
-  if (viewer.role === "visitor" && !viewer.emailVerifiedAt) {
-    // Re-surfaces as unread once every 24 hours until the email is confirmed.
+  if (viewer.role === "visitor") {
     const signedUpAt = Date.parse(viewer.createdAt);
     const reminderAt = signedUpAt + Math.floor(Math.max(0, now - signedUpAt) / DAY_MS) * DAY_MS;
     items.unshift({
       id: `verify-email-${reminderAt}`,
       kind: "verify-email",
-      title: "Confirm your email address",
-      body: "Confirm your email to start collecting points and join reward offers. Check your inbox for the link we sent.",
+      title: viewer.emailVerifiedAt ? "Email confirmed" : "Confirm your email address",
+      body: viewer.emailVerifiedAt
+        ? "Your email address is confirmed. You're now collecting Rontab points."
+        : "Confirm your email to start collecting points and join reward offers. Check your inbox for the link we sent.",
       href: null,
       createdAt: new Date(reminderAt).toISOString(),
+      completed: Boolean(viewer.emailVerifiedAt),
     });
   }
 

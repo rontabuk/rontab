@@ -118,6 +118,7 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .65; point
 .notification-list > li + li { margin-top: 2px; }
 .notification-list > li[data-unread] { background: #f5f9ff; }
 .notification-list > li[data-kind="verify-email"] { background: #fff8e1; }
+.notification-list > li[data-completed] { background: #f1f7ef; }
 .notification-item { position: relative; display: flex; align-items: center; gap: 12px; padding: 10px 34px 10px 8px; border-radius: 6px; color: inherit; transition: background-color 120ms ease; }
 a.notification-item:hover { background: rgb(0 0 0 / 5%); }
 a.notification-item:active { background: rgb(0 0 0 / 8%); }
@@ -136,6 +137,7 @@ li[data-unread] .notification-copy time { color: #065fd4; font-weight: 700; }
 .notification-actions button { min-height: 34px; padding: 0 12px; border: 0; border-radius: 5px; background: #0f0f0f; color: #fff; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; transition: background-color 150ms ease; }
 .notification-actions button:hover { background: #272727; }
 .notification-actions button:disabled { cursor: wait; opacity: .7; }
+.notification-done { display: inline-flex; align-items: center; gap: 6px; color: #356b3b; font-size: 13px; font-weight: 700; }
 .notification-actions p { margin: 7px 0 0; font-size: 12px; }
 .notification-actions p[data-tone="ok"] { color: #1e6b34; }
 .notification-actions p[data-tone="error"] { color: #b3261e; }

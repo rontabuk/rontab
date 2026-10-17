@@ -4,7 +4,17 @@
 
 - Docker Desktop is required only for the optional local database stack.
 - `.env.local` containing `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for the hosted Auth client.
-- In hosted Supabase Auth URL Configuration, allow your app's `/seller/login` callback URL (for local development: `http://127.0.0.1:3000/seller/login` and `http://localhost:3000/seller/login`).
+- In hosted Supabase Auth URL Configuration, allow your app's `/auth/callback` and `/seller/login` URLs (for local development: `http://127.0.0.1:3000/**` and `http://localhost:3000/**`).
+
+## Email links
+
+The local Supabase stack uses `supabase/templates/magic_link.html` for email links. For the hosted project, set the Magic Link template in Dashboard → Authentication → Email Templates to use this link:
+
+```html
+<a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email">Continue to Rontab</a>
+```
+
+The app supplies a callback URL with a `flow` query parameter, so the template appends the token hash and email verification type. This lets the link complete on the device that opens the email. Dashboard templates are not changed by database migrations.
 
 ## Start and validate the local database
 

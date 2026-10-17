@@ -47,7 +47,7 @@ export function useNotificationReads({ userId, readIds, lastSeenAt, autoReadId }
   const [rawIds, guestLastSeenAt] = JSON.parse(snapshot) as [string, string | null];
   const savedIds = new Set([...readIds, ...parseIds(rawIds)]);
   const baseline = userId ? lastSeenAt : guestLastSeenAt;
-  const isUnread = (item: SiteNotification) => item.kind === "verify-email" || (
+  const isUnread = (item: SiteNotification) => (item.kind === "verify-email" && !item.completed) || (
     !savedIds.has(item.id) && (!baseline || Date.parse(item.createdAt) > Date.parse(baseline))
   );
 

@@ -249,6 +249,11 @@ otp_expiry = 3600
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
 
+# Hosted Supabase projects need the same template configured in Dashboard > Authentication > Email Templates.
+[auth.email.template.magic_link]
+subject = "Confirm your email or sign in to Rontab"
+content_path = "./supabase/templates/magic_link.html"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true

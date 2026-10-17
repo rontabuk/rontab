@@ -96,9 +96,10 @@ export function VisitorAccountForm({ nextPath, notice, initialMode = "login", co
         return;
       }
 
-      // The confirmation email is a follow-up; the visitor can browse immediately.
-      await sendVisitorEmailVerification().catch(() => null);
-      router.replace(nextPath === "/visitor" ? "/products" : nextPath);
+      const verificationResult = await sendVisitorEmailVerification().catch(() => ({ error: "We couldn't send the email right now." }));
+      const destination = new URL(nextPath === "/visitor" ? "/products" : nextPath, window.location.origin);
+      destination.searchParams.set("verificationEmail", verificationResult.error ? "failed" : "sent");
+      router.replace(`${destination.pathname}${destination.search}${destination.hash}`);
       router.refresh();
       return;
     }
