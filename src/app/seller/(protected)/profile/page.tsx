@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, MapPin, Store } from "lucide-react";
 import { connection } from "next/server";
 import { saveSellerProfile, sendSellerPhoneConfirmation } from "@/app/seller/(protected)/actions";
 import { ActionForm } from "@/components/ActionForm";
@@ -41,14 +41,37 @@ export default async function SellerProfilePage({
 
   return (
     <main className="admin-overview seller-overview">
-      <header className="admin-page-heading">
-        <p className="admin-eyebrow">SHOP WORKSPACE</p>
-        <h1>Seller profile</h1>
-        <p>Manage your shop identity and private contact information for the Rontab team.</p>
-        {seller.status === "active" && seller.is_public && <Link className="seller-public-profile-link" href={`/shops/${seller.slug}`}>View public shop profile<ArrowUpRight size={14} aria-hidden="true" /></Link>}
+      <header className="seller-profile-page-heading">
+        <p className="admin-eyebrow">SHOP PROFILE</p>
       </header>
       {saved === "1" && <p className="admin-save-success" role="status">Seller profile saved successfully.</p>}
       {phoneConfirmed === "1" && <p className="admin-save-success" role="status">Phone contact confirmed through your registered email.</p>}
+      <section className="seller-account-profile" aria-label="Shop overview">
+        <div className="seller-account-identity">
+          <div className="seller-account-logo">
+            {seller.logo_url
+              ? <Image src={seller.logo_url} alt={`${seller.shop_name} logo`} width={80} height={80} unoptimized />
+              : <Store size={30} aria-hidden="true" />}
+          </div>
+          <div className="seller-account-details">
+            <h1>{seller.shop_name}</h1>
+            <p><MapPin size={14} aria-hidden="true" />{savedCity ? `${savedCity.city_name}, ${savedCity.country_code}` : "Shop location not set"}</p>
+          </div>
+          <div className="seller-account-actions">
+            {seller.status === "active" && seller.is_public && <Link href={`/shops/${seller.slug}`}>View shop<ArrowUpRight size={14} aria-hidden="true" /></Link>}
+          </div>
+        </div>
+        <div className="seller-account-stats" aria-label="Shop activity">
+          <div><strong>{formatNumber(shopFollowerCount ?? 0)}</strong><span>Followers</span></div>
+          <div><strong>{seller.status === "active" ? "Active" : seller.status}</strong><span>Account status</span></div>
+          <div><strong>{seller.is_public ? "Visible" : "Hidden"}</strong><span>Public shop</span></div>
+        </div>
+      </section>
+      <details className="seller-profile-editor">
+        <summary>
+          <span>Edit shop profile</span>
+          <small>Update shop details and private contact information.</small>
+        </summary>
       <ActionForm className="seller-profile-form" action={saveSellerProfile}>
         <div className="seller-profile-section-heading">
           <h2>Shop details</h2>
@@ -149,6 +172,7 @@ export default async function SellerProfilePage({
         </section>
         <button className="admin-primary-button" type="submit">Save profile</button>
       </ActionForm>
+      </details>
       {contact?.phone && !contact.phone_contact_confirmed_at && (
         <section className="seller-phone-verification" aria-labelledby="seller-phone-verification-title">
           <div>

@@ -67,13 +67,15 @@ export function SellerProductList({ products, canDelete, canPromote }: { product
       {filteredProducts.length ? (
         <div className="admin-table-wrap">
           <table className="admin-table">
-            <thead><tr><th>Product</th><th>Category</th><th>Media</th><th>Price</th><th className="seller-click-count">Shop clicks</th><th>Status</th><th>Submitted</th><th>Actions</th></tr></thead>
+            <thead><tr><th scope="col">Product</th><th scope="col">Category</th><th scope="col">Media</th><th scope="col">Price</th><th className="seller-click-count" scope="col">Shop clicks</th><th scope="col">Status</th><th scope="col">Submitted</th><th scope="col">Actions</th></tr></thead>
             <tbody>
               {filteredProducts.map((product) => (
                 <tr key={product.id}>
-                  <td>
-                    <strong>{product.name}</strong>
-                    <small>{product.slug}</small>
+                  <td data-label="Product">
+                    <div className="seller-product-identity">
+                      <strong>{product.name}</strong>
+                      <small>{product.slug}</small>
+                    </div>
                     {product.previewUrl ? (
                       <div className={`seller-product-thumbnail${product.previewMediaType === "video" ? " seller-product-thumbnail-video" : ""}`}>
                         {product.previewMediaType === "video" ? (
@@ -86,16 +88,16 @@ export function SellerProductList({ products, canDelete, canPromote }: { product
                       <div className="seller-product-thumbnail seller-product-thumbnail-empty" aria-label="No product media">No media</div>
                     )}
                   </td>
-                  <td>{product.categoryName}</td>
-                  <td>{product.mediaTypes.map((type) => type === "video" ? "Reel" : "Photo").join(" · ") || "—"}</td>
-                  <td>{formatPrice(product.price, product.currency)}</td>
-                  <td className="seller-click-count">{formatCompactNumber(product.click_count)}</td>
-                  <td><span className={`admin-status admin-status-${product.status}`}>{product.status}</span></td>
-                  <td>{formatDate(product.created_at)}</td>
-                  <td>
+                  <td data-label="Category">{product.categoryName}</td>
+                  <td data-label="Media">{product.mediaTypes.map((type) => type === "video" ? "Reel" : "Photo").join(" · ") || "—"}</td>
+                  <td data-label="Price">{formatPrice(product.price, product.currency)}</td>
+                  <td className="seller-click-count" data-label="Shop clicks">{formatCompactNumber(product.click_count)}</td>
+                  <td data-label="Status"><span className={`admin-status admin-status-${product.status}`}>{product.status}</span></td>
+                  <td data-label="Submitted">{formatDate(product.created_at)}</td>
+                  <td data-label="Actions">
                     <div className="seller-product-row-actions">
                       <Link className="seller-product-edit-link" href={`/seller/products/${product.id}/edit`}>Edit</Link>
-                      {canPromote && product.status === "approved" && <Link className="seller-product-edit-link" href={`/seller/products/${product.id}/creator-opportunity`}>Promote to creators</Link>}
+                      {canPromote && product.status === "approved" && <Link className="seller-product-edit-link" href={`/seller/products/${product.id}/creator-opportunity`}>Find creators</Link>}
                       {canDelete && (
                         <button className="seller-product-delete-button" type="button" onClick={() => setPendingDelete(product)}>Delete</button>
                       )}

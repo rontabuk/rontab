@@ -32,10 +32,14 @@ begin
 	end if;
 	update public.profiles
 	set email_verified_at = now(), city_id = test_city_id
-	where id in (admin_user, seller_user, visitor_user);
+	where id in (admin_user, seller_user);
+	update public.profiles set city_id = test_city_id where id = visitor_user;
 	select id into seller_id from public.seller_profiles where user_id = seller_user;
 	if seller_id is null then
 		raise exception 'Seller signup should create a seller profile.';
+	end if;
+	if not public.is_admin() then
+		raise exception 'Click smoke admin fixture was not recognized as admin: %.', auth.jwt();
 	end if;
 	perform public.admin_set_seller_status(seller_id, 'active', true);
 
@@ -56,8 +60,24 @@ begin
 		raise exception 'The first eligible click must consume one welcome credit and increment the product count once.';
 	end if;
 
+	select account.points_balance into points_balance from public.loyalty_accounts account where account.visitor_id = visitor_user;
+	if points_balance is distinct from 1 or public.is_supported_loyalty_visitor(visitor_user) then
+		raise exception 'An unconfirmed visitor should earn a point but remain ineligible to redeem it.';
+	end if;
+	update public.profiles set email_verified_at = now() where id = visitor_user;
+	select account.points_balance into points_balance from public.loyalty_accounts account where account.visitor_id = visitor_user;
+	if points_balance is distinct from 1 then
+		raise exception 'Email confirmation must not award duplicate points for an earlier accepted click.';
+	end if;
+
+	delete from public.visitor_product_points
+	where visitor_id = visitor_user and product_id = target_product_id;
+	delete from public.loyalty_point_transactions
+	where visitor_id = visitor_user and source_product_id = target_product_id and transaction_type = 'visit_earned';
+	delete from public.loyalty_accounts where visitor_id = visitor_user;
+
 	if not public.record_product_shop_click(target_product_id, visitor_user) then
-		raise exception 'A repeat visit to the same product should remain available.';
+		raise exception 'A repeat visit to the same product should remain available and recover a missing point.';
 	end if;
 	select clicks_remaining, welcome_clicks_remaining
 	into remaining_clicks, welcome_clicks
@@ -67,8 +87,8 @@ begin
 	where event.product_id = target_product_id and event.visitor_id = visitor_user;
 	select account.points_balance into points_balance from public.loyalty_accounts account where account.visitor_id = visitor_user;
 	if remaining_clicks <> 9999 or welcome_clicks <> 9999 or click_count <> 1
-		or event_count <> 1 or points_balance <> 1 then
-		raise exception 'Repeat visit state mismatch: balance %, welcome %, clicks %, events %, points %.',
+		or event_count <> 1 or points_balance is distinct from 1 then
+		raise exception 'Repeat visit recovery mismatch: balance %, welcome %, clicks %, events %, points %.',
 			remaining_clicks, welcome_clicks, click_count, event_count, points_balance;
 	end if;
 
