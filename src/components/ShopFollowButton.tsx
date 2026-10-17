@@ -26,7 +26,7 @@ export function ShopFollowButton({
       <input type="hidden" name="shop_slug" value={shopSlug} />
       <input type="hidden" name="follow_action" value="follow" />
       {state.following ? (
-        <span className="shop-follow-control-status" role="status"><span className="shop-follow-confirmation-icon"><Check size={12} aria-hidden="true" /></span>Following</span>
+        <span className="shop-follow-control-status" role="status"><span className="shop-follow-confirmation-icon"><Check size={15} aria-hidden="true" /></span>Following</span>
       ) : (
         <button type="submit" disabled={isPending}>
           <span aria-hidden="true">+</span>{isPending ? "Saving…" : "Follow"}

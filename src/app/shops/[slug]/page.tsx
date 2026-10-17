@@ -3,12 +3,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { ArrowLeft, ArrowUpRight, Minus, Phone, MapPin, Plus, UsersRound } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Check, Phone, MapPin, Plus, UsersRound } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
 import { SellerVerificationBadge } from "@/components/seller/SellerVerificationBadge";
 import { ProductCard } from "@/components/ProductCard";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
-import { followShop, unfollowShop } from "@/app/visitor/shop-follow-actions";
+import { followShop } from "@/app/visitor/shop-follow-actions";
 import { getViewer } from "@/lib/auth/viewer";
 import { formatNumber } from "@/lib/format";
 import { getPublicCatalog } from "@/lib/supabase/catalog";
@@ -88,13 +88,19 @@ export default async function PublicShopPage({
             <div className="public-shop-title-row">
               <h1 className="public-shop-name">{seller.shop_name}{sellerBadge && <SellerVerificationBadge isBlue={sellerBadge.is_blue} />}</h1>
               {viewer.role === "visitor" ? (
-                <ActionForm className="public-shop-follow-form" action={isFollowing ? unfollowShop : followShop}>
+                isFollowing ? (
+                  <span className="public-shop-follow-status" role="img" aria-label={`Following ${seller.shop_name}`} title={`Following ${seller.shop_name}`}>
+                    <Check size={15} aria-hidden="true" />
+                  </span>
+                ) : (
+                <ActionForm className="public-shop-follow-form" action={followShop}>
                   <input type="hidden" name="seller_profile_id" value={seller.id} />
                   <input type="hidden" name="shop_slug" value={seller.slug} />
-                  <button className={`public-shop-follow-icon-button${isFollowing ? " is-following" : ""}`} type="submit" aria-label={`${isFollowing ? "Unfollow" : "Follow"} ${seller.shop_name}`} title={`${isFollowing ? "Unfollow" : "Follow"} ${seller.shop_name}`}>
-                    {isFollowing ? <Minus size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
+                  <button className="public-shop-follow-icon-button" type="submit" aria-label={`Follow ${seller.shop_name}`} title={`Follow ${seller.shop_name}`}>
+                    <Plus size={16} aria-hidden="true" />
                   </button>
                 </ActionForm>
+                )
               ) : viewer.role === "guest" ? (
                 <Link className="public-shop-follow-icon-link" href={`/account?next=${encodeURIComponent(`/shops/${seller.slug}`)}`} aria-label={`Sign in to follow ${seller.shop_name}`} title={`Sign in to follow ${seller.shop_name}`}><Plus size={16} aria-hidden="true" /></Link>
               ) : null}

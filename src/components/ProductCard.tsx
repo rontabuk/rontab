@@ -152,7 +152,7 @@ export function ProductCard({
 
   return (
     <article className="product-card" data-product-card data-preview-only={previewOnly || undefined}>
-      <div className="product-image" data-media-type={product.mediaType ?? "image"}>
+      <div className="product-image" data-media-type={product.mediaType ?? "image"} data-tone={product.overlayTone}>
         {previewOnly ? (
           <div className="product-image-link">{mediaElement}</div>
         ) : (
@@ -179,30 +179,9 @@ export function ProductCard({
             {previewMuted ? <VolumeX size={16} aria-hidden="true" /> : <Volume2 size={16} aria-hidden="true" />}
           </button>
         )}
-        {descriptionOpen && (
-          <div
-            className="description-panel"
-            data-tone={product.overlayTone}
-            id={descriptionId}
-            role="region"
-            aria-label="Full product description"
-            tabIndex={0}
-            onPointerMove={resetCloseTimer}
-            onPointerDown={resetCloseTimer}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") closeDescription();
-              else resetCloseTimer();
-            }}
-          >
-            <p title={product.description} aria-label={product.description}>
-              {product.description.slice(0, visibleDetailLength)}
-            </p>
-            {!previewOnly && visibleDetailLength >= product.description.length && product.sellerProfileId && product.shopSlug && (
-              <ShopFollowButton sellerProfileId={product.sellerProfileId} shopSlug={product.shopSlug} initialFollowing={isShopFollowed} />
-            )}
-          </div>
-        )}
-        <div className="product-card-info" data-tone={product.overlayTone}>
+      </div>
+      <div className="product-card-footer" data-tone={product.overlayTone}>
+        <div className="product-card-info">
           {product.shopSlug && !previewOnly ? (
             <Link className="advertiser-avatar-link" href={`/shops/${product.shopSlug}`} aria-label={`View ${product.maker} shop profile`}>
               {product.makerImage
@@ -241,6 +220,28 @@ export function ProductCard({
             </ShopVisitLink>
           )}
         </div>
+        {descriptionOpen && (
+          <div
+            className="description-panel"
+            id={descriptionId}
+            role="region"
+            aria-label="Full product description"
+            tabIndex={0}
+            onPointerMove={resetCloseTimer}
+            onPointerDown={resetCloseTimer}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") closeDescription();
+              else resetCloseTimer();
+            }}
+          >
+            <p title={product.description} aria-label={product.description}>
+              {product.description.slice(0, visibleDetailLength)}
+            </p>
+            {!previewOnly && visibleDetailLength >= product.description.length && product.sellerProfileId && product.shopSlug && (
+              <ShopFollowButton sellerProfileId={product.sellerProfileId} shopSlug={product.shopSlug} initialFollowing={isShopFollowed} />
+            )}
+          </div>
+        )}
       </div>
     </article>
   );
