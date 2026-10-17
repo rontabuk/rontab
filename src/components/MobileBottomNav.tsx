@@ -2,6 +2,7 @@ import { adminAreas } from "@/lib/admin/areas";
 import { getViewer } from "@/lib/auth/viewer";
 import { formatNumber } from "@/lib/format";
 import { getNotificationFeed } from "@/lib/notifications/feed";
+import { getCreatorWorkspaceLabel } from "@/lib/creator/workspace";
 import { MobileBottomNavBar, type MobileNavConfig } from "@/components/MobileBottomNavBar";
 
 const guestNav: MobileNavConfig = {
@@ -26,6 +27,8 @@ export async function MobileBottomNav() {
       if (item.kind !== "loyalty-offer" || feed.readIds.includes(item.id)) return false;
       return !feed.lastSeenAt || Date.parse(item.createdAt) > Date.parse(feed.lastSeenAt);
     }).length;
+    const creatorIsPublic = viewer.creatorProfileIsPublic;
+    const creatorLabel = getCreatorWorkspaceLabel(viewer.creatorProfileStatus, creatorIsPublic);
     return (
       <MobileBottomNavBar
         config={{
@@ -40,11 +43,11 @@ export async function MobileBottomNav() {
               badge: unreadOfferCount ? formatNumber(unreadOfferCount) : undefined,
               ariaLabel: unreadOfferCount ? `Rewards, ${unreadOfferCount} new offers` : "Rewards",
             },
-            { href: "/visitor/creator/opportunities", label: "Creator", icon: "creators" },
           ],
           menuLinks: [
             { href: "/visitor", label: "My account" },
-            { href: "/visitor/creator", label: "Introduce yourself" },
+            { href: "/visitor/creator", label: creatorLabel },
+            { href: "/visitor/creator/opportunities", label: "Creator opportunities" },
             { href: "/visitor/fans", label: "I'm a fan of" },
             { href: "/visitor/shops-following", label: "Shops I follow" },
             { href: "/visitor/offers?view=vouchers", label: "My vouchers" },

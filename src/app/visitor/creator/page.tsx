@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
-import { ArrowUpRight, BadgeCheck, Check, Coins, ExternalLink, MessageSquareText, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, BadgeCheck, Check, Coins, ExternalLink, MessageSquareText, UserRound, X } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
+import { CreatorMediaPicker } from "@/components/creator/CreatorMediaPicker";
 import { SellerVerificationBadge } from "@/components/seller/SellerVerificationBadge";
 import { CreatorFanTools } from "@/components/creator/CreatorFanTools";
 import { MultiCityPicker } from "@/components/MultiCityPicker";
@@ -20,7 +22,7 @@ export const instant = false;
 
 type CreatorProfile = Pick<
   Database["public"]["Tables"]["creator_profiles"]["Row"],
-  "id" | "slug" | "display_name" | "bio" | "specialties" | "status" | "is_public" | "submitted_at" | "audience_city_id" | "public_profile_consent_at" | "referral_code"
+  "id" | "slug" | "display_name" | "bio" | "specialties" | "status" | "is_public" | "submitted_at" | "audience_city_id" | "public_profile_consent_at" | "referral_code" | "profile_image_path" | "cover_image_path" | "published_profile_image_path" | "published_cover_image_path"
 >;
 type CreatorPlatformAccount = Pick<
   Database["public"]["Tables"]["creator_platform_accounts"]["Row"],
@@ -72,7 +74,7 @@ export default async function VisitorCreatorPage({
   let creatorContact: Pick<Database["public"]["Tables"]["creator_contact_details"]["Row"], "phone" | "phone_visibility"> | null = null;
   if (profileId) {
     const [profileResult, accountsResult, reviewsResult, pointsResult, historyResult, portfolioResult, collaborationResult, fanStatsResult, audienceCitiesResult, contactResult] = await Promise.all([
-      supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,public_profile_consent_at,referral_code").eq("id", profileId).single(),
+      supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,public_profile_consent_at,referral_code,profile_image_path,cover_image_path,published_profile_image_path,published_cover_image_path").eq("id", profileId).single(),
       supabase.from("creator_platform_accounts").select("id,creator_profile_id,platform,handle,profile_url,follower_count,followers_updated_at,is_published").eq("creator_profile_id", profileId).order("platform"),
       supabase.from("creator_profile_reviews").select("review_note").eq("creator_profile_id", profileId).order("created_at", { ascending: false }).limit(1),
       supabase.from("creator_point_accounts").select("points_balance").eq("creator_profile_id", profileId).single(),
@@ -103,6 +105,20 @@ export default async function VisitorCreatorPage({
   }
 
   const useDraft = Boolean(profile && profile.status !== "approved");
+  const profileImagePath = profile
+    ? (useDraft ? profile.profile_image_path ?? profile.published_profile_image_path : profile.published_profile_image_path)
+    : null;
+  const coverImagePath = profile
+    ? (useDraft ? profile.cover_image_path ?? profile.published_cover_image_path : profile.published_cover_image_path)
+    : null;
+  const [{ data: profileImageResult, error: profileImageError }, { data: coverImageResult, error: coverImageError }] = await Promise.all([
+    profileImagePath ? supabase.storage.from("creator-profile-media").createSignedUrl(profileImagePath, 60 * 60) : { data: null, error: null },
+    coverImagePath ? supabase.storage.from("creator-profile-media").createSignedUrl(coverImagePath, 60 * 60) : { data: null, error: null },
+  ]);
+  if (profileImageError) throw new Error(profileImageError.message);
+  if (coverImageError) throw new Error(coverImageError.message);
+  const profileImageUrl = profileImageResult?.signedUrl ?? null;
+  const coverImageUrl = coverImageResult?.signedUrl ?? null;
   const formAccounts = accounts.filter((account) => account.is_published === !useDraft);
   const formPortfolio = portfolioItems.filter((item) => item.is_published === !useDraft);
   const accountsByPlatform = new Map(formAccounts.map((account) => [account.platform, account]));
@@ -130,11 +146,33 @@ export default async function VisitorCreatorPage({
 
   return (
     <main className="admin-overview visitor-creator-page">
-      <header className="admin-page-heading">
-        <p className="admin-eyebrow">CREATOR PROGRAMME</p>
-        <h1>Introduce yourself</h1>
-        <p>Share what you create and where your audience follows you. Approved profiles are visible to the Rontab community and sellers.</p>
-      </header>
+      <Link className="creator-account-back" href="/visitor"><ArrowLeft size={14} aria-hidden="true" />Back to My Account</Link>
+      {profile?.is_public ? (
+        <section className="creator-studio-profile" aria-labelledby="creator-studio-name">
+          <div className="creator-profile-cover">
+            {coverImageUrl
+              ? <Image src={coverImageUrl} alt={`${profile.display_name} cover`} fill unoptimized sizes="(max-width: 700px) 100vw, 900px" />
+              : <div className="creator-profile-cover-default"><span>RONTAB CREATORS</span><strong>Creators who inspire everyday living</strong></div>}
+          </div>
+          <div className="creator-studio-identity">
+            <div className="creator-profile-avatar">
+              {profileImageUrl ? <Image src={profileImageUrl} alt={`${profile.display_name} profile picture`} width={88} height={88} unoptimized /> : <UserRound size={34} aria-hidden="true" />}
+            </div>
+            <div>
+              <p className="admin-eyebrow">CREATOR STUDIO</p>
+              <h1 id="creator-studio-name">{profile.display_name}</h1>
+              <p>{profile.status === "approved" ? "Your public creator profile" : "Your updated profile is under review"}</p>
+              <Link className="creator-studio-edit-link" href="#creator-profile-editor">Edit creator profile</Link>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <header className="admin-page-heading">
+          <p className="admin-eyebrow">CREATOR PROGRAMME</p>
+          <h1>{profile ? "Creator application" : "Introduce yourself"}</h1>
+          <p>Share what you create and where your audience follows you. Approved profiles are visible to the Rontab community and sellers.</p>
+        </header>
+      )}
 
       {!profile && (
         <section className="creator-account-choice" aria-labelledby="creator-account-choice-title">
@@ -213,14 +251,20 @@ export default async function VisitorCreatorPage({
       {profile?.status === "suspended" ? (
         <p className="creator-suspended-note">Your profile cannot be edited while it is suspended.</p>
       ) : (
-        <details className="creator-application-section" open={Boolean(profile && (profile.status === "changes_requested" || profile.status === "rejected"))}>
+        <details id="creator-profile-editor" className="creator-application-section" open={Boolean(profile && (profile.status === "changes_requested" || profile.status === "rejected"))}>
           <summary className="creator-application-summary">
-            <span className="admin-eyebrow">YOUR PUBLIC PROFILE</span>
-            <strong>{profile ? "Update your application" : "Apply with this account"}</strong>
-            <small>{profile ? "Open to edit your profile details." : "Your visitor account and points will remain unchanged."}</small>
+            <strong>{profile ? "Edit creator profile" : "Add creator profile"}</strong>
           </summary>
+          <p className="creator-application-hint">{profile?.is_public ? "Changes stay private until approved." : profile ? "Update your application details for review." : "Add creator features to this account; your personal profile and points stay unchanged."}</p>
           {profile?.is_public && <p className="creator-edit-notice">Changes stay private during review. Your current approved profile remains visible until updates are approved.</p>}
           <ActionForm className="creator-application-form" action={saveCreatorApplication}>
+            <fieldset className="creator-profile-media">
+              <legend>Profile images <small>These images are published after the profile is approved.</small></legend>
+              <div className="creator-profile-media-grid">
+                <CreatorMediaPicker kind="profile" initialUrl={profileImageUrl} />
+                <CreatorMediaPicker kind="cover" initialUrl={coverImageUrl} />
+              </div>
+            </fieldset>
             <label>
               Public display name
               <input name="display_name" defaultValue={profile?.display_name ?? ""} minLength={2} maxLength={100} autoComplete="nickname" required />
@@ -295,7 +339,7 @@ export default async function VisitorCreatorPage({
 
             <label className="creator-public-consent">
               <input name="public_profile_consent" type="checkbox" required />
-              <span>I agree that my name, introduction, specialties, audience cities, platform links, follower counts, and work samples may appear on my public Rontab creator profile.</span>
+              <span>I agree that my profile picture, cover image, name, introduction, specialties, audience cities, platform links, follower counts, and work samples may appear on my public Rontab creator profile.</span>
             </label>
             <button className="admin-primary-button" type="submit">{profile ? "Save and submit for review" : "Submit for review"}</button>
           </ActionForm>

@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { connection } from "next/server";
 import Link from "next/link";
-import { MapPin, UserRound } from "lucide-react";
+import { ArrowLeft, MapPin, UserRound } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
+import { ProfileImageUpload } from "@/components/ProfileImageUpload";
 import { CityPicker } from "@/components/CityPicker";
 import { VisitorProfileEditDialog } from "@/components/VisitorProfileEditDialog";
 import { formatNumber } from "@/lib/format";
@@ -72,6 +73,7 @@ export default async function VisitorAccountPage({
 
   return (
     <main className="admin-overview visitor-overview">
+      <Link className="visitor-account-back" href="/products"><ArrowLeft size={14} aria-hidden="true" />Back to products</Link>
       {saved === "1" && <p className="admin-save-success" role="status">Your profile was saved.</p>}
       {locationLocked === "1" && <p className="visitor-rewards-error" role="alert">Your city could not be changed because a matching local offer became active. Your other profile changes were not saved.</p>}
       <section className="visitor-account-profile" aria-label="Profile overview">
@@ -87,12 +89,16 @@ export default async function VisitorAccountPage({
             <div className="visitor-account-profile-actions">
               <VisitorProfileEditDialog>
                 <ActionForm className="visitor-profile-form" action={saveVisitorProfile}>
-                  <div className="visitor-avatar-control">
-                    <label className="visitor-avatar-label" htmlFor="visitor-avatar-image">Profile picture</label>
-                    <input id="visitor-avatar-image" name="avatar_image" type="file" accept="image/jpeg,image/png,image/webp" />
-                    <small>JPEG, PNG, or WebP. Maximum 5 MB.</small>
-                    {avatarUrl && <label className="visitor-avatar-remove"><input name="remove_avatar" type="checkbox" />Remove current picture</label>}
-                  </div>
+                  <ProfileImageUpload
+                    className="visitor-avatar-control"
+                    inputId="visitor-avatar-image"
+                    name="avatar_image"
+                    removeName="remove_avatar"
+                    label="Profile picture"
+                    removeLabel="Remove current picture"
+                    currentUrl={avatarUrl}
+                    alt="Your profile picture"
+                  />
                   <label>Display name<input name="display_name" defaultValue={profile.display_name ?? ""} maxLength={100} autoComplete="name" /><small>This name is for your Rontab account.</small></label>
                   <label>Registered email<input type="email" value={user.email ?? ""} readOnly />
                     {profile.email_verified_at

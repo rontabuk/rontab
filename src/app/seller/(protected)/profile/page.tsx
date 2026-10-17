@@ -5,6 +5,7 @@ import { ArrowUpRight, MapPin, Store } from "lucide-react";
 import { connection } from "next/server";
 import { saveSellerProfile, sendSellerPhoneConfirmation } from "@/app/seller/(protected)/actions";
 import { ActionForm } from "@/components/ActionForm";
+import { ProfileImageUpload } from "@/components/ProfileImageUpload";
 import { CityPicker } from "@/components/CityPicker";
 import { formatDate, formatNumber } from "@/lib/format";
 import { getSavedCity, getSupportedLocations } from "@/lib/locations";
@@ -103,22 +104,18 @@ export default async function SellerProfilePage({
           <textarea name="description" defaultValue={seller.description ?? ""} rows={5} maxLength={500} />
           <small>Up to 500 characters.</small>
         </label>
-        <label className="seller-profile-logo">
-          Shop logo image
-          {seller.logo_url ? (
-            <Image className="seller-profile-logo-preview" src={seller.logo_url} alt={`${seller.shop_name} logo`} width={88} height={88} unoptimized />
-          ) : (
-            <span className="seller-profile-logo-empty" aria-hidden="true">{seller.shop_name.slice(0, 1).toUpperCase()}</span>
-          )}
-          <input name="logo_image" type="file" accept="image/jpeg,image/png,image/webp" />
-          <small>JPEG, PNG, or WebP. Maximum 5 MB. This image appears beside your product name on cards.</small>
-          {seller.logo_url && (
-            <label className="seller-profile-remove-logo">
-              <input name="remove_logo" type="checkbox" />
-              Remove current shop logo
-            </label>
-          )}
-        </label>
+        <ProfileImageUpload
+          className="seller-profile-logo"
+          inputId="seller-logo-image"
+          name="logo_image"
+          removeName="remove_logo"
+          label="Shop logo image"
+          removeLabel="Remove current shop logo"
+          currentUrl={seller.logo_url}
+          alt={`${seller.shop_name} logo`}
+          fallbackText={seller.shop_name.slice(0, 1).toUpperCase()}
+        />
+        <p className="seller-profile-logo-help">JPEG, PNG, or WebP. Maximum 5 MB. This image appears beside your product name on cards.</p>
         <label className="seller-profile-logo-url">
           Or use an image URL
           <input name="logo_url" type="url" defaultValue={seller.logo_url ?? ""} placeholder="https://" />

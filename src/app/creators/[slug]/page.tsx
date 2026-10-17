@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -36,12 +37,23 @@ export default async function CreatorProfilePage({
   const supabase = createSupabasePublicClient();
   const { data: profile, error: profileError } = await supabase
     .from("creator_profiles")
-    .select("id,slug,published_display_name,published_bio,published_specialties,published_audience_city_id,referral_code,is_public,created_at")
+    .select("id,slug,published_display_name,published_bio,published_specialties,published_audience_city_id,published_profile_image_path,published_cover_image_path,referral_code,is_public,created_at")
     .eq("slug", slug)
     .eq("is_public", true)
     .maybeSingle();
   if (profileError) throw new Error(profileError.message);
   if (!profile) notFound();
+
+  const [{ data: profileImageResult, error: profileImageError }, { data: coverImageResult, error: coverImageError }] = await Promise.all([
+    profile.published_profile_image_path
+      ? supabase.storage.from("creator-profile-media").createSignedUrl(profile.published_profile_image_path, 60 * 60)
+      : { data: null, error: null },
+    profile.published_cover_image_path
+      ? supabase.storage.from("creator-profile-media").createSignedUrl(profile.published_cover_image_path, 60 * 60)
+      : { data: null, error: null },
+  ]);
+  if (profileImageError) throw new Error(profileImageError.message);
+  if (coverImageError) throw new Error(coverImageError.message);
 
   const { data: accounts, error: accountsError } = await supabase
     .from("creator_platform_accounts")
@@ -94,8 +106,22 @@ export default async function CreatorProfilePage({
     <main className="creator-public-profile">
       <Link className="creator-back-link" href="/creators"><ArrowLeft size={14} aria-hidden="true" />All creators</Link>
       <header className="creator-profile-hero">
-        <p className="creator-directory-eyebrow">RONTAB CREATOR PROFILE</p>
-        <h1 className="creator-profile-name">{profile.published_display_name}<CreatorVerificationBadge fanCount={fanCountResult.data ?? 0} /></h1>
+        <div className="creator-profile-cover">
+          {coverImageResult?.signedUrl
+            ? <Image src={coverImageResult.signedUrl} alt={`${profile.published_display_name} cover`} fill unoptimized sizes="(max-width: 700px) 100vw, 900px" />
+            : <div className="creator-profile-cover-default"><span>RONTAB CREATORS</span><strong>Creators who inspire everyday living</strong></div>}
+        </div>
+        <div className="creator-public-identity">
+          <div className="creator-profile-avatar">
+            {profileImageResult?.signedUrl
+              ? <Image src={profileImageResult.signedUrl} alt={`${profile.published_display_name} profile picture`} width={88} height={88} unoptimized />
+              : <span aria-hidden="true">{profile.published_display_name?.slice(0, 1).toUpperCase() || "R"}</span>}
+          </div>
+          <div>
+            <p className="creator-directory-eyebrow">RONTAB CREATOR PROFILE</p>
+            <h1 className="creator-profile-name">{profile.published_display_name}<CreatorVerificationBadge fanCount={fanCountResult.data ?? 0} /></h1>
+          </div>
+        </div>
         <p className="creator-profile-specialties">
           {(profile.published_specialties ?? []).map((value) => creatorSpecialties.find((item) => item.value === value)?.label ?? value).join(" · ")}
         </p>

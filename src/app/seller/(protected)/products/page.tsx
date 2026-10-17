@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
+import { Plus } from "lucide-react";
 import { SellerProductList } from "@/components/seller/SellerProductList";
 import { getSellerAccount } from "@/lib/seller/access";
 import { getSellerProductDetails } from "@/lib/seller/products";
@@ -38,10 +40,13 @@ export default async function SellerProductsPage({
 
   return (
     <main className="admin-overview seller-overview">
-      <header className="admin-page-heading">
-        <p className="admin-eyebrow">SELLER WORKSPACE</p>
-        <h1>Your products</h1>
-        <p>Track drafts, submissions, and review decisions for {seller.shop_name}.</p>
+      <header className="admin-page-heading seller-products-page-heading">
+        <div>
+          <p className="admin-eyebrow">SELLER WORKSPACE</p>
+          <h1>Your products</h1>
+          <p>Track drafts, submissions, and review decisions for {seller.shop_name}.</p>
+        </div>
+        <Link className="seller-products-add-button" href="/seller"><Plus size={17} aria-hidden="true" />Add product</Link>
       </header>
       {updated === "approved" && <p className="admin-save-success" role="status">Changes saved. The product was approved automatically and is live.</p>}
       {updated === "review" && <p className="admin-save-success" role="status">Changes saved and sent for admin review.</p>}

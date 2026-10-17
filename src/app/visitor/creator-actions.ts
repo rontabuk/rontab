@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { FormError, runFormAction, type FormState } from "@/lib/form-state";
 import { creatorPlatforms, creatorSpecialties, type CreatorPlatform } from "@/lib/creator/catalog";
-import { isCityId, isHttpsUrl, isUuid } from "@/lib/validation";
+import { getProfileImageProblem, isCityId, isHttpsUrl, isUuid, PROFILE_IMAGE_TYPES } from "@/lib/validation";
 import { getVisitorAccount } from "@/lib/visitor/access";
 
 const allowedHosts: Record<CreatorPlatform, string[]> = {
@@ -22,6 +22,18 @@ export async function saveCreatorApplication(_state: FormState, formData: FormDa
     const audienceCityIds = formData.getAll("audience_city_id").map(String).filter(Boolean);
     const specialties = formData.getAll("specialty").map(String);
     const publicConsent = formData.get("public_profile_consent") === "on";
+    const profileImageValue = formData.get("profile_image");
+    const coverImageValue = formData.get("cover_image");
+    const profileImage = profileImageValue instanceof File && profileImageValue.size > 0 ? profileImageValue : null;
+    const coverImage = coverImageValue instanceof File && coverImageValue.size > 0 ? coverImageValue : null;
+    const removeProfileImage = formData.get("remove_profile_image") === "on";
+    const removeCoverImage = formData.get("remove_cover_image") === "on";
+    if (profileImage && removeProfileImage) throw new FormError("Choose a new profile picture or remove the current one, not both.");
+    if (coverImage && removeCoverImage) throw new FormError("Choose a new cover image or remove the current one, not both.");
+    const profileImageProblem = profileImage && getProfileImageProblem(profileImage, "Creator profile picture");
+    const coverImageProblem = coverImage && getProfileImageProblem(coverImage, "Creator cover image");
+    if (profileImageProblem) throw new FormError(profileImageProblem);
+    if (coverImageProblem) throw new FormError(coverImageProblem);
     const validSpecialties = new Set(creatorSpecialties.map(({ value }) => value));
     if (displayName.length < 2 || displayName.length > 100 || bio.length < 30 || bio.length > 2000) {
       throw new FormError("Add a display name and a short introduction of at least 30 characters.");
@@ -71,8 +83,18 @@ export async function saveCreatorApplication(_state: FormState, formData: FormDa
       return [{ title, url }];
     });
 
-    const { supabase } = await getVisitorAccount("/visitor/creator");
-    const { error } = await supabase.rpc("save_creator_application_with_audience_cities", {
+    const { supabase, user } = await getVisitorAccount("/visitor/creator");
+    const { data: existingProfileId, error: existingProfileIdError } = await supabase.rpc("get_my_creator_profile_id");
+    if (existingProfileIdError) throw new Error(existingProfileIdError.message);
+    const { data: existingMedia, error: existingMediaError } = existingProfileId
+      ? await supabase.from("creator_profiles")
+        .select("profile_image_path,published_profile_image_path,cover_image_path,published_cover_image_path")
+        .eq("id", existingProfileId)
+        .maybeSingle()
+      : { data: null, error: null };
+    if (existingMediaError) throw new Error(existingMediaError.message);
+
+    const { data: creatorProfileId, error } = await supabase.rpc("save_creator_application_with_audience_cities", {
       p_display_name: displayName,
       p_bio: bio,
       p_specialties: specialties,
@@ -83,6 +105,52 @@ export async function saveCreatorApplication(_state: FormState, formData: FormDa
     });
     if (error?.code === "22023" || error?.code === "55000") throw new FormError(error.message);
     if (error) throw new Error(error.message);
+    if (!creatorProfileId) throw new Error("The creator profile could not be loaded after saving.");
+
+    const uploadedPaths: string[] = [];
+    const uploadImage = async (file: File | null, kind: "profile" | "cover") => {
+      if (!file) return null;
+      const extension = PROFILE_IMAGE_TYPES[file.type];
+      if (!extension) throw new FormError("Creator images must be JPEG, PNG, or WebP files.");
+      const path = `${user.id}/${creatorProfileId}/${kind}/${crypto.randomUUID()}.${extension}`;
+      const { error: uploadError } = await supabase.storage.from("creator-profile-media").upload(path, file, {
+        cacheControl: "3600",
+        contentType: file.type,
+        upsert: false,
+      });
+      if (uploadError) {
+        if (uploadedPaths.length) await supabase.storage.from("creator-profile-media").remove(uploadedPaths);
+        throw new FormError(`We couldn't upload the ${kind === "profile" ? "profile picture" : "cover image"}. Please try again.`);
+      }
+      uploadedPaths.push(path);
+      return path;
+    };
+
+    const profileImagePath = removeProfileImage
+      ? null
+      : await uploadImage(profileImage, "profile") ?? existingMedia?.profile_image_path ?? existingMedia?.published_profile_image_path ?? null;
+    const coverImagePath = removeCoverImage
+      ? null
+      : await uploadImage(coverImage, "cover") ?? existingMedia?.cover_image_path ?? existingMedia?.published_cover_image_path ?? null;
+    const { error: mediaError } = await supabase.rpc("creator_save_profile_media_paths", {
+      p_profile_image_path: profileImagePath,
+      p_cover_image_path: coverImagePath,
+    });
+    if (mediaError) {
+      if (uploadedPaths.length) await supabase.storage.from("creator-profile-media").remove(uploadedPaths);
+      if (["22023", "42501", "55000"].includes(mediaError.code ?? "")) throw new FormError(mediaError.message);
+      throw new Error(mediaError.message);
+    }
+
+    const obsoleteDraftPaths = [
+      existingMedia?.profile_image_path !== existingMedia?.published_profile_image_path
+        ? existingMedia?.profile_image_path
+        : null,
+      existingMedia?.cover_image_path !== existingMedia?.published_cover_image_path
+        ? existingMedia?.cover_image_path
+        : null,
+    ].filter((path): path is string => Boolean(path) && path !== profileImagePath && path !== coverImagePath);
+    if (obsoleteDraftPaths.length) await supabase.storage.from("creator-profile-media").remove(obsoleteDraftPaths);
 
     revalidatePath("/visitor/creator");
     revalidatePath("/creators");

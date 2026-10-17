@@ -6,6 +6,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { informationPages } from "@/data/information";
 import { getViewer } from "@/lib/auth/viewer";
 import { formatNumber } from "@/lib/format";
+import { getCreatorWorkspaceLabel } from "@/lib/creator/workspace";
 
 export function SiteHeader() {
   return (
@@ -55,6 +56,7 @@ async function AccountLinks() {
   if (viewer.role === "visitor") {
     return (
       <HeaderActions accountHref="/visitor" accountLabel="My account" points={viewer.points} bell={bell}>
+        <Link href="/visitor/creator">{getCreatorWorkspaceLabel(viewer.creatorProfileStatus, viewer.creatorProfileIsPublic)}</Link>
         <Link href="/visitor/offers">Offer gallery</Link>
         <Link href="/visitor/rewards">Points & rewards</Link>
         <Link href="/seller/register">For sellers</Link>

@@ -99,12 +99,14 @@ export default async function VisitorRewardsPage({
       {supportError === "submit" && <p className="visitor-rewards-error" role="alert">We could not submit your report. Please try again.</p>}
 
       <section className="visitor-rewards-overview" aria-label="Points summary">
-        <div className="visitor-points-gauge" style={{ "--points-progress": `${progress}%` } as React.CSSProperties}>
-          <div className="visitor-points-gauge-core">
-            <span>Available</span>
-            <strong>{formatPoints(summary.points_balance)}</strong>
-            <small>points</small>
+        <div className="visitor-rewards-gauge-column">
+          <div className="visitor-points-gauge" style={{ "--points-progress": `${progress}%` } as React.CSSProperties}>
+            <div className="visitor-points-gauge-core">
+              <strong>{formatPoints(summary.points_balance)}</strong>
+              <small>points</small>
+            </div>
           </div>
+          <span>Available</span>
         </div>
         <div className="visitor-rewards-overview-copy">
           <p className="admin-eyebrow">YOUR ACTIVITY</p>

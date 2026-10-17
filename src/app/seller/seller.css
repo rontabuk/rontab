@@ -13,6 +13,10 @@
 .seller-auth-switch a, .seller-auth-back { color: #415d43; font-weight: 700; }
 .seller-auth-back { display: inline-block; margin-top: 21px; font-size: 12px; }
 .seller-overview .admin-page-heading { margin-bottom: 22px; }
+.seller-products-page-heading { display: flex; align-items: end; justify-content: space-between; gap: 18px; }
+.seller-products-page-heading > div { min-width: 0; }
+.seller-products-add-button { display: inline-flex; min-height: 44px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; padding: 0 15px; border: 1px solid #34483a; border-radius: 3px; background: #34483a; color: #fffdf8; font-size: 12px; font-weight: 700; }
+.seller-products-add-button:hover { border-color: #405c46; background: #405c46; }
 .seller-profile-page-heading { max-width: 900px; margin-bottom: 5px; }
 .seller-profile-page-heading .admin-eyebrow { margin: 0; }
 .seller-account-profile { max-width: 900px; margin-bottom: 17px; border-bottom: 1px solid #dce2d8; }
@@ -255,6 +259,11 @@
 @media (max-width: 420px) { .seller-ad-product-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 760px) { .seller-product-workspace { grid-template-columns: 1fr; gap: 23px; } .seller-product-preview { position: static; } .seller-product-preview-card { width: 100%; max-width: none; } }
 @media (max-width: 600px) { .seller-auth-panel { padding: 24px; } .seller-product-form, .seller-profile-form { grid-template-columns: 1fr; } .seller-product-form .seller-product-description, .seller-product-form .seller-form-message, .seller-product-form .seller-auth-submit, .seller-current-media, .seller-edit-actions { grid-column: auto; } .seller-current-media { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 600px) {
+	.seller-products-page-heading { align-items: stretch; flex-direction: column; gap: 12px; }
+	.seller-products-page-heading h1 { font-size: 31px; }
+	.seller-products-add-button { width: 100%; }
+}
 @media (max-width: 600px) {
 	.seller-products-section .admin-table-wrap { margin-top: 0; overflow: visible; border: 0; background: transparent; }
 	.seller-products-section .admin-table { display: block; width: 100%; min-width: 0; }

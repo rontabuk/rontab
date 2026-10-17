@@ -1,5 +1,12 @@
 .visitor-overview { max-width: 1120px; padding-top: 18px; }
+.visitor-account-back { display: inline-flex; min-height: 34px; align-items: center; gap: 6px; margin: 0 0 12px; color: #526b50; font-size: 11px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.creator-account-back { display: inline-flex; min-height: 34px; align-items: center; gap: 6px; margin-bottom: 15px; color: #526b50; font-size: 11px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .visitor-creator-page { max-width: 980px; }
+@media (max-width: 700px) {
+	.visitor-creator-page .admin-page-heading { padding-bottom: 18px; }
+	.visitor-creator-page .admin-page-heading h1 { max-width: none; font-size: 21px; line-height: 1.2; white-space: nowrap; }
+	.visitor-creator-page .admin-page-heading > p:last-child { max-width: 42ch; font-size: 12px; line-height: 1.5; }
+}
 .creator-account-choice { margin-top: 20px; padding: 14px 16px; border-left: 3px solid #526c54; background: #f2f5ef; }
 .creator-account-choice .admin-eyebrow { margin: 0 0 5px; }
 .creator-account-choice h2 { margin: 0; color: #354137; font-family: var(--font-display), Georgia, serif; font-size: 20px; font-weight: 400; }
@@ -21,13 +28,11 @@
 .creator-points-balance strong { color: #354b39; font-family: var(--font-display), Georgia, serif; font-size: 23px; font-weight: 400; font-variant-numeric: tabular-nums; }
 .creator-points-balance small { color: #737c71; font-size: 10px; }
 .creator-application-section { margin-top: 27px; border-top: 1px solid #dde2d9; }
-.creator-application-summary { display: grid; gap: 4px; padding: 16px 2px; cursor: pointer; list-style: none; }
+.creator-application-summary { display: inline-flex; width: fit-content; min-height: 42px; align-items: center; padding: 0 14px; border-radius: 3px; background: #34483a; color: #fffdf8; cursor: pointer; list-style: none; transition: background-color 150ms ease; }
 .creator-application-summary::-webkit-details-marker { display: none; }
-.creator-application-summary::after { content: "+"; grid-column: 2; grid-row: 1 / span 3; align-self: center; color: #50684d; font-size: 22px; }
-.creator-application-section[open] > .creator-application-summary::after { content: "−"; }
-.creator-application-summary .admin-eyebrow { margin: 0; }
-.creator-application-summary strong { color: #354137; font-family: var(--font-display), Georgia, serif; font-size: 22px; font-weight: 400; }
-.creator-application-summary small { color: #737c71; font-size: 10px; }
+.creator-application-summary:hover { background: #405c46; }
+.creator-application-summary strong { color: inherit; font-size: 12px; font-weight: 700; }
+.creator-application-hint { margin: 8px 0 0; color: #737c71; font-size: 11px; }
 .creator-edit-notice, .creator-suspended-note { margin: 15px 0 0; padding: 10px 12px; border-left: 3px solid #b08a4f; background: #f5f0e5; color: #65563e; font-size: 12px; line-height: 1.55; }
 .creator-withdraw-action { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 18px; padding: 12px 14px; border: 1px solid #e0e4dc; background: #fcfdf9; }
 .creator-withdraw-action p { margin: 0; color: #687267; font-size: 11px; line-height: 1.5; }
@@ -204,6 +209,8 @@
 .visitor-rewards-back { display: inline-flex; min-height: 34px; align-items: center; gap: 6px; margin: 0 0 12px; color: #526b50; font-size: 11px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .visitor-rewards-heading h1 { font-size: 46px; }
 .visitor-rewards-overview { display: grid; grid-template-columns: 190px minmax(0, 1fr); align-items: center; gap: 28px; padding: 25px 0 30px; border-bottom: 1px solid #dde2d9; }
+.visitor-rewards-gauge-column { display: grid; justify-items: center; gap: 4px; }
+.visitor-rewards-gauge-column > span { color: #60715d; font-size: 10px; font-weight: 700; }
 .visitor-points-gauge { display: grid; width: 166px; aspect-ratio: 1; place-items: center; border-radius: 50%; background: conic-gradient(#6e876a var(--points-progress), #e3e8df var(--points-progress)); }
 .visitor-points-gauge-core { display: grid; width: 132px; aspect-ratio: 1; align-content: center; justify-items: center; border-radius: 50%; background: #f4f5f1; }
 .visitor-points-gauge-core span, .visitor-points-gauge-core small { color: #6f786d; font-size: 11px; }

@@ -224,7 +224,10 @@ export function ProductCard({
             onPointerEnter={() => descriptionOpen && resetCloseTimer()}
           >
             <span className="product-description-name">{product.name}</span>
-            <span className="product-description-maker">{product.maker}{product.sellerBadge && <SellerVerificationBadge isBlue={product.sellerBadge === "blue"} />}</span>
+            <span className="product-description-maker">
+              <span className="product-description-maker-name">{product.maker}</span>
+              {product.sellerBadge && <SellerVerificationBadge isBlue={product.sellerBadge === "blue"} />}
+            </span>
           </button>
           {previewOnly ? (
             <span className="product-visit-button">{visitLabel}</span>

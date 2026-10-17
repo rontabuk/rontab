@@ -206,7 +206,7 @@ export type Database = {
         never
       >;
       creator_profiles: Table<
-        { audience_city_id: string | null; bio: string; created_at: string; display_name: string; id: string; is_public: boolean; owner_id: string; public_profile_consent_at: string | null; published_audience_city_id: string | null; published_bio: string | null; published_display_name: string | null; published_specialties: string[] | null; referral_code: string | null; reviewed_at: string | null; slug: string; specialties: string[]; status: string; submitted_at: string; suspended_from_status: string | null; updated_at: string },
+        { audience_city_id: string | null; bio: string; cover_image_path: string | null; created_at: string; display_name: string; id: string; is_public: boolean; owner_id: string; profile_image_path: string | null; public_profile_consent_at: string | null; published_audience_city_id: string | null; published_bio: string | null; published_cover_image_path: string | null; published_display_name: string | null; published_profile_image_path: string | null; published_specialties: string[] | null; referral_code: string | null; reviewed_at: string | null; slug: string; specialties: string[]; status: string; submitted_at: string; suspended_from_status: string | null; updated_at: string },
         never
       >;
       creator_profile_audience_cities: Table<
@@ -378,6 +378,7 @@ export type Database = {
       creator_get_my_fan_stats: { Args: Record<PropertyKey, never>; Returns: { fan_count: number; first_referral_count: number }[] };
       creator_get_public_fan_count: { Args: { p_creator_profile_id: string }; Returns: number | null };
       creator_save_contact_preferences: { Args: { p_phone: string | null; p_phone_visibility: string }; Returns: undefined };
+      creator_save_profile_media_paths: { Args: { p_cover_image_path: string | null; p_profile_image_path: string | null }; Returns: undefined };
       get_public_creator_contact_phone: { Args: { p_creator_profile_id: string }; Returns: string | null };
       visitor_follow_seller_shop: { Args: { p_seller_profile_id: string }; Returns: Json };
       visitor_unfollow_seller_shop: { Args: { p_seller_profile_id: string }; Returns: boolean };

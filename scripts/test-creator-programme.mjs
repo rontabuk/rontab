@@ -11,7 +11,7 @@ const service = createClient(url, serviceKey);
 const publicClient = createClient(url, anonKey);
 const suffix = randomUUID();
 const password = `LocalTest-${suffix}-Aa1!`;
-const ids = { visitor: null, fan: null, secondOwner: null, sellerUser: null, sellerProfile: null, admin: null, creator: null, secondCreator: null, request: null, requests: [] };
+const ids = { visitor: null, fan: null, secondOwner: null, sellerUser: null, sellerProfile: null, admin: null, creator: null, creatorMedia: [], secondCreator: null, request: null, requests: [] };
 let failure;
 
 function throwOnError(result) {
@@ -53,6 +53,31 @@ try {
   }));
   ids.creator = initial;
 
+  const profileImagePath = `${ids.visitor}/${ids.creator}/profile/${suffix}.png`;
+  const coverImagePath = `${ids.visitor}/${ids.creator}/cover/${suffix}.png`;
+  const imageFixture = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  throwOnError(await visitor.storage.from("creator-profile-media").upload(profileImagePath, imageFixture, { contentType: "image/png" }));
+  ids.creatorMedia.push(profileImagePath);
+  throwOnError(await visitor.storage.from("creator-profile-media").upload(coverImagePath, imageFixture, { contentType: "image/png" }));
+  ids.creatorMedia.push(coverImagePath);
+  throwOnError(await visitor.rpc("creator_save_profile_media_paths", {
+    p_profile_image_path: profileImagePath,
+    p_cover_image_path: coverImagePath,
+  }));
+  const privateMediaDraft = throwOnError(await service.from("creator_profiles")
+    .select("profile_image_path,cover_image_path,published_profile_image_path,published_cover_image_path")
+    .eq("id", ids.creator).single());
+  assert.equal(privateMediaDraft.profile_image_path, profileImagePath);
+  assert.equal(privateMediaDraft.cover_image_path, coverImagePath);
+  assert.equal(privateMediaDraft.published_profile_image_path, null);
+  assert.equal(privateMediaDraft.published_cover_image_path, null);
+  const ownerDraftMediaUrl = throwOnError(await visitor.storage.from("creator-profile-media").createSignedUrl(profileImagePath, 60));
+  assert.ok(ownerDraftMediaUrl.signedUrl, "creators can preview their own draft media");
+  const hiddenDraftMediaUrl = await publicClient.storage.from("creator-profile-media").createSignedUrl(profileImagePath, 60);
+  assert.ok(hiddenDraftMediaUrl.error, "anonymous visitors cannot create a URL for unapproved creator media");
+  const adminDraftMediaUrl = throwOnError(await admin.storage.from("creator-profile-media").createSignedUrl(profileImagePath, 60));
+  assert.ok(adminDraftMediaUrl.signedUrl, "administrators can inspect creator media before approval");
+
   const creatorOwner = throwOnError(await service.from("creator_profiles").select("owner_id").eq("id", ids.creator).single());
   assert.equal(creatorOwner.owner_id, ids.visitor, "the creator profile is linked to the existing visitor account");
   const visitorLoyalty = throwOnError(await service.from("loyalty_accounts").select("points_balance").eq("visitor_id", ids.visitor).single());
@@ -65,10 +90,51 @@ try {
   throwOnError(await admin.rpc("admin_review_creator_profile", { p_creator_profile_id: ids.creator, p_decision: "approve", p_review_note: null }));
 
   const firstPublic = throwOnError(await publicClient.from("creator_profiles")
-    .select("published_display_name,published_audience_city_id")
+    .select("published_display_name,published_audience_city_id,published_profile_image_path,published_cover_image_path")
     .eq("id", ids.creator).single());
   assert.equal(firstPublic.published_display_name, profileName);
   assert.equal(firstPublic.published_audience_city_id, cities[0].city_id);
+  assert.equal(firstPublic.published_profile_image_path, profileImagePath, "creator approval publishes the profile picture snapshot");
+  assert.equal(firstPublic.published_cover_image_path, coverImagePath, "creator approval publishes the cover snapshot");
+  const publicMediaUrl = throwOnError(await publicClient.storage.from("creator-profile-media").createSignedUrl(profileImagePath, 60));
+  const publicCoverUrl = throwOnError(await publicClient.storage.from("creator-profile-media").createSignedUrl(coverImagePath, 60));
+  assert.ok(publicMediaUrl.signedUrl, "anonymous visitors can view approved creator media through a signed URL");
+  assert.ok(publicCoverUrl.signedUrl, "anonymous visitors can view the approved creator cover through a signed URL");
+  const revisedCoverPath = `${ids.visitor}/${ids.creator}/cover/revised-${suffix}.png`;
+  throwOnError(await visitor.storage.from("creator-profile-media").upload(revisedCoverPath, imageFixture, { contentType: "image/png" }));
+  ids.creatorMedia.push(revisedCoverPath);
+  const mediaOnlyUpdate = await visitor.rpc("creator_save_profile_media_paths", {
+    p_profile_image_path: profileImagePath,
+    p_cover_image_path: revisedCoverPath,
+  });
+  assert.equal(mediaOnlyUpdate.error?.code, "55000", "published media cannot bypass full creator-profile review");
+  const mediaResubmission = throwOnError(await visitor.rpc("save_creator_application_with_audience_cities", {
+    p_display_name: profileName,
+    p_bio: "I create useful local food and home content for an engaged community.",
+    p_specialties: ["food", "local"],
+    p_platform_accounts: [{ platform: "instagram", handle: firstPlatformHandle, profile_url: `https://www.instagram.com/${firstPlatformHandle}/`, follower_count: 12000 }],
+    p_audience_city_ids: cities.map((city) => city.city_id),
+    p_portfolio_items: [{ title: "Approved sample", url: "https://www.instagram.com/example/reel/" }],
+    p_public_profile_consent: true,
+  }));
+  assert.equal(mediaResubmission, ids.creator, "editing creator media resubmits the existing profile rather than creating another account");
+  throwOnError(await visitor.rpc("creator_save_profile_media_paths", {
+    p_profile_image_path: profileImagePath,
+    p_cover_image_path: revisedCoverPath,
+  }));
+  const coverWhileReviewing = throwOnError(await service.from("creator_profiles")
+    .select("status,is_public,cover_image_path,published_cover_image_path")
+    .eq("id", ids.creator).single());
+  assert.equal(coverWhileReviewing.status, "submitted", "changing approved creator media returns it to review");
+  assert.equal(coverWhileReviewing.is_public, true, "the previous approved creator profile remains public during review");
+  assert.equal(coverWhileReviewing.cover_image_path, revisedCoverPath);
+  assert.equal(coverWhileReviewing.published_cover_image_path, coverImagePath, "the previous cover remains published until approval");
+  const hiddenRevisedCover = await publicClient.storage.from("creator-profile-media").createSignedUrl(revisedCoverPath, 60);
+  assert.ok(hiddenRevisedCover.error, "anonymous visitors cannot access a revised cover before approval");
+  throwOnError(await admin.rpc("admin_review_creator_profile", { p_creator_profile_id: ids.creator, p_decision: "approve", p_review_note: null }));
+  const revisedCoverPublished = throwOnError(await publicClient.from("creator_profiles")
+    .select("published_cover_image_path").eq("id", ids.creator).single());
+  assert.equal(revisedCoverPublished.published_cover_image_path, revisedCoverPath, "creator approval publishes the revised cover");
   const publishedAudienceCities = throwOnError(await publicClient.from("creator_profile_audience_cities")
     .select("city_id").eq("creator_profile_id", ids.creator).eq("is_published", true).order("city_id"));
   assert.deepEqual(publishedAudienceCities.map((city) => city.city_id), cities.map((city) => city.city_id).sort(), "creator approval publishes all selected audience cities");
@@ -324,11 +390,12 @@ try {
   const sellerWithdrawalNotifications = throwOnError(await visitor.rpc("get_creator_collaboration_notifications"));
   assert.ok(sellerWithdrawalNotifications.some((notification) => notification.title === "Seller withdrew a collaboration request"));
 
-  console.log("PASS: creator lifecycle, private durable review/collaboration notifications, correct recipient routing, notification read tracking, and existing profile/fan/collaboration workflows.");
+  console.log("PASS: creator lifecycle, private draft media and approval publication, durable review/collaboration notifications, correct recipient routing, notification read tracking, and existing profile/fan/collaboration workflows.");
 } catch (error) {
   failure = error;
 } finally {
   if (ids.requests.length) await service.from("creator_collaboration_requests").delete().in("id", ids.requests);
+  if (ids.creatorMedia.length) await service.storage.from("creator-profile-media").remove(ids.creatorMedia);
   const creatorIds = [ids.creator, ids.secondCreator].filter(Boolean);
   if (creatorIds.length) {
     await service.from("creator_first_referrals").delete().in("creator_profile_id", creatorIds);

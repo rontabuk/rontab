@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { connection } from "next/server";
 import { BadgeCheck, Coins, ExternalLink } from "lucide-react";
 import { CreatorVerificationBadge } from "@/components/creator/CreatorVerificationBadge";
@@ -19,8 +20,8 @@ export default async function AdminCreatorsPage({
   await connection();
   const [{ reviewed, granted, duplicate }, { supabase }] = await Promise.all([searchParams, requireAdmin()]);
   const [submittedResult, approvedResult, suspendedResult] = await Promise.all([
-    supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,published_display_name,published_bio,published_specialties,published_audience_city_id,created_at,updated_at").eq("status", "submitted").order("submitted_at", { ascending: true }),
-    supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,published_display_name,published_bio,published_specialties,published_audience_city_id,created_at,updated_at").eq("is_public", true).order("updated_at", { ascending: false }).limit(100),
+    supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,published_display_name,published_bio,published_specialties,published_audience_city_id,profile_image_path,cover_image_path,published_profile_image_path,published_cover_image_path,created_at,updated_at").eq("status", "submitted").order("submitted_at", { ascending: true }),
+    supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,published_display_name,published_bio,published_specialties,published_audience_city_id,profile_image_path,cover_image_path,published_profile_image_path,published_cover_image_path,created_at,updated_at").eq("is_public", true).order("updated_at", { ascending: false }).limit(100),
     supabase.from("creator_profiles").select("id,display_name").eq("status", "suspended").order("updated_at", { ascending: false }),
   ]);
   if (submittedResult.error) throw new Error(submittedResult.error.message);
@@ -30,6 +31,12 @@ export default async function AdminCreatorsPage({
   const approved = approvedResult.data;
   const suspended = suspendedResult.data;
   const allProfileIds = [...submitted, ...approved].map((profile) => profile.id);
+  const mediaPaths = [...new Set([...submitted, ...approved].flatMap((profile) => [
+    profile.profile_image_path,
+    profile.cover_image_path,
+    profile.published_profile_image_path,
+    profile.published_cover_image_path,
+  ]).filter((path): path is string => Boolean(path)))];
   const cityIds = [...new Set([...submitted.map((profile) => profile.audience_city_id), ...approved.map((profile) => profile.published_audience_city_id)].filter((cityId): cityId is string => Boolean(cityId)))];
   const [accountsResult, portfolioResult, citiesResult, reviewsResult, pointsResult] = await Promise.all([
     allProfileIds.length
@@ -51,6 +58,11 @@ export default async function AdminCreatorsPage({
   for (const result of [accountsResult, portfolioResult, citiesResult, reviewsResult, pointsResult]) {
     if (result.error) throw new Error(result.error.message);
   }
+  const { data: signedMedia, error: signedMediaError } = mediaPaths.length
+    ? await supabase.storage.from("creator-profile-media").createSignedUrls(mediaPaths, 60 * 60)
+    : { data: [], error: null };
+  if (signedMediaError) throw new Error(signedMediaError.message);
+  const mediaUrlByPath = new Map((signedMedia ?? []).flatMap((item) => item.path && item.signedUrl ? [[item.path, item.signedUrl] as const] : []));
   const accountsByProfile = new Map<string, typeof accountsResult.data>();
   for (const account of accountsResult.data ?? []) {
     const list = accountsByProfile.get(account.creator_profile_id) ?? [];
@@ -96,6 +108,12 @@ export default async function AdminCreatorsPage({
                   <div className="creator-admin-profile">
                     <div className="creator-admin-status"><span className="admin-status admin-status-pending">Submitted</span><time>{formatDateTime(profile.submitted_at)}</time></div>
                     <h3>{profile.display_name}</h3>
+                    {(profile.profile_image_path || profile.cover_image_path) && (
+                      <div className="creator-admin-media-preview" aria-label="Submitted creator images">
+                        {profile.profile_image_path && mediaUrlByPath.get(profile.profile_image_path) && <Image src={mediaUrlByPath.get(profile.profile_image_path)!} alt={`${profile.display_name} submitted profile picture`} width={72} height={72} unoptimized />}
+                        {profile.cover_image_path && mediaUrlByPath.get(profile.cover_image_path) && <Image className="creator-admin-cover-preview" src={mediaUrlByPath.get(profile.cover_image_path)!} alt={`${profile.display_name} submitted cover`} width={360} height={100} unoptimized />}
+                      </div>
+                    )}
                     <p className="creator-admin-specialties">{profile.specialties.map(specialtyLabel).join(" · ")}</p>
                     <p className="creator-admin-bio">{profile.bio}</p>
                     {profile.audience_city_id && <p className="creator-admin-specialties">Primary audience: {citiesById.get(profile.audience_city_id) ?? profile.audience_city_id}</p>}
@@ -103,6 +121,10 @@ export default async function AdminCreatorsPage({
                       <div className="creator-admin-public-snapshot">
                         <strong>Currently public</strong>
                         <span>{profile.published_display_name ?? profile.display_name} · {(profile.published_specialties ?? []).map(specialtyLabel).join(" · ")}</span>
+                        <div className="creator-admin-media-preview" aria-label="Current public creator images">
+                          {profile.published_profile_image_path && mediaUrlByPath.get(profile.published_profile_image_path) && <Image src={mediaUrlByPath.get(profile.published_profile_image_path)!} alt={`${profile.display_name} current profile picture`} width={56} height={56} unoptimized />}
+                          {profile.published_cover_image_path && mediaUrlByPath.get(profile.published_cover_image_path) && <Image className="creator-admin-cover-preview" src={mediaUrlByPath.get(profile.published_cover_image_path)!} alt={`${profile.display_name} current cover`} width={300} height={84} unoptimized />}
+                        </div>
                         {profile.published_audience_city_id && <span>Audience: {citiesById.get(profile.published_audience_city_id) ?? profile.published_audience_city_id}</span>}
                         {profile.published_bio && <p>{profile.published_bio}</p>}
                       </div>

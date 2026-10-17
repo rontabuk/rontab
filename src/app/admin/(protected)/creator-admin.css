@@ -4,6 +4,9 @@
 .creator-admin-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .creator-admin-status time { color: #7b8379; font-size: 10px; }
 .creator-admin-profile h3, .creator-admin-approved h3 { margin: 9px 0 3px; color: #354137; font-family: var(--font-display), Georgia, serif; font-size: 22px; font-weight: 400; }
+.creator-admin-media-preview { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 9px; }
+.creator-admin-media-preview > img:not(.creator-admin-cover-preview) { width: 56px; height: 56px; border: 1px solid #dce1d7; border-radius: 50%; background: #edf1e9; object-fit: cover; }
+.creator-admin-cover-preview { width: min(100%, 240px); height: auto; aspect-ratio: 3.6 / 1; border: 1px solid #dce1d7; background: #edf1e9; object-fit: cover; }
 .creator-admin-specialties { margin: 0; color: #60745e; font-size: 10px; font-weight: 700; }
 .creator-admin-bio { margin: 10px 0 0; color: #606a60; font-size: 12px; line-height: 1.65; white-space: pre-line; }
 .creator-admin-prior-note { margin: 10px 0 0; padding: 8px 10px; border-left: 2px solid #b08a4f; background: #f5f0e5; color: #65563e; font-size: 11px; line-height: 1.5; }
