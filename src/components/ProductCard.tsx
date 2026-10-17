@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Image as ImageIcon, Play, Volume2, VolumeX } from "lucide-react";
+import { ArrowUpRight, Eye, Image as ImageIcon, Volume2, VolumeX } from "lucide-react";
 import type { Product } from "@/data/products";
 import { ShopFollowButton } from "@/components/ShopFollowButton";
 import { ShopVisitLink } from "@/components/ShopVisitLink";
 import { SellerVerificationBadge } from "@/components/seller/SellerVerificationBadge";
 import { formatCompactNumber, formatPrice } from "@/lib/format";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export function ProductCard({
   product,
@@ -26,8 +27,11 @@ export function ProductCard({
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const [visibleDetailLength, setVisibleDetailLength] = useState(0);
   const [previewMuted, setPreviewMuted] = useState(true);
+  const [viewCount, setViewCount] = useState(product.viewCount ?? 0);
   const closeTimer = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const cardRef = useRef<HTMLElement>(null);
+  const viewRecorded = useRef(false);
   const descriptionId = `description-${product.slug}`;
   const descriptionCloseDelay = Math.min(180_000, Math.max(15_000, product.description.length * 60 + 5_000));
 
@@ -106,6 +110,29 @@ export function ProductCard({
     };
   }, [previewOnly, product.mediaType]);
 
+  useEffect(() => {
+    const productId = product.id;
+    const card = cardRef.current;
+    if (previewOnly || !productId || !product.image || !card || typeof IntersectionObserver === "undefined") return;
+
+    const supabase = createSupabaseBrowserClient();
+    const viewerSessionId = getProductViewSessionId();
+    if (!supabase || !viewerSessionId) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (viewRecorded.current || !entry.isIntersecting || entry.intersectionRatio < 0.5) return;
+
+      viewRecorded.current = true;
+      observer.unobserve(card);
+      void supabase.rpc("record_product_view", { p_product_id: productId, p_viewer_session_id: viewerSessionId }).then(({ data, error }) => {
+        if (!error && typeof data === "number") setViewCount(data);
+      }, () => {});
+    }, { threshold: 0.5 });
+
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, [previewOnly, product.id, product.image]);
+
   const mediaElement = !product.image && previewOnly && showUploadPlaceholder ? (
     <div className="seller-upload-preview-placeholder" role="img" aria-label="Preview placeholder for your product photo or Reel">
       <div className="seller-upload-preview-topline"><span>YOUR SHOP</span><span>4:5 PORTRAIT</span></div>
@@ -151,7 +178,7 @@ export function ProductCard({
   );
 
   return (
-    <article className="product-card" data-product-card data-preview-only={previewOnly || undefined}>
+    <article ref={cardRef} className="product-card" data-product-card data-preview-only={previewOnly || undefined}>
       <div className="product-image" data-media-type={product.mediaType ?? "image"} data-tone={product.overlayTone}>
         {previewOnly ? (
           <div className="product-image-link">{mediaElement}</div>
@@ -161,9 +188,9 @@ export function ProductCard({
           </Link>
         )}
         {product.image && (
-          <span className="product-media-badge">
-            {product.mediaType === "video" ? <Play size={11} fill="currentColor" aria-hidden="true" /> : <ImageIcon size={12} aria-hidden="true" />}
-            {product.mediaType === "video" ? "Reel" : "Image"}
+          <span className="product-view-count-badge" aria-label={`${formatCompactNumber(viewCount)} views`}>
+            <Eye size={12} aria-hidden="true" />
+            <span aria-hidden="true">{formatCompactNumber(viewCount)}</span>
           </span>
         )}
         {isFeatured && <span className="product-featured-badge">Featured</span>}
@@ -202,10 +229,12 @@ export function ProductCard({
             onClick={toggleDescription}
             onPointerEnter={() => descriptionOpen && resetCloseTimer()}
           >
-            <span className="product-description-name">{product.name}</span>
-            <span className="product-description-maker">
-              <span className="product-description-maker-name">{product.maker}</span>
+            <span className="product-description-name">
+              <span className="product-description-name-text">{product.maker}</span>
               {product.sellerBadge && <SellerVerificationBadge isBlue={product.sellerBadge === "blue"} />}
+            </span>
+            <span className="product-description-maker">
+              <span className="product-description-maker-name">{product.name}</span>
             </span>
           </button>
           {previewOnly ? (
@@ -249,4 +278,18 @@ export function ProductCard({
 
 function getMakerInitials(maker: string) {
   return maker.trim().split(/\s+/).slice(0, 2).map((word) => word[0]?.toUpperCase()).join("") || "R";
+}
+
+function getProductViewSessionId() {
+  try {
+    const storageKey = "rontab-product-view-session";
+    const existingId = window.sessionStorage.getItem(storageKey);
+    if (existingId) return existingId;
+
+    const sessionId = window.crypto.randomUUID();
+    window.sessionStorage.setItem(storageKey, sessionId);
+    return sessionId;
+  } catch {
+    return null;
+  }
 }

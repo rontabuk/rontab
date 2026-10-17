@@ -16,6 +16,7 @@ export type Product = {
   featuredUntil?: string | null;
   newUntil?: string | null;
   mediaType?: "image" | "video";
+  viewCount?: number;
   clickCount?: number;
   clicksSinceTopUp?: number;
   description: string;

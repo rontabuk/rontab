@@ -40,8 +40,8 @@ export type Database = {
         [{ foreignKeyName: "product_images_product_id_fkey"; columns: ["product_id"]; isOneToOne: false; referencedRelation: "products"; referencedColumns: ["id"] }]
       >;
       products: Table<
-        { audio_script: string; category_id: string; click_count: number; clicks_since_top_up: number; created_at: string; currency: string; description: string; external_url: string; featured_until: string | null; id: string; name: string; new_until: string | null; price: number | null; published_at: string | null; reviewed_at: string | null; reviewed_by: string | null; seller_profile_id: string; slug: string; status: Database["public"]["Enums"]["product_status"]; updated_at: string },
-        { audio_script?: string; category_id: string; click_count?: number; created_at?: string; currency?: string; description: string; external_url: string; featured_until?: string | null; id?: string; name: string; new_until?: string | null; price?: number | null; published_at?: string | null; reviewed_at?: string | null; reviewed_by?: string | null; seller_profile_id: string; slug: string; status?: Database["public"]["Enums"]["product_status"]; updated_at?: string },
+        { audio_script: string; category_id: string; click_count: number; clicks_since_top_up: number; created_at: string; currency: string; description: string; external_url: string; featured_until: string | null; id: string; name: string; new_until: string | null; price: number | null; published_at: string | null; reviewed_at: string | null; reviewed_by: string | null; seller_profile_id: string; slug: string; status: Database["public"]["Enums"]["product_status"]; updated_at: string; view_count: number },
+        { audio_script?: string; category_id: string; click_count?: number; created_at?: string; currency?: string; description: string; external_url: string; featured_until?: string | null; id?: string; name: string; new_until?: string | null; price?: number | null; published_at?: string | null; reviewed_at?: string | null; reviewed_by?: string | null; seller_profile_id: string; slug: string; status?: Database["public"]["Enums"]["product_status"]; updated_at?: string; view_count?: number },
         [
           { foreignKeyName: "products_category_id_fkey"; columns: ["category_id"]; isOneToOne: false; referencedRelation: "categories"; referencedColumns: ["id"] },
           { foreignKeyName: "products_seller_profile_id_fkey"; columns: ["seller_profile_id"]; isOneToOne: false; referencedRelation: "seller_profiles"; referencedColumns: ["id"] }
@@ -323,6 +323,7 @@ export type Database = {
       search_supported_cities: { Args: { p_country_code: string; p_query: string }; Returns: { admin_name: string; city_ascii: string; city_id: string; city_name: string; country_code: string }[] };
       join_loyalty_offer: { Args: { p_offer_id: string }; Returns: Json };
       is_product_click_credit_available: { Args: { p_product_id: string }; Returns: boolean };
+      record_product_view: { Args: { p_product_id: string; p_viewer_session_id: string }; Returns: number | null };
       record_product_shop_click: { Args: { p_product_id: string; p_visitor_id: string }; Returns: boolean };
       seller_set_product_click_allocations: { Args: { p_allocations: Json }; Returns: undefined };
       seller_save_contact_details: { Args: { p_business_address: string | null; p_contact_name: string | null; p_instagram_url: string | null; p_phone: string | null; p_website_url: string | null }; Returns: undefined };
