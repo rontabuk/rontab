@@ -373,7 +373,8 @@ li[data-unread] .notification-copy time { color: #065fd4; font-weight: 700; }
 .product-description-maker { display: flex; min-width: 0; align-items: center; gap: 4px; margin-top: 4px; overflow: hidden; color: #606060; font-size: 11px; font-weight: 500; white-space: nowrap; }
 .product-description-maker-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .product-description-name .seller-verification-badge { flex: 0 0 19px; }
-.product-view-count-badge { position: absolute; z-index: 2; top: 12px; left: 12px; display: inline-flex; min-height: 27px; align-items: center; gap: 6px; padding: 0 9px; border-radius: 5px; background: rgb(15 15 15 / 72%); color: #ffffff; font-size: 11px; font-weight: 600; line-height: 1; pointer-events: none; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.product-view-count-badge { position: absolute; z-index: 2; top: 12px; left: 12px; display: inline-flex; min-height: 27px; align-items: center; gap: 5px; padding: 0 9px; border: 0; border-radius: 999px; background: #000; color: #fff; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; pointer-events: none; }
+.product-view-count-badge svg { width: 13px; height: 13px; flex: 0 0 auto; stroke-width: 2.25; }
 .product-view-count-badge ~ .product-featured-badge { right: 12px; left: auto; }
 .product-click-count { min-width: 3ch; color: #4c5649; font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
 .description-panel { padding: 0 15px 14px; overflow: hidden; color: var(--ink); }
@@ -559,6 +560,11 @@ li[data-unread] .notification-copy time { color: #065fd4; font-weight: 700; }
   .status-page h1 { font-size: 40px; }
   /* iOS Safari zooms into any focused field rendered below 16px. */
   input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), select, textarea { font-size: 16px !important; }
+}
+
+@media (max-width: 760px) and (display-mode: standalone) {
+  .mobile-bottom-nav > a, .mobile-bottom-nav > button, .mobile-nav-menu > summary { transform: translateY(-6px); }
+  .mobile-nav-menu-panel { bottom: calc(76px + env(safe-area-inset-bottom)); }
 }
 
 @keyframes menu-sheet-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }

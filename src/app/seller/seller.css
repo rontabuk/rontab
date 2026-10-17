@@ -28,7 +28,30 @@
 .seller-account-details p { display: flex; align-items: center; gap: 5px; margin: 7px 0 0; color: #687267; font-size: 11px; }
 .seller-account-details p svg { flex: 0 0 auto; }
 .seller-account-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
-.seller-account-actions a { display: inline-flex; min-height: 36px; align-items: center; justify-content: center; gap: 5px; padding: 0 11px; border: 1px solid #d8dfd3; border-radius: 3px; color: #405745; font-size: 11px; font-weight: 700; }
+.seller-account-actions a, .seller-profile-edit-button { display: inline-flex; min-height: 36px; align-items: center; justify-content: center; gap: 5px; padding: 0 11px; border: 1px solid #d8dfd3; border-radius: 3px; background: transparent; color: #405745; cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; }
+.seller-profile-public-description { max-width: 680px; margin: 0 0 9px; color: #626c60; font-size: 12px; line-height: 1.65; white-space: pre-line; }
+.seller-profile-public-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 9px 14px; margin-bottom: 13px; }
+.seller-profile-public-meta > a { display: inline-flex; align-items: center; gap: 5px; color: #405f45; font-size: 11px; font-weight: 700; overflow-wrap: anywhere; }
+.seller-profile-products { max-width: 900px; margin: 25px 0 29px; }
+.seller-profile-products-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.seller-profile-products-heading h2 { margin: 0; color: #354137; font-family: var(--font-display), Georgia, serif; font-size: 22px; font-weight: 400; }
+.seller-profile-products-heading span { color: #737c71; font-size: 11px; }
+.seller-profile-product-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.seller-profile-product-grid .product-card-footer-compact { border-top: 1px solid #e4e6eb; background: #fff; color: #1c1e21; }
+.seller-profile-product-grid .product-card-info-compact { display: grid; align-content: start; gap: 7px; padding: 10px 9px; }
+.seller-profile-product-grid .product-card-compact-price { color: #56692f; font-size: 16px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.seller-profile-product-grid .product-card-compact-title { display: grid; min-height: 34px; align-content: start; gap: 4px; }
+.seller-profile-product-grid .product-card-info-compact .product-description-name { color: #1c1e21; }
+.seller-profile-product-grid .product-card-info-compact .product-description-maker { color: #65676b; }
+.seller-profile-product-grid .product-card-info-compact .product-description-name, .seller-profile-product-grid .product-card-info-compact .product-description-maker { min-height: 13px; margin: 0; }
+.seller-profile-product-grid .product-card-info-compact .product-description-name-text, .seller-profile-product-grid .product-card-info-compact .product-description-maker-name { font-size: 12px; }
+.seller-profile-product-grid .product-card-compact-description { display: -webkit-box; min-height: 32px; max-height: 32px; margin: 0; overflow: hidden; color: #65676b; font-size: 11px; line-height: 16px; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.seller-profile-product-grid .product-visit-button-compact { display: grid; width: calc(100% + 18px); min-height: 34px; grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; margin-inline: -9px; padding: 0 14px; border: 0; border-radius: 5px; background: #1da1f2; color: #fff; box-sizing: border-box; font-size: 11px; font-weight: 600; line-height: 1.2; }
+.seller-profile-product-grid .product-visit-button-compact > span:first-child { min-width: 0; text-align: left; }
+.seller-profile-product-grid .product-visit-button-compact:hover, .seller-profile-product-grid .product-visit-button-compact:hover .product-visit-meta, .seller-profile-product-grid .product-visit-button-compact:hover .product-click-count, .seller-profile-product-grid .product-visit-button-compact:hover svg { background: #1a91da; color: #fff; }
+.seller-profile-product-grid .product-visit-button-compact .product-visit-meta { min-width: 42px; justify-content: flex-end; gap: 4px; margin: 0; padding: 0; border: 0; color: inherit; }
+.seller-profile-product-grid .product-visit-button-compact .product-click-count { color: inherit; }
+.seller-profile-products-empty { padding: 25px 12px; border: 1px dashed #cfd7cb; color: #697268; font-size: 12px; text-align: center; }
 .seller-account-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid #e2e6df; }
 .seller-account-stats > div { display: grid; gap: 3px; justify-items: center; padding: 11px 6px; text-align: center; }
 .seller-account-stats > div + div { border-left: 1px solid #e2e6df; }
@@ -134,8 +157,10 @@
 	.seller-account-details h1 { font-size: 21px; }
 	.seller-account-actions { grid-column: 2; justify-content: flex-start; gap: 5px; }
 	.seller-account-actions a { min-height: 32px; padding-inline: 8px; font-size: 10px; }
+	.seller-profile-edit-button { min-height: 32px; padding-inline: 8px; font-size: 10px; }
 	.seller-account-stats strong { font-size: 18px; }
 	.seller-account-stats span { font-size: 9px; }
+	.seller-profile-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
 	.seller-profile-editor > summary { padding-block: 13px; }
 	.seller-profile-editor > summary span { font-size: 19px; }
 	.seller-profile-form { grid-template-columns: minmax(0, 1fr); gap: 13px; padding: 14px; }

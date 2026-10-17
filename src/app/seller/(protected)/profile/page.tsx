@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
-import { ArrowUpRight, MapPin, Store } from "lucide-react";
+import { ArrowUpRight, Globe2, MapPin, Phone, Store } from "lucide-react";
 import { connection } from "next/server";
 import { saveSellerProfile, sendSellerPhoneConfirmation } from "@/app/seller/(protected)/actions";
 import { ActionForm } from "@/components/ActionForm";
 import { ProfileImageUpload } from "@/components/ProfileImageUpload";
 import { CityPicker } from "@/components/CityPicker";
+import { ProductCard } from "@/components/ProductCard";
+import { SellerVerificationBadge } from "@/components/seller/SellerVerificationBadge";
+import { SellerProfileEditButton } from "@/components/seller/SellerProfileEditButton";
 import { formatDate, formatNumber } from "@/lib/format";
 import { getSavedCity, getSupportedLocations } from "@/lib/locations";
 import { getSellerAccount } from "@/lib/seller/access";
+import { getPublicCatalog } from "@/lib/supabase/catalog";
 
 export const metadata: Metadata = { title: "Seller profile", robots: { index: false, follow: false } };
 export const instant = false;
@@ -22,7 +25,7 @@ export default async function SellerProfilePage({
   await connection();
   const { saved, verificationSent, phoneConfirmed, verificationError } = await searchParams;
   const { supabase, seller } = await getSellerAccount();
-  const [{ data: authResult, error: authError }, { data: contact, error: contactError }, { data: shopFollowerCount, error: followerCountError }, { countries, cities }, savedCity] = await Promise.all([
+  const [{ data: authResult, error: authError }, { data: contact, error: contactError }, { data: shopFollowerCount, error: followerCountError }, { countries, cities }, savedCity, { data: publicPhone, error: publicPhoneError }, { data: badges, error: badgesError }, catalog] = await Promise.all([
     supabase.auth.getUser(),
     supabase
       .from("seller_contact_details")
@@ -32,13 +35,20 @@ export default async function SellerProfilePage({
     supabase.rpc("seller_get_shop_follower_count"),
     getSupportedLocations(),
     getSavedCity(supabase, seller.shop_city_id),
+    supabase.rpc("get_public_seller_contact_phone", { p_seller_profile_id: seller.id }),
+    supabase.rpc("get_public_seller_verification_badges", { p_seller_profile_ids: [seller.id] }),
+    getPublicCatalog(),
   ]);
 
   if (authError) throw new Error(authError.message);
   if (contactError) throw new Error(contactError.message);
   if (followerCountError) throw new Error(followerCountError.message);
+  if (publicPhoneError) throw new Error(publicPhoneError.message);
+  if (badgesError) throw new Error(badgesError.message);
   const registeredEmail = authResult.user?.email ?? "";
   const isRegisteredEmailVerified = Boolean(authResult.user?.email_confirmed_at);
+  const sellerBadge = badges?.find((badge) => badge.is_verified);
+  const products = catalog.products.filter((product) => product.sellerProfileId === seller.id);
 
   return (
     <main className="admin-overview seller-overview">
@@ -55,12 +65,17 @@ export default async function SellerProfilePage({
               : <Store size={30} aria-hidden="true" />}
           </div>
           <div className="seller-account-details">
-            <h1>{seller.shop_name}</h1>
+            <h1>{seller.shop_name}{sellerBadge && <SellerVerificationBadge isBlue={sellerBadge.is_blue} />}</h1>
             <p><MapPin size={14} aria-hidden="true" />{savedCity ? `${savedCity.city_name}, ${savedCity.country_code}` : "Shop location not set"}</p>
           </div>
           <div className="seller-account-actions">
-            {seller.status === "active" && seller.is_public && <Link href={`/shops/${seller.slug}`}>View shop<ArrowUpRight size={14} aria-hidden="true" /></Link>}
+            <SellerProfileEditButton targetId="seller-profile-editor" />
           </div>
+        </div>
+        {seller.description && <p className="seller-profile-public-description">{seller.description}</p>}
+        <div className="seller-profile-public-meta">
+          {seller.shop_url && <a href={seller.shop_url} target="_blank" rel="noreferrer"><Globe2 size={14} aria-hidden="true" />Shop website<ArrowUpRight size={13} aria-hidden="true" /></a>}
+          {publicPhone && <a href={`tel:${publicPhone}`}><Phone size={14} aria-hidden="true" />{publicPhone}</a>}
         </div>
         <div className="seller-account-stats" aria-label="Shop activity">
           <div><strong>{formatNumber(shopFollowerCount ?? 0)}</strong><span>Followers</span></div>
@@ -68,7 +83,16 @@ export default async function SellerProfilePage({
           <div><strong>{seller.is_public ? "Visible" : "Hidden"}</strong><span>Public shop</span></div>
         </div>
       </section>
-      <details className="seller-profile-editor">
+      <section className="seller-profile-products" aria-labelledby="seller-profile-products-title">
+        <div className="seller-profile-products-heading">
+          <h2 id="seller-profile-products-title">Products</h2>
+          <span>{formatNumber(products.length)}</span>
+        </div>
+        {products.length
+          ? <div className="seller-profile-product-grid">{products.map((product) => <ProductCard product={product} compact muteAutoplay key={product.slug} />)}</div>
+          : <p className="seller-profile-products-empty">Published products will appear here.</p>}
+      </section>
+      <details id="seller-profile-editor" className="seller-profile-editor">
         <summary>
           <span>Edit shop profile</span>
           <small>Update shop details and private contact information.</small>

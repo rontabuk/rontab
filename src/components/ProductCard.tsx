@@ -19,6 +19,7 @@ export function ProductCard({
   previewOnly = false,
   showUploadPlaceholder = false,
   isShopFollowed = false,
+  muteAutoplay = false,
 }: {
   product: Product;
   isFeatured?: boolean;
@@ -26,12 +27,13 @@ export function ProductCard({
   previewOnly?: boolean;
   showUploadPlaceholder?: boolean;
   isShopFollowed?: boolean;
+  muteAutoplay?: boolean;
 }) {
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const [visibleDetailLength, setVisibleDetailLength] = useState(0);
   const [soundBlocked, setSoundBlocked] = useState(false);
   const [preferences, setPreferences] = useState(DEFAULT_CLIENT_PREFERENCES);
-  const audioMuted = !preferences.reelSoundEnabled || soundBlocked;
+  const audioMuted = muteAutoplay || !preferences.reelSoundEnabled || soundBlocked;
   const [viewCount, setViewCount] = useState(product.viewCount ?? 0);
   const closeTimer = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
