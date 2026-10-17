@@ -1,6 +1,6 @@
 .visitor-account-page { display: grid; min-height: 100svh; place-items: center; padding: 32px 20px; background: #f9f9f9; color: #0f0f0f; }
 .visitor-account-panel { width: min(100%, 440px); padding: 36px 34px 30px; border: 1px solid rgb(0 0 0 / 8%); border-radius: 5px; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 16px 40px rgb(0 0 0 / 6%); }
-.visitor-account-wordmark { display: inline-block; margin-bottom: 26px; color: #0f0f0f; font-family: var(--font-display), Georgia, serif; font-size: 30px; line-height: 1; }
+.visitor-account-wordmark { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 26px; color: #0f0f0f; font-family: var(--font-display), Georgia, serif; font-size: 30px; line-height: 1; }
 
 .visitor-account-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 26px; padding: 4px; border-radius: 5px; background: #f2f2f2; }
 .visitor-account-tabs button { min-height: 38px; border: 0; border-radius: 5px; background: transparent; color: #606060; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }

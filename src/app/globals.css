@@ -264,7 +264,8 @@ li[data-unread] .notification-copy time { color: #065fd4; font-weight: 700; }
 }
 @keyframes notification-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 @keyframes notification-pop { from { transform: scale(.4); } to { transform: scale(1); } }
-.wordmark { flex: 0 0 auto; font-family: var(--font-display), Georgia, serif; font-size: 34px; line-height: 1; }
+.wordmark { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; font-family: var(--font-display), Georgia, serif; font-size: 34px; line-height: 1; white-space: nowrap; }
+.brand-mark { display: block; flex: 0 0 auto; height: auto; }
 .header-actions { display: flex; align-items: center; gap: 16px; }
 .header-account-link { display: inline-flex; min-height: 40px; align-items: center; gap: 8px; padding: 0 14px; border: 1px solid #d4d3ca; border-radius: 40px; color: var(--green-dark); font-size: 12px; font-weight: 600; white-space: nowrap; transition: border-color 160ms ease, background-color 160ms ease; }
 .header-account-link:hover { border-color: var(--green-dark); background: #e9eee5; }

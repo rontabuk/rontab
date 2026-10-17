@@ -16,7 +16,13 @@ const dmSerifDisplay = DM_Serif_Display({
   weight: "400",
 });
 
+const deploymentHost = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
+const metadataBase = process.env.NEXT_PUBLIC_SITE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SITE_URL)
+  : new URL(deploymentHost ? `https://${deploymentHost}` : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase,
   title: {
     default: "RonTab | Good things, well found",
     template: "%s | RonTab",
@@ -24,6 +30,14 @@ export const metadata: Metadata = {
   description:
     "A considered edit of useful, characterful finds for the everyday home.",
   appleWebApp: { capable: true, title: "RonTab", statusBarStyle: "default" },
+  icons: {
+    icon: [
+      { url: "/brand/favicon.svg", type: "image/svg+xml" },
+      { url: "/brand/favicon-48.svg", sizes: "48x48", type: "image/svg+xml" },
+      { url: "/brand/favicon-32.svg", sizes: "32x32", type: "image/svg+xml" },
+      { url: "/brand/favicon-16.svg", sizes: "16x16", type: "image/svg+xml" },
+    ],
+  },
 };
 
 export const viewport: Viewport = {

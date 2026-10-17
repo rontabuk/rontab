@@ -1,8 +1,8 @@
-import { renderAppIcon } from "@/lib/pwa-icon";
+import { renderBrandImage } from "@/lib/brand-image";
 
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
-export default function AppleIcon() {
-  return renderAppIcon(180);
+export default async function AppleIcon() {
+  return renderBrandImage("apple-touch-icon-180.svg", size.width, size.height);
 }

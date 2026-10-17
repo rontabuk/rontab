@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-134.9 -155.4 1534.7 1534.7" width="192" height="192" role="img" aria-label="RT Logo"><title>RT Logo</title><rect x="-134.9" y="-155.4" width="1534.7" height="1534.7" rx="337.6" fill="#FFFFFF"/>
+
+  <defs>
+    <linearGradient id="orangeH" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFA500"/>
+      <stop offset="1" stop-color="#FF5A00"/>
+    </linearGradient>
+    <linearGradient id="orangeT" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#FFA000"/>
+      <stop offset="0.45" stop-color="#FF7A00"/>
+      <stop offset="1" stop-color="#FF4D00"/>
+    </linearGradient>
+    <linearGradient id="orangeL" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFB000"/>
+      <stop offset="1" stop-color="#FF5A00"/>
+    </linearGradient>
+    <linearGradient id="dark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2E2E36"/>
+      <stop offset="1" stop-color="#14151D"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Cart handle -->
+  <path fill="url(#orangeH)" d="M112 222 H278 C305 222 322 236 335 258 L378 330 L352 334 C325 318 298 300 270 297 L262 288 H112 C95 288 80 274 80 255 C80 237 95 222 112 222 Z"/>
+
+  <!-- Speed lines -->
+  <path fill="url(#orangeL)" d="M112 512 C200 490 290 472 352 465 C368 465 380 478 380 490 C380 503 368 514 352 514 Z"/>
+  <path fill="url(#orangeL)" d="M105 601 C190 578 300 555 382 547 C398 547 408 558 408 571 C408 585 398 596 382 596 Z"/>
+  <path fill="url(#orangeL)" d="M178 665 C260 645 340 628 412 621 C428 621 440 632 440 645 C440 658 428 669 412 669 Z"/>
+
+  <!-- Letter T -->
+  <path fill="url(#orangeT)" d="M683 332 H1158 C1175 334 1184 352 1175 372 C1160 402 1140 432 1100 432 H1003 L910 722 C908 730 902 734 890 734 C850 734 818 710 805 680 L888 432 H780 C765 395 730 352 683 332 Z"/>
+
+  <!-- Letter R + cart body -->
+  <path fill="url(#dark)" d="M272 298 C300 300 330 312 352 332 H600 C700 332 760 400 762 470 C762 530 715 570 645 577 C675 585 690 600 710 620 L825 737 H722 C705 737 690 730 680 720 L590 612 C578 598 565 590 552 585 L610 715 C620 738 635 755 660 755 H995 C1010 755 1020 770 1020 780 C1020 792 1010 802 995 802 H620 C560 802 530 785 515 750 L412 505 H600 C630 505 645 485 645 465 C645 435 625 412 598 412 H345 L328 405 Z"/>
+
+  <!-- Wheels -->
+  <g>
+    <circle cx="569" cy="910" r="92" fill="url(#dark)"/>
+    <circle cx="569" cy="910" r="52" fill="#fff"/>
+    <circle cx="569" cy="910" r="42" fill="url(#orangeH)"/>
+    <circle cx="921" cy="910" r="92" fill="url(#dark)"/>
+    <circle cx="921" cy="910" r="52" fill="#fff"/>
+    <circle cx="921" cy="910" r="42" fill="url(#orangeH)"/>
+  </g>
+</svg>

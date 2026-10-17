@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { startTransition, useActionState, useState } from "react";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, Loader2, Mail } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 import { requestPasswordReset, resetPassword } from "@/app/auth/password-actions";
 
 export function PasswordRecoveryForm({ mode, returnTo, expired = false }: { mode: "request" | "reset"; returnTo: string; expired?: boolean }) {
@@ -13,7 +14,7 @@ export function PasswordRecoveryForm({ mode, returnTo, expired = false }: { mode
 
   return <main className="visitor-account-page">
     <section className="visitor-account-panel" aria-labelledby="password-recovery-title">
-      <Link className="visitor-account-wordmark" href="/products" aria-label="RonTab products">RonTab</Link>
+      <Link className="visitor-account-wordmark" href="/products" aria-label="RonTab products"><BrandMark width={42} height={30} /><span>RonTab</span></Link>
       <div className="password-recovery-icon"><Icon size={25} aria-hidden="true" /></div>
       <h1 id="password-recovery-title">{state.success ? mode === "request" ? "Check your inbox" : "Password updated" : mode === "request" ? "Forgot your password?" : "Set a new password"}</h1>
       <p className="visitor-account-intro">{state.success

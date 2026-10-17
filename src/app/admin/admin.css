@@ -12,7 +12,7 @@
 .admin-security-note { margin: 23px 0 0; padding-top: 15px; border-top: 1px solid #e0e2da; color: #777d73; font-size: 10px; line-height: 1.6; }
 .admin-shell { display: flex; min-height: 100vh; background: #f4f5f1; color: #29322c; }
 .admin-sidebar { position: sticky; top: 0; display: flex; width: 244px; height: 100vh; flex: 0 0 auto; flex-direction: column; padding: 25px 17px 16px; border-right: 1px solid #e0e4dc; background: #fbfcf8; }
-.admin-brand { display: flex; align-items: baseline; gap: 9px; color: #29352c; font-family: var(--font-display), Georgia, serif; font-size: 31px; }
+.admin-brand { display: flex; align-items: center; gap: 9px; color: #29352c; font-family: var(--font-display), Georgia, serif; font-size: 31px; }
 .admin-brand small { color: #747d72; font-family: var(--font-body), sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .14em; }
 .admin-sidebar-label { margin: 48px 10px 10px; color: #8a9288; font-size: 10px; font-weight: 700; letter-spacing: .12em; }
 .admin-navigation { display: grid; min-height: 0; flex: 1 1 auto; align-content: start; gap: 4px; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: #cfd7cb transparent; scrollbar-width: thin; }

@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Suspense } from "react";
 import { CircleUserRound, Menu } from "lucide-react";
 import { DismissibleDetails } from "@/components/DismissibleDetails";
+import { BrandMark } from "@/components/BrandMark";
 import { NotificationBell } from "@/components/NotificationBell";
 import { informationPages } from "@/data/information";
 import { getViewer } from "@/lib/auth/viewer";
@@ -13,7 +14,10 @@ export function SiteHeader() {
   return (
     <header className="site-header">
       <div className="site-header-inner page-shell">
-        <Link className="wordmark" href="/products" aria-label="RonTab products">RonTab</Link>
+        <Link className="wordmark" href="/products" aria-label="RonTab products">
+          <BrandMark width={38} height={27} />
+          <span>RonTab</span>
+        </Link>
 
         <Suspense fallback={<AccountLinksFallback />}>
           <AccountLinks />
@@ -141,7 +145,10 @@ export function SiteFooter() {
       <div className="footer-inner page-shell">
         <div className="footer-top">
           <div className="footer-brand">
-            <Link className="wordmark wordmark-light" href="/products">RonTab</Link>
+            <Link className="wordmark wordmark-light" href="/products" aria-label="RonTab products">
+              <BrandMark width={42} height={30} onDarkBackground />
+              <span>RonTab</span>
+            </Link>
             <p>Good things for the everyday home.</p>
           </div>
           <nav className="footer-links" aria-label="Information">

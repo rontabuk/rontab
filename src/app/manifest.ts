@@ -14,9 +14,9 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#2f5a3f",
     categories: ["shopping"],
     icons: [
-      { src: "/pwa-icon/192", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/pwa-icon/512", sizes: "512x512", type: "image/png", purpose: "any" },
-      { src: "/pwa-icon/512", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/brand/android-chrome-192.svg", sizes: "192x192", type: "image/svg+xml", purpose: "any" },
+      { src: "/brand/android-chrome-512.svg", sizes: "512x512", type: "image/svg+xml", purpose: "any" },
+      { src: "/brand/maskable-icon-512.svg", sizes: "512x512", type: "image/svg+xml", purpose: "maskable" },
     ],
   };
 }

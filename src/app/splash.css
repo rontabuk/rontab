@@ -4,7 +4,8 @@
 .splash-blob-b { right: -10%; bottom: -14%; width: min(58vw, 580px); aspect-ratio: 1; background: #a9cfae; opacity: .7; animation: splash-drift-b 16s ease-in-out infinite alternate; }
 .splash-blob-c { top: 38%; right: 22%; width: min(26vw, 260px); aspect-ratio: 1; background: #ffe2a8; opacity: .6; animation: splash-drift-a 11s ease-in-out infinite alternate-reverse; }
 .splash-content { display: grid; width: min(100%, 620px); justify-items: center; text-align: center; animation: splash-arrive 750ms cubic-bezier(.2,.7,.2,1) both; }
-.splash-brand-mark { position: relative; display: grid; width: 92px; height: 92px; place-items: center; overflow: hidden; border-radius: 26px; background: linear-gradient(145deg, #4f7a5a, #2f5a3f); color: #fff; box-shadow: 0 18px 40px rgb(47 90 63 / 35%), inset 0 1px 0 rgb(255 255 255 / 30%); animation: splash-float 4s ease-in-out infinite; }
+.splash-brand-mark { position: relative; display: grid; width: 92px; height: 92px; place-items: center; overflow: hidden; border: 1px solid rgb(37 38 48 / 8%); border-radius: 20px; background: #fff; box-shadow: 0 12px 30px rgb(37 38 48 / 12%); animation: splash-float 4s ease-in-out infinite; }
+.splash-brand-logo { display: block; width: 72px; height: auto; }
 .splash-brand-mark::after { position: absolute; inset: 0; background: linear-gradient(110deg, transparent 35%, rgb(255 255 255 / 45%) 50%, transparent 65%); content: ""; transform: translateX(-120%); animation: splash-shine 3.6s 1s ease-in-out infinite; }
 .splash-brand-arrow { position: absolute; top: 14px; right: 13px; color: #ffb48f; animation: splash-arrow 900ms 450ms cubic-bezier(.2,.7,.2,1) both; }
 .splash-wordmark { margin: 22px 0 0; color: #1f3326; font-family: var(--font-display), Georgia, serif; font-size: clamp(56px, 10vw, 92px); font-weight: 400; line-height: 1; }

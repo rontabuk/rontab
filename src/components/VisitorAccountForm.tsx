@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Check, Eye, EyeOff, Loader2 } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 import { CityPicker, type SupportedCity, type SupportedCountry } from "@/components/CityPicker";
 import { registerVisitorAccount, sendVisitorEmailVerification } from "@/app/account/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -118,7 +119,7 @@ export function VisitorAccountForm({ nextPath, notice, initialMode = "login", co
   return (
     <main className="visitor-account-page">
       <section className="visitor-account-panel" aria-labelledby="visitor-account-title">
-        <Link className="visitor-account-wordmark" href="/products" aria-label="RonTab products">RonTab</Link>
+        <Link className="visitor-account-wordmark" href="/products" aria-label="RonTab products"><BrandMark width={42} height={30} /><span>RonTab</span></Link>
 
         <div className="visitor-account-tabs" role="group" aria-label="Account options">
           <button type="button" aria-pressed={mode === "login"} onClick={() => switchMode("login")}>Sign in</button>

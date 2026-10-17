@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, ShoppingBag, ShoppingCart, Store } from "lucide-react";
+import { ShoppingBag, Store } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 
 export function RontabSplash({ showOnly = false, destination = "/products" }: { showOnly?: boolean; destination?: string }) {
   const router = useRouter();
@@ -21,8 +22,7 @@ export function RontabSplash({ showOnly = false, destination = "/products" }: { 
       <div className="splash-blob splash-blob-c" aria-hidden="true" />
       <section className="splash-content" aria-label="Rontab">
         <div className="splash-brand-mark" aria-hidden="true">
-          <ShoppingCart size={46} strokeWidth={2} />
-          <ArrowUpRight className="splash-brand-arrow" size={24} strokeWidth={3} />
+          <BrandMark className="splash-brand-logo" width={72} height={51} />
         </div>
         <h1 className="splash-wordmark">Ron<span>.</span>Tab</h1>
         <p className="splash-tagline">Find it. Sell it. Grow it.</p>
