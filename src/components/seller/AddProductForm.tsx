@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { ImagePlus, Video } from "lucide-react";
+import { BrowserSpeechPlayer } from "@/components/BrowserSpeechPlayer";
 import { ProductPreview, type SellerCategoryOption } from "@/components/seller/ProductPreview";
 import { PHOTO_ACCEPT, REEL_ACCEPT, removeProductMedia, uploadProductMedia, validateProductMedia } from "@/components/seller/productMedia";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -206,41 +208,72 @@ export function AddProductForm({
   }
 
   return (
-    <div className="seller-product-workspace">
+    <div className="seller-product-workspace seller-add-product-workspace">
       <form className="seller-product-form" onSubmit={handleSubmit}>
-        <aside className="seller-media-guide" aria-labelledby="seller-media-guide-title">
-          <h2 id="seller-media-guide-title">Photo and Reel guidelines</h2>
-          <p><strong>Photos:</strong> portrait 4:5, ideally 1080 × 1350 px; JPEG or WebP keeps cards sharp and fast.</p>
-          <p><strong>Reels:</strong> vertical 9:16, ideally 1080 × 1920 px; MP4 or WebM. Cards play muted and loop.</p>
-          <p>Choose up to 5 photos or one Reel video. Selecting one type replaces the other. Media size limit: 100 MB.</p>
-        </aside>
-        <label>Product name<input name="name" maxLength={120} value={previewValues.name} onChange={(event) => setPreviewValues({ ...previewValues, name: event.target.value })} required /></label>
-        <label>Category<select name="category_id" value={previewValues.categoryId} onChange={(event) => setPreviewValues({ ...previewValues, categoryId: event.target.value })} required><option value="" disabled>Select a category</option>{categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></label>
-        <label>Price in GBP<input name="price" type="number" min="0" step="0.01" value={previewValues.price} onChange={(event) => setPreviewValues({ ...previewValues, price: event.target.value })} /></label>
-        <label>Shop URL<input name="external_url" type="url" placeholder="https://" required /></label>
-        <label className="seller-product-description"><span>Product description</span><textarea name="description" rows={4} maxLength={1000} value={previewValues.description} onChange={(event) => setPreviewValues({ ...previewValues, description: event.target.value })} required /><small>Up to 1,000 characters.</small></label>
-        <label className="seller-product-audio-script"><span>Audio summary <small>(optional)</small></span><textarea name="audio_script" rows={3} maxLength={300} value={previewValues.audioScript} onChange={(event) => setPreviewValues({ ...previewValues, audioScript: event.target.value })} /><small>Up to 300 characters, around 30 seconds. Preview uses a voice on your device.</small></label>
-        <label>Product photos<input ref={imageInputRef} name="images" type="file" accept={PHOTO_ACCEPT} onChange={handleImagePreviewChange} multiple /></label>
-        {imagePreviewUrl && <button className="seller-media-clear" type="button" onClick={clearSelectedImages}>Remove selected photos</button>}
-        <label>Reel video<input ref={videoInputRef} name="reel" type="file" accept={REEL_ACCEPT} onChange={handleVideoPreviewChange} /></label>
-        {videoPreviewUrl && <button className="seller-media-clear" type="button" onClick={clearSelectedVideo}>Remove selected video</button>}
+        <section className="seller-product-feature" aria-label="Product preview and media">
+          <aside className="seller-media-guide" aria-labelledby="seller-media-guide-title">
+            <h2 id="seller-media-guide-title">Photo and Reel tips</h2>
+            <p><strong>Photos:</strong> 4:5 (1080 × 1350), JPEG/WebP. <strong>Reels:</strong> 9:16 (1080 × 1920), MP4/WebM.</p>
+            <p>Choose 1 photo or 1 Reel, max 100 MB. Choosing one replaces the other; Reels play muted and loop.</p>
+          </aside>
+          {(imagePreviewUrl || videoPreviewUrl) && (
+            <>
+              <p className="seller-product-feature-intro">Preview your listing as shoppers will see it.</p>
+              <ProductPreview
+                slug="seller-product-preview"
+                name={previewValues.name}
+                category={selectedCategory}
+                price={previewValues.price}
+                description={previewValues.description}
+                audioScript={previewValues.audioScript}
+                shopName={shopName}
+                shopLogo={shopLogo}
+                mediaUrl={videoPreviewUrl || imagePreviewUrl}
+                mediaType={videoPreviewUrl ? "video" : "image"}
+                showAudioPreview={false}
+              />
+            </>
+          )}
+        </section>
+        <section className="seller-product-media-section" aria-label="Product photos and video">
+          <label className="seller-media-upload seller-media-upload-reel" title="Add a Reel video">
+            <input className="seller-media-file-input" ref={videoInputRef} name="reel" type="file" accept={REEL_ACCEPT} onChange={handleVideoPreviewChange} aria-label="Add a Reel video" />
+            <span className="seller-media-upload-content"><Video size={24} aria-hidden="true" /></span>
+          </label>
+          <label className="seller-media-upload seller-media-upload-photos" title="Add a product photo">
+            <input className="seller-media-file-input" ref={imageInputRef} name="images" type="file" accept={PHOTO_ACCEPT} onChange={handleImagePreviewChange} aria-label="Add a product photo" />
+            <span className="seller-media-upload-content"><ImagePlus size={24} aria-hidden="true" /></span>
+          </label>
+          {videoPreviewUrl && <button className="seller-media-clear" type="button" onClick={clearSelectedVideo}>Remove selected video</button>}
+          {imagePreviewUrl && <button className="seller-media-clear" type="button" onClick={clearSelectedImages}>Remove selected photo</button>}
+        </section>
+        <section className="seller-product-form-section">
+          <h2>About your item</h2>
+          <label><span>Title</span><input name="name" maxLength={120} value={previewValues.name} onChange={(event) => setPreviewValues({ ...previewValues, name: event.target.value })} required /></label>
+          <label className="seller-product-description"><span>Description</span><textarea name="description" rows={4} maxLength={1000} value={previewValues.description} onChange={(event) => setPreviewValues({ ...previewValues, description: event.target.value })} required /><small>Up to 1,000 characters.</small></label>
+        </section>
+        <section className="seller-product-form-section">
+          <h2>Item details</h2>
+          <label><span>Category</span><select name="category_id" value={previewValues.categoryId} onChange={(event) => setPreviewValues({ ...previewValues, categoryId: event.target.value })} required><option value="" disabled>Select a category</option>{categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></label>
+        </section>
+        <section className="seller-product-form-section">
+          <h2>Pricing</h2>
+          <label><span>Price in GBP</span><input name="price" type="number" min="0" step="0.01" value={previewValues.price} onChange={(event) => setPreviewValues({ ...previewValues, price: event.target.value })} /></label>
+          <label><span>Shop URL</span><input name="external_url" type="url" placeholder="https://" required /></label>
+        </section>
+        <section className="seller-product-form-section seller-product-extra-section">
+          <h2>Audio summary</h2>
+          <label className="seller-product-audio-script"><span>Script <small>(optional)</small></span><textarea name="audio_script" rows={3} maxLength={300} value={previewValues.audioScript} onChange={(event) => setPreviewValues({ ...previewValues, audioScript: event.target.value })} /><small>Up to 300 characters, around 30 seconds.</small></label>
+          <section className="seller-product-audio-preview" aria-label="Audio summary preview">
+            <h3>Listen to your summary</h3>
+            <BrowserSpeechPlayer text={previewValues.audioScript} preview />
+          </section>
+        </section>
         {message && <p className="seller-form-message" role="status">{message}</p>}
         <button className="seller-auth-submit" type="submit" disabled={isSubmitting || categories.length === 0}>
           {isSubmitting ? "Submitting…" : "Submit for review"}
         </button>
       </form>
-      <ProductPreview
-        slug="seller-product-preview"
-        name={previewValues.name}
-        category={selectedCategory}
-        price={previewValues.price}
-        description={previewValues.description}
-        audioScript={previewValues.audioScript}
-        shopName={shopName}
-        shopLogo={shopLogo}
-        mediaUrl={videoPreviewUrl || imagePreviewUrl}
-        mediaType={videoPreviewUrl ? "video" : "image"}
-      />
     </div>
   );
 }

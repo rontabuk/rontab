@@ -17,6 +17,7 @@ export function ProductPreview({
   shopLogo,
   mediaUrl,
   mediaType,
+  showAudioPreview = true,
 }: {
   slug: string;
   name: string;
@@ -28,6 +29,7 @@ export function ProductPreview({
   shopLogo: string | null;
   mediaUrl: string;
   mediaType: "image" | "video" | undefined;
+  showAudioPreview?: boolean;
 }) {
   const parsedPrice = Number(price);
   const product: Product = {
@@ -48,10 +50,12 @@ export function ProductPreview({
   return (
     <aside className="seller-product-preview" aria-label="Live product preview">
       <h2>Preview</h2>
-      <section className="seller-product-audio-preview" aria-label="Audio summary preview">
-        <h3>Audio summary</h3>
-        <BrowserSpeechPlayer text={audioScript} preview />
-      </section>
+      {showAudioPreview && (
+        <section className="seller-product-audio-preview" aria-label="Audio summary preview">
+          <h3>Audio summary</h3>
+          <BrowserSpeechPlayer text={audioScript} preview />
+        </section>
+      )}
       <div className="seller-product-preview-card">
         <ProductCard product={product} previewOnly showUploadPlaceholder={!mediaUrl} />
       </div>
