@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
+  ArrowLeft,
   Bike,
+  Check,
   UsersRound,
   CircleUserRound,
   Gift,
   House,
   LayoutDashboard,
+  Languages,
   LogIn,
   Megaphone,
   Menu,
@@ -16,11 +20,20 @@ import {
   Plus,
   ShieldCheck,
   Store,
+  Sun,
   Ticket,
   UserPlus,
+  Volume2,
   type LucideIcon,
 } from "lucide-react";
 import { DismissibleDetails } from "@/components/DismissibleDetails";
+import {
+  DEFAULT_CLIENT_PREFERENCES,
+  readClientPreferences,
+  subscribeToClientPreferences,
+  updateClientPreferences,
+  type ClientPreferences,
+} from "@/lib/preferences/client";
 import { signOut, type SignOutDestination } from "@/lib/auth/actions";
 
 const icons = {
@@ -64,6 +77,15 @@ const HIDDEN_PATHS = new Set(["/"]);
 
 export function MobileBottomNavBar({ config }: { config: MobileNavConfig }) {
   const pathname = usePathname();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [preferences, setPreferences] = useState<ClientPreferences>(DEFAULT_CLIENT_PREFERENCES);
+
+  useEffect(() => {
+    const syncPreferences = () => setPreferences(readClientPreferences());
+    syncPreferences();
+    return subscribeToClientPreferences(syncPreferences);
+  }, []);
+
   if (HIDDEN_PATHS.has(pathname)) return null;
 
   const isActive = ({ href, exact }: NavItem) => {
@@ -99,19 +121,47 @@ export function MobileBottomNavBar({ config }: { config: MobileNavConfig }) {
           </Link>
         );
       })}
-      <DismissibleDetails className="mobile-nav-menu">
+      <DismissibleDetails className="mobile-nav-menu" onToggle={(open) => !open && setSettingsOpen(false)}>
         <summary aria-label="Open menu">
           <span className="mobile-nav-icon"><Menu size={21} aria-hidden="true" /></span>
           <span className="mobile-nav-label" aria-hidden="true">Menu</span>
         </summary>
         <div className="site-menu-panel mobile-nav-menu-panel">
-          <div className="site-menu-extras">
-            {config.menuLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}
-          </div>
-          {config.signOutTo && (
-            <form className="site-menu-extras" action={signOut.bind(null, config.signOutTo)}>
-              <button className="mobile-nav-signout" type="submit">Sign out</button>
-            </form>
+          {settingsOpen ? (
+            <section className="mobile-nav-settings" aria-label="Settings">
+              <div className="mobile-nav-settings-heading">
+                <button type="button" onClick={() => setSettingsOpen(false)} aria-label="Back to menu"><ArrowLeft size={18} aria-hidden="true" /></button>
+                <h2>Settings</h2>
+              </div>
+              <div className="mobile-nav-settings-options">
+                <label className="mobile-nav-setting-row">
+                  <span className="mobile-nav-setting-copy"><Volume2 size={18} aria-hidden="true" /><span><strong>Reel sound</strong><small>{preferences.reelSoundEnabled ? "On" : "Off"}</small></span></span>
+                  <input type="checkbox" checked={preferences.reelSoundEnabled} onChange={(event) => setPreferences(updateClientPreferences({ reelSoundEnabled: event.currentTarget.checked }))} aria-label="Reel sound" />
+                </label>
+                <label className="mobile-nav-setting-row">
+                  <span className="mobile-nav-setting-copy"><Check size={18} aria-hidden="true" /><span><strong>Auto-play reels</strong><small>{preferences.autoplayReels ? "On" : "Off"}</small></span></span>
+                  <input type="checkbox" checked={preferences.autoplayReels} onChange={(event) => setPreferences(updateClientPreferences({ autoplayReels: event.currentTarget.checked }))} aria-label="Auto-play reels" />
+                </label>
+                <label className="mobile-nav-setting-row is-unavailable">
+                  <span className="mobile-nav-setting-copy"><Languages size={18} aria-hidden="true" /><span><strong>Language</strong><small>Coming soon</small></span></span>
+                  <select disabled aria-label="Language"><option>English</option><option>العربية</option></select>
+                </label>
+                <label className="mobile-nav-setting-row is-unavailable">
+                  <span className="mobile-nav-setting-copy"><Sun size={18} aria-hidden="true" /><span><strong>Appearance</strong><small>Coming soon</small></span></span>
+                  <select disabled aria-label="Appearance"><option>Light</option><option>Dark</option></select>
+                </label>
+              </div>
+              {config.signOutTo && (
+                <form className="mobile-nav-settings-signout" action={signOut.bind(null, config.signOutTo)}>
+                  <button className="mobile-nav-signout" type="submit">Sign out</button>
+                </form>
+              )}
+            </section>
+          ) : (
+            <div className="mobile-nav-menu-links">
+              {config.menuLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}
+              <button className="mobile-nav-settings-button" type="button" onClick={() => setSettingsOpen(true)}>Settings</button>
+            </div>
           )}
         </div>
       </DismissibleDetails>

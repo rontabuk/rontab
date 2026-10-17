@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Suspense } from "react";
 import { CircleUserRound, Menu } from "lucide-react";
 import { DismissibleDetails } from "@/components/DismissibleDetails";
@@ -55,7 +56,7 @@ async function AccountLinks() {
 
   if (viewer.role === "visitor") {
     return (
-      <HeaderActions accountHref="/visitor" accountLabel="My account" points={viewer.points} bell={bell}>
+      <HeaderActions accountHref="/visitor" accountLabel="My account" accountImage={viewer.avatarUrl} points={viewer.points} bell={bell}>
         <Link href="/visitor/creator">{getCreatorWorkspaceLabel(viewer.creatorProfileStatus, viewer.creatorProfileIsPublic)}</Link>
         <Link href="/visitor/offers">Offer gallery</Link>
         <Link href="/visitor/rewards">Points & rewards</Link>
@@ -70,12 +71,14 @@ async function AccountLinks() {
 function HeaderActions({
   accountHref,
   accountLabel,
+  accountImage,
   points = null,
   bell,
   children,
 }: {
   accountHref: string;
   accountLabel: string;
+  accountImage?: string | null;
   points?: number | null;
   bell: React.ReactNode;
   children: React.ReactNode;
@@ -104,11 +107,29 @@ function HeaderActions({
         {bell}
       </div>
       <div className="header-end">
-        <Link className="header-account-link" href={accountHref}>
-          <CircleUserRound size={18} aria-hidden="true" />
-          <span>{accountLabel}</span>
-          {points !== null && <strong aria-label={`${points} Rontab points`}>{formatNumber(points)}</strong>}
+        <Link
+          className={`header-account-link${accountImage !== undefined ? " header-account-link-avatar" : ""}`}
+          href={accountHref}
+          aria-label={accountLabel}
+          title={accountLabel}
+        >
+          {accountImage !== undefined ? (
+            accountImage
+              ? <Image src={accountImage} alt="" width={40} height={40} unoptimized />
+              : <CircleUserRound size={20} aria-hidden="true" />
+          ) : (
+            <>
+              <CircleUserRound size={18} aria-hidden="true" />
+              <span>{accountLabel}</span>
+              {points !== null && <strong aria-label={`${points} Rontab points`}>{formatNumber(points)}</strong>}
+            </>
+          )}
         </Link>
+        {accountImage !== undefined && points !== null && (
+          <strong className="header-account-avatar-points" aria-label={`${points} Rontab points`}>
+            {formatNumber(points)}
+          </strong>
+        )}
       </div>
     </>
   );

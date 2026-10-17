@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Eye, Image as ImageIcon, Volume2, VolumeX } from "lucide-react";
+import { ArrowUpRight, Eye, Image as ImageIcon } from "lucide-react";
 import type { Product } from "@/data/products";
 import { ShopFollowButton } from "@/components/ShopFollowButton";
 import { ShopVisitLink } from "@/components/ShopVisitLink";
 import { SellerVerificationBadge } from "@/components/seller/SellerVerificationBadge";
 import { formatCompactNumber, formatPrice } from "@/lib/format";
+import { DEFAULT_CLIENT_PREFERENCES, readClientPreferences, subscribeToClientPreferences } from "@/lib/preferences/client";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export function ProductCard({
@@ -26,10 +27,13 @@ export function ProductCard({
 }) {
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const [visibleDetailLength, setVisibleDetailLength] = useState(0);
-  const [previewMuted, setPreviewMuted] = useState(true);
+  const [soundBlocked, setSoundBlocked] = useState(false);
+  const [preferences, setPreferences] = useState(DEFAULT_CLIENT_PREFERENCES);
+  const audioMuted = !preferences.reelSoundEnabled || soundBlocked;
   const [viewCount, setViewCount] = useState(product.viewCount ?? 0);
   const closeTimer = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const automaticReplayCount = useRef(0);
   const cardRef = useRef<HTMLElement>(null);
   const viewRecorded = useRef(false);
   const descriptionId = `description-${product.slug}`;
@@ -69,6 +73,15 @@ export function ProductCard({
   useEffect(() => () => clearCloseTimer(), []);
 
   useEffect(() => {
+    const syncPreferences = () => {
+      setPreferences(readClientPreferences());
+      setSoundBlocked(false);
+    };
+    syncPreferences();
+    return subscribeToClientPreferences(syncPreferences);
+  }, []);
+
+  useEffect(() => {
     if (!descriptionOpen) return;
 
     const description = product.description;
@@ -93,22 +106,36 @@ export function ProductCard({
     const video = videoRef.current;
     if (!video) return;
 
-    if (previewOnly) {
-      void video.play().catch(() => {});
+    if (!preferences.autoplayReels) {
+      video.pause();
       return;
     }
 
+    const play = () => {
+      video.muted = audioMuted || !preferences.reelSoundEnabled;
+      void video.play().catch(() => {
+        video.muted = true;
+        setSoundBlocked(true);
+        void video.play().catch(() => {});
+      });
+    };
+
+    if (previewOnly) {
+      play();
+      return () => video.pause();
+    }
+
     const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) void video.play().catch(() => {});
+      if (entry.isIntersecting) play();
       else video.pause();
-    }, { rootMargin: "100px" });
+    }, { rootMargin: "0px" });
 
     observer.observe(video);
     return () => {
       observer.disconnect();
       video.pause();
     };
-  }, [previewOnly, product.mediaType]);
+  }, [audioMuted, previewOnly, preferences.autoplayReels, preferences.reelSoundEnabled, product.mediaType]);
 
   useEffect(() => {
     const productId = product.id;
@@ -158,10 +185,22 @@ export function ProductCard({
       className="product-card-media"
       src={product.image}
       aria-label={product.imageAlt}
-      loop
-      muted={previewOnly ? previewMuted : true}
+      muted={audioMuted || !preferences.reelSoundEnabled}
       playsInline
       preload="none"
+      onEnded={(event) => {
+        const video = event.currentTarget;
+        if (!preferences.autoplayReels || automaticReplayCount.current >= 3) return;
+
+        automaticReplayCount.current += 1;
+        video.currentTime = 0;
+        video.muted = audioMuted || !preferences.reelSoundEnabled;
+        void video.play().catch(() => {
+          video.muted = true;
+          setSoundBlocked(true);
+          void video.play().catch(() => {});
+        });
+      }}
     />
   ) : (
     <Image src={product.image} alt={product.imageAlt} fill unoptimized sizes="(max-width: 640px) 46vw, (max-width: 1000px) 30vw, 22vw" />
@@ -194,18 +233,6 @@ export function ProductCard({
           </span>
         )}
         {isFeatured && <span className="product-featured-badge">Featured</span>}
-        {previewOnly && product.mediaType === "video" && (
-          <button
-            className="product-preview-audio-toggle"
-            type="button"
-            aria-label={previewMuted ? "Enable preview sound" : "Mute preview"}
-            aria-pressed={!previewMuted}
-            title={previewMuted ? "Enable sound" : "Mute sound"}
-            onClick={() => setPreviewMuted((muted) => !muted)}
-          >
-            {previewMuted ? <VolumeX size={16} aria-hidden="true" /> : <Volume2 size={16} aria-hidden="true" />}
-          </button>
-        )}
       </div>
       <div className="product-card-footer" data-tone={product.overlayTone}>
         <div className="product-card-info">

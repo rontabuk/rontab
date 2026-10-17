@@ -57,6 +57,7 @@
 .catalog-theme .wordmark { color: var(--espresso); }
 .catalog-theme .site-menu-trigger, .catalog-theme .header-account-link { border-color: var(--border); color: var(--espresso); }
 .catalog-theme .site-menu-trigger:hover, .catalog-theme .site-menu[open] .site-menu-trigger, .catalog-theme .header-account-link:hover { border-color: var(--taupe); background: var(--beige); }
+.catalog-theme .header-account-link-avatar { border-radius: 50%; }
 .catalog-theme .site-menu-panel { border-color: var(--border); border-radius: 5px; background: var(--surface); box-shadow: 0 14px 38px rgb(12 12 12 / 12%); }
 .catalog-theme .site-menu-panel a { border-radius: 5px; color: var(--espresso); }
 .catalog-theme .site-menu-panel a:hover { background: var(--beige); color: var(--espresso); }

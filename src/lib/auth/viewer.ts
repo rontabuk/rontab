@@ -8,7 +8,7 @@ export type Viewer =
   | { role: "guest" }
   | { role: "admin"; userId: string }
   | { role: "seller"; userId: string; hasNewAdCreditGrants: boolean }
-  | { role: "visitor"; userId: string; createdAt: string; emailVerifiedAt: string | null; points: number | null; creatorProfileStatus: string | null; creatorProfileIsPublic: boolean };
+  | { role: "visitor"; userId: string; createdAt: string; emailVerifiedAt: string | null; avatarUrl: string | null; points: number | null; creatorProfileStatus: string | null; creatorProfileIsPublic: boolean };
 
 // Shared by the header and the mobile navigation so each request resolves the account once.
 export const getViewer = cache(async (): Promise<Viewer> => {
@@ -32,11 +32,15 @@ export const getViewer = cache(async (): Promise<Viewer> => {
 
   const [{ data: points, error }, { data: profile, error: profileError }, { data: creatorProfileId, error: creatorProfileIdError }] = await Promise.all([
     supabase.rpc("get_visitor_loyalty_points"),
-    supabase.from("profiles").select("email_verified_at").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("email_verified_at,avatar_url").eq("id", user.id).maybeSingle(),
     supabase.rpc("get_my_creator_profile_id"),
   ]);
   if (profileError) throw new Error(profileError.message);
   if (creatorProfileIdError) throw new Error(creatorProfileIdError.message);
+  const avatarPath = profile?.avatar_url?.startsWith(`${user.id}/`) ? profile.avatar_url : null;
+  const { data: avatar } = avatarPath
+    ? await supabase.storage.from("visitor-avatars").createSignedUrl(avatarPath, 60 * 60)
+    : { data: null };
   const { data: creatorProfile, error: creatorProfileError } = creatorProfileId
     ? await supabase.from("creator_profiles").select("status,is_public").eq("id", creatorProfileId).maybeSingle()
     : { data: null, error: null };
@@ -46,6 +50,7 @@ export const getViewer = cache(async (): Promise<Viewer> => {
     userId: user.id,
     createdAt: user.created_at,
     emailVerifiedAt: profile?.email_verified_at ?? null,
+    avatarUrl: avatar?.signedUrl ?? null,
     points: error ? null : Number(points),
     creatorProfileStatus: creatorProfile?.status ?? null,
     creatorProfileIsPublic: creatorProfile?.is_public ?? false,

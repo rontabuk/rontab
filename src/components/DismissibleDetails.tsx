@@ -3,7 +3,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 
 // Native <details> stays open until its summary is clicked again; close it like a regular menu.
-export function DismissibleDetails({ className, children }: { className: string; children: ReactNode }) {
+export function DismissibleDetails({ className, children, onToggle }: { className: string; children: ReactNode; onToggle?: (open: boolean) => void }) {
   const ref = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
@@ -34,5 +34,5 @@ export function DismissibleDetails({ className, children }: { className: string;
     };
   }, []);
 
-  return <details ref={ref} className={className}>{children}</details>;
+  return <details ref={ref} className={className} onToggle={(event) => onToggle?.(event.currentTarget.open)}>{children}</details>;
 }
