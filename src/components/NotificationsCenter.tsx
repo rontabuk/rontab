@@ -38,6 +38,29 @@ export function NotificationsCenter({ items, userId, readIds, lastSeenAt, messag
 
   return (
     <main className="notifications-page page-shell" data-message-open={message ? true : undefined}>
+      {!userId ? (
+        <>
+          <header className="inbox-heading">
+            <div><h1><Bell size={24} aria-hidden="true" /> Notifications</h1><p>Personal notifications are tied to your account.</p></div>
+          </header>
+          <section className="notifications-guest-state" aria-labelledby="notifications-guest-title">
+            <Bell size={28} aria-hidden="true" />
+            <h2 id="notifications-guest-title">You&apos;re browsing as a guest</h2>
+            <p>Sign in or create an account to receive notifications about your activity, rewards, and messages.</p>
+            <div>
+              <Link href="/account?next=%2Fnotifications">Sign in</Link>
+              <Link href="/account?mode=register&next=%2Fnotifications">Create account</Link>
+            </div>
+            {message && <article className="inbox-message notifications-guest-message">
+              <div className="inbox-sender"><span className="inbox-kind" data-kind="announcement"><Megaphone size={20} aria-hidden="true" /></span><div><strong>Rontab</strong><span>Public announcement</span></div></div>
+              <h2 dir="auto">{message.title}</h2>
+              <div className="inbox-received"><ReceivedTime value={message.created_at} /></div>
+              <div className="inbox-message-body" dir="auto">{message.body}</div>
+              {message.link_url && <a className="inbox-message-link" href={message.link_url} {...(message.link_url.startsWith("https://") ? { target: "_blank", rel: "noopener noreferrer" } : {})}>Open link <ArrowUpRight size={17} aria-hidden="true" /></a>}
+            </article>}
+          </section>
+        </>
+      ) : <>
       <header className="inbox-heading">
         <div><h1><Bell size={24} aria-hidden="true" /> Notifications</h1><p>{items.length} notifications{unreadCount > 0 ? ` / ${unreadCount} unread` : ""}</p></div>
         <button className="inbox-mark-read" type="button" title="Mark all as read" onClick={() => void markRead(visibleItems.filter((item) => isUnread(item)).map((item) => item.id))} disabled={saving || !items.some((item) => item.kind !== "verify-email" && isUnread(item))}>
@@ -80,6 +103,7 @@ export function NotificationsCenter({ items, userId, readIds, lastSeenAt, messag
           </article> : <div className="inbox-reader-empty"><MailOpen size={36} strokeWidth={1.5} aria-hidden="true" /><p>Select a notification</p></div>}
         </section>
       </div>
+      </>}
     </main>
   );
 }

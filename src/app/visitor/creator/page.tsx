@@ -136,6 +136,14 @@ export default async function VisitorCreatorPage({
         <p>Share what you create and where your audience follows you. Approved profiles are visible to the Rontab community and sellers.</p>
       </header>
 
+      {!profile && (
+        <section className="creator-account-choice" aria-labelledby="creator-account-choice-title">
+          <p className="admin-eyebrow">SAME ACCOUNT</p>
+          <h2 id="creator-account-choice-title">Add a creator profile to this account</h2>
+          <p>This adds creator features without replacing your visitor account. Your loyalty points, visit history, and regular account access stay unchanged, and you keep using the same sign-in.</p>
+        </section>
+      )}
+
       {submitted === "1" && <p className="admin-save-success" role="status">Your creator profile has been submitted for review.</p>}
       {replied === "1" && <p className="admin-save-success" role="status">Your collaboration response has been sent.</p>}
       {withdrawn === "1" && <p className="admin-save-success" role="status">Your profile is now offline. You can apply again whenever you are ready.</p>}
@@ -205,11 +213,11 @@ export default async function VisitorCreatorPage({
       {profile?.status === "suspended" ? (
         <p className="creator-suspended-note">Your profile cannot be edited while it is suspended.</p>
       ) : (
-        <details className="creator-application-section" open={!profile || profile.status === "changes_requested" || profile.status === "rejected"}>
+        <details className="creator-application-section" open={Boolean(profile && (profile.status === "changes_requested" || profile.status === "rejected"))}>
           <summary className="creator-application-summary">
             <span className="admin-eyebrow">YOUR PUBLIC PROFILE</span>
-            <strong>{profile ? "Update your application" : "Creator application"}</strong>
-            <small>{profile ? "Open to edit your profile details." : "Add your details to apply."}</small>
+            <strong>{profile ? "Update your application" : "Apply with this account"}</strong>
+            <small>{profile ? "Open to edit your profile details." : "Your visitor account and points will remain unchanged."}</small>
           </summary>
           {profile?.is_public && <p className="creator-edit-notice">Changes stay private during review. Your current approved profile remains visible until updates are approved.</p>}
           <ActionForm className="creator-application-form" action={saveCreatorApplication}>

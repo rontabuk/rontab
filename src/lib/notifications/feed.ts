@@ -11,17 +11,29 @@ export type SiteNotification = {
   body: string;
   href: string | null;
   createdAt: string;
+  completed?: boolean;
+};
+
+type NotificationFeed = {
+  items: SiteNotification[];
+  signedIn: boolean;
+  userId: string | null;
+  readIds: string[];
+  lastSeenAt: string | null;
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NEW_PRODUCT_WINDOW_MS = 14 * DAY_MS;
 const ANNOUNCEMENT_WINDOW_MS = 60 * DAY_MS;
 
-export const getNotificationFeed = cache(async () => {
+export const getNotificationFeed = cache(async (): Promise<NotificationFeed> => {
   const viewer = await getViewer();
+  if (viewer.role === "guest") {
+    return { items: [], signedIn: false, userId: null, readIds: [], lastSeenAt: null };
+  }
+
   const supabase = await createSupabaseServerClient();
   const now = Date.now();
-  const signedIn = viewer.role !== "guest";
 
   const [announcements, products, reads, offers, rewardResults, supportUpdates, creatorCollaborationUpdates] = await Promise.all([
     supabase
@@ -38,9 +50,7 @@ export const getNotificationFeed = cache(async () => {
       .gte("published_at", new Date(now - NEW_PRODUCT_WINDOW_MS).toISOString())
       .order("published_at", { ascending: false })
       .limit(8),
-    signedIn
-      ? supabase.from("notification_reads").select("last_seen_at").maybeSingle()
-      : Promise.resolve({ data: null }),
+    supabase.from("notification_reads").select("last_seen_at").maybeSingle(),
     viewer.role === "visitor" && viewer.emailVerifiedAt
       ? supabase.rpc("get_visitor_loyalty_offers")
       : Promise.resolve({ data: null, error: null }),
@@ -134,7 +144,7 @@ export const getNotificationFeed = cache(async () => {
     });
   }
 
-  const itemReads = signedIn && items.length
+  const itemReads = items.length
     ? await supabase.from("notification_item_reads").select("notification_id").in("notification_id", items.map((item) => item.id))
     : { data: null, error: null };
   if (itemReads.error) throw new Error("Notification read status is temporarily unavailable.");
@@ -142,5 +152,5 @@ export const getNotificationFeed = cache(async () => {
   if (rewardResults?.error) throw new Error("Reward result notifications are temporarily unavailable.");
   if (supportUpdates?.error && supportUpdates.error.code !== "PGRST202") throw new Error("Support case notifications are temporarily unavailable.");
   if (creatorCollaborationUpdates?.error) throw new Error("Collaboration notifications are temporarily unavailable.");
-  return { items, signedIn, userId: viewer.role === "guest" ? null : viewer.userId, readIds: (itemReads.data ?? []).map((item) => item.notification_id), lastSeenAt: reads.data?.last_seen_at ?? null };
+  return { items, signedIn: true, userId: viewer.userId, readIds: (itemReads.data ?? []).map((item) => item.notification_id), lastSeenAt: reads.data?.last_seen_at ?? null };
 });

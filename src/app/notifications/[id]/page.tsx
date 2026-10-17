@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { NotificationsCenter } from "@/components/NotificationsCenter";
 import { getNotificationFeed } from "@/lib/notifications/feed";
+import { getViewer } from "@/lib/auth/viewer";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type NotificationRouteProps = { params: Promise<{ id: string }> };
@@ -19,14 +20,19 @@ async function NotificationContent({ params }: NotificationRouteProps) {
   if (!UUID_PATTERN.test(id)) notFound();
 
   const supabase = await createSupabaseServerClient();
-  const [result, feed] = await Promise.all([supabase
+  const [result, feed, viewer] = await Promise.all([supabase
     .from("site_announcements")
-    .select("id,title,body,link_url,created_at")
+    .select("id,title,body,link_url,created_at,audience")
     .eq("id", id)
     .eq("is_active", true)
-    .maybeSingle(), getNotificationFeed()]);
+    .maybeSingle(), getNotificationFeed(), getViewer()]);
   const announcement = result.data;
   if (!announcement) notFound();
+  const canRead = viewer.role === "admin"
+    || announcement.audience === "everyone"
+    || (viewer.role === "visitor" && announcement.audience === "visitors")
+    || (viewer.role === "seller" && announcement.audience === "sellers");
+  if (!canRead) notFound();
   return <NotificationsCenter {...feed} message={announcement} />;
 }
 

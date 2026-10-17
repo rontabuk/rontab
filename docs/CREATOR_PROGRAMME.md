@@ -4,6 +4,8 @@
 
 Confirmed visitor accounts can submit a public creator profile with a display name, introduction, one to five specialties, up to ten optional audience cities, links to social platforms, and up to three work samples. Audience cities describe where followers are based, not the creator's home. The creator must explicitly consent to publishing these fields. Seller and administrator accounts cannot submit visitor creator applications.
 
+A creator profile is an additional profile linked to the existing visitor account, not an account conversion. Applying does not remove visitor access, loyalty points, or visit history, and the creator signs in with the same account.
+
 Applications move through `submitted`, `changes_requested`, `approved`, `rejected`, `suspended`, and `withdrawn` states. Only public profiles appear in the directory. Review notes are visible to the creator and administrators, not to the public. A creator who changes an approved profile submits a private draft for review; the last approved profile remains public until the new version is approved. A rejection or change request does not remove that approved version. Creators can take their profile offline and submit it again later with fresh public consent. Administrators can reinstate a suspended profile to the status it had before suspension.
 
 ## Public information and metrics

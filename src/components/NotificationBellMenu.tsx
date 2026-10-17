@@ -181,7 +181,7 @@ export function NotificationBellMenu({
         <header className="notification-panel-header">
           <div className="notification-panel-title">
             <h2>Notifications</h2>
-            <div className="notification-panel-controls">
+            {userId && <div className="notification-panel-controls">
               <button type="button" className="notification-sound-toggle" title={soundEnabled ? "Turn notification sound off" : "Turn notification sound on"} aria-label={soundEnabled ? "Turn notification sound off" : "Turn notification sound on"} aria-pressed={soundEnabled} onClick={() => {
                 const nextEnabled = !soundEnabled;
                 saveSoundPreference(soundStorageKey, nextEnabled);
@@ -195,17 +195,25 @@ export function NotificationBellMenu({
                   <CheckCheck size={15} aria-hidden="true" /> Mark all as read
                 </button>
               )}
-            </div>
+            </div>}
           </div>
-          <div className="notification-tabs" role="tablist" aria-label="Filter notifications">
+          {userId && <div className="notification-tabs" role="tablist" aria-label="Filter notifications">
             <button type="button" role="tab" aria-selected={tab === "all"} onClick={() => setTab("all")}>All</button>
             <button type="button" role="tab" aria-selected={tab === "unread"} onClick={() => setTab("unread")}>
               Unread{unreadItems.length > 0 && <span>{unreadItems.length}</span>}
             </button>
-          </div>
+          </div>}
         </header>
         {readError && <p className="form-error" role="alert">{readError}</p>}
-        {hasOpened && (visibleItems.length ? (
+        {hasOpened && !userId ? (
+          <div className="notification-guest-state">
+            <p>You&apos;re browsing as a guest. Sign in or create an account to receive notifications about your account.</p>
+            <div>
+              <Link href="/account?next=%2Fnotifications">Sign in</Link>
+              <Link href="/account?mode=register&next=%2Fnotifications">Create account</Link>
+            </div>
+          </div>
+        ) : hasOpened && (visibleItems.length ? (
           <ul className="notification-list">
             {visibleItems.map((item, index) => {
               const Icon = icons[item.kind];

@@ -99,6 +99,12 @@ begin
 	if exists (select 1 from public.get_visitor_loyalty_offers()) then
 		raise exception 'A visitor without an enabled country must not see loyalty offers.';
 	end if;
+	select status.daily_cap, status.points_earned
+	into daily_cap, daily_earned
+	from public.get_visitor_daily_visit_points_status() status;
+	if daily_cap not between 1 and 250 or daily_earned <> 12 then
+		raise exception 'Daily points status should still return for an authenticated visitor without an enabled country.';
+	end if;
 
 	perform set_config('request.jwt.claim.sub', visitor_one::text, true);
 	perform set_config('request.jwt.claims', jsonb_build_object('sub', visitor_one::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);

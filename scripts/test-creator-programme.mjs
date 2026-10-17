@@ -41,6 +41,7 @@ try {
 
   const profileName = `Local Creator ${suffix.slice(0, 8)}`;
   const firstPlatformHandle = `creator_${suffix.slice(0, 8)}`;
+  throwOnError(await service.from("loyalty_accounts").upsert({ visitor_id: ids.visitor, points_balance: 125 }));
   const initial = throwOnError(await visitor.rpc("save_creator_application_with_audience_cities", {
     p_display_name: profileName,
     p_bio: "I create useful local food and home content for an engaged community.",
@@ -51,6 +52,13 @@ try {
     p_public_profile_consent: true,
   }));
   ids.creator = initial;
+
+  const creatorOwner = throwOnError(await service.from("creator_profiles").select("owner_id").eq("id", ids.creator).single());
+  assert.equal(creatorOwner.owner_id, ids.visitor, "the creator profile is linked to the existing visitor account");
+  const visitorLoyalty = throwOnError(await service.from("loyalty_accounts").select("points_balance").eq("visitor_id", ids.visitor).single());
+  assert.equal(visitorLoyalty.points_balance, 125, "applying as a creator preserves visitor loyalty points");
+  const signedInVisitor = throwOnError(await visitor.auth.getUser());
+  assert.equal(signedInVisitor.user.id, ids.visitor, "applying as a creator keeps the existing sign-in identity");
 
   const hiddenBeforeApproval = throwOnError(await publicClient.from("creator_profiles").select("id").eq("id", ids.creator));
   assert.equal(hiddenBeforeApproval.length, 0, "unapproved applications must stay private");
