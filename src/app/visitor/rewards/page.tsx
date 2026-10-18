@@ -93,7 +93,7 @@ export default async function VisitorRewardsPage({
       {offerError === "points" && <p className="visitor-rewards-error" role="alert">You do not have enough points for this offer.</p>}
       {offerError === "location" && <p className="visitor-rewards-error" role="alert">This offer is only available in the city shown on your profile.</p>}
       {offerError === "unavailable" && <p className="visitor-rewards-error" role="alert">This offer is no longer available. Your points were not changed.</p>}
-      {supportReported === "1" && <p className="admin-save-success" role="status">Your reward issue was sent to the Rontab team. No points were changed automatically.</p>}
+      {supportReported === "1" && <p className="admin-save-success" role="status">Your reward issue was sent to the support team. No points were changed automatically.</p>}
       {supportError === "details" && <p className="visitor-rewards-error" role="alert">Choose an issue and describe it in at least 10 characters.</p>}
       {supportError === "unavailable" && <p className="visitor-rewards-error" role="alert">This reward cannot be reported right now. Your points were not changed.</p>}
       {supportError === "submit" && <p className="visitor-rewards-error" role="alert">We could not submit your report. Please try again.</p>}

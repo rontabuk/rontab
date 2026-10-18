@@ -24,8 +24,8 @@ const metadataBase = process.env.NEXT_PUBLIC_SITE_URL
 export const metadata: Metadata = {
   metadataBase,
   title: {
-    default: "RonTab | Good things, well found",
-    template: "%s | RonTab",
+    default: "Discover products",
+    template: "%s",
   },
   description:
     "A considered edit of useful, characterful finds for the everyday home.",
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f5f2eb",
+  themeColor: "#eef2f3",
 };
 
 export default function RootLayout({

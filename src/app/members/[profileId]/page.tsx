@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ArrowLeft, ArrowUpRight, Heart, HeartOff, Mail, MapPin, Phone, UsersRound } from "lucide-react";
 import { followMemberProfile, unfollowMemberProfile } from "@/app/member-actions";
-import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
+import { SiteHeader } from "@/components/SiteChrome";
 import { getViewer } from "@/lib/auth/viewer";
 import { isUuid } from "@/lib/validation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -46,8 +46,8 @@ export default async function MemberProfilePage({
         <Link className="member-profile-back" href="/visitor"><ArrowLeft size={14} aria-hidden="true" />My account</Link>
         <header className="member-profile-heading">
           <div>
-            <p className="admin-eyebrow">RONTAB MEMBER</p>
-            <h1>{profile.display_name || "Rontab member"}</h1>
+            <p className="admin-eyebrow">MEMBER</p>
+            <h1>{profile.display_name || "Member"}</h1>
             {profile.city_name && <p className="member-profile-location"><MapPin size={14} aria-hidden="true" />{profile.city_name}{profile.country_code ? `, ${profile.country_code}` : ""}</p>}
             <p className="member-profile-followers"><UsersRound size={14} aria-hidden="true" />{new Intl.NumberFormat("en-GB").format(followerSummary.follower_count)} followers</p>
           </div>
@@ -80,7 +80,6 @@ export default async function MemberProfilePage({
           </section>
         ) : <p className="member-profile-no-contact">This member has not added public contact details.</p>}
       </main>
-      <SiteFooter />
     </>
   );
 }

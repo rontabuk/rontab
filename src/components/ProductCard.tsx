@@ -20,6 +20,8 @@ export function ProductCard({
   showUploadPlaceholder = false,
   isShopFollowed = false,
   muteAutoplay = false,
+  priceBesideMaker = false,
+  priority = false,
 }: {
   product: Product;
   isFeatured?: boolean;
@@ -28,6 +30,8 @@ export function ProductCard({
   showUploadPlaceholder?: boolean;
   isShopFollowed?: boolean;
   muteAutoplay?: boolean;
+  priceBesideMaker?: boolean;
+  priority?: boolean;
 }) {
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const [visibleDetailLength, setVisibleDetailLength] = useState(0);
@@ -207,7 +211,7 @@ export function ProductCard({
       }}
     />
   ) : (
-    <Image src={product.image} alt={product.imageAlt} fill unoptimized sizes="(max-width: 640px) 46vw, (max-width: 1000px) 30vw, 22vw" />
+    <Image src={product.image} alt={product.imageAlt} fill unoptimized={previewOnly} priority={priority} sizes={`(max-width: 760px) ${compact ? "46vw" : "100vw"}, (max-width: 1000px) 30vw, 22vw`} />
   );
 
   const visitLabel = (
@@ -294,16 +298,29 @@ export function ProductCard({
       <div className={`product-card-footer${compact ? " product-card-footer-compact" : ""}`} data-tone={product.overlayTone}>
         {compact ? (
           <div className="product-card-info product-card-info-compact">
-            <span className="product-card-compact-price">{product.price === null ? "On request" : formatPrice(product.price)}</span>
-            <div className="product-card-compact-title">
-              <span className="product-description-name">
-                <span className="product-description-name-text">{product.maker}</span>
-                {product.sellerBadge && <SellerVerificationBadge isBlue={product.sellerBadge === "blue"} />}
-              </span>
-              <span className="product-description-maker">
-                <span className="product-description-maker-name">{product.name}</span>
-              </span>
-            </div>
+            {priceBesideMaker ? (
+              <div className="product-card-compact-title">
+                <div className="product-card-compact-seller">
+                  <span className="product-description-name">
+                    <span className="product-description-name-text">{product.maker}</span>
+                    {product.sellerBadge && <SellerVerificationBadge isBlue={product.sellerBadge === "blue"} />}
+                  </span>
+                  <span className="product-card-compact-price">{product.price === null ? "On request" : formatPrice(product.price)}</span>
+                </div>
+                <span className="product-description-maker"><span className="product-description-maker-name">{product.name}</span></span>
+              </div>
+            ) : (
+              <>
+                <span className="product-card-compact-price">{product.price === null ? "On request" : formatPrice(product.price)}</span>
+                <div className="product-card-compact-title">
+                  <span className="product-description-name">
+                    <span className="product-description-name-text">{product.maker}</span>
+                    {product.sellerBadge && <SellerVerificationBadge isBlue={product.sellerBadge === "blue"} />}
+                  </span>
+                  <span className="product-description-maker"><span className="product-description-maker-name">{product.name}</span></span>
+                </div>
+              </>
+            )}
             <p className="product-card-compact-description" title={product.description}>{product.description}</p>
             {previewOnly ? (
               <span className="product-visit-button product-visit-button-compact">{compactVisitLabel}</span>

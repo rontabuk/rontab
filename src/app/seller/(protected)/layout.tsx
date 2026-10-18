@@ -19,6 +19,7 @@ async function ProtectedSellerShell({ children }: { children: ReactNode }) {
       navigation={<SellerNavigation hasNewAdCreditGrants={hasNewAdCreditGrants} />}
       accountLabel={`${seller.shop_name} · ${seller.status}`}
       signOutTo="/seller/login"
+      brandBackHref="/products"
       hideMobileAccountDetails
     >
       {children}

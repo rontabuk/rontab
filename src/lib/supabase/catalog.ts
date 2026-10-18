@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 import { getOverlayTone, type Product, type ProductCategory } from "@/data/products";
 import type { Database } from "@/lib/supabase/database.types";
 import { createSupabasePublicClient } from "@/lib/supabase/server";
@@ -44,24 +45,53 @@ export async function getTopVideoAds(): Promise<TopVideoAd[]> {
   }));
 }
 
-// Cached per request so page metadata and content share one catalogue read.
-export const getPublicCatalog = cache(async (): Promise<{
+type CatalogFilter = {
+  slug?: string;
+  excludeSlug?: string;
+  categorySlug?: string;
+  excludeCategory?: boolean;
+  limit?: number;
+};
+
+async function loadPublicCatalog(filter: CatalogFilter = {}): Promise<{
   categories: ProductCategory[];
   products: Product[];
-}> => {
+}> {
+  "use cache";
+  cacheLife({ stale: 30, revalidate: 30, expire: 60 });
+  cacheTag("public-catalog");
+
   const supabase = createSupabasePublicClient();
-  const [categoriesResult, productsResult] = await Promise.all([
-    supabase
-      .from("categories")
-      .select("id,slug,name")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true }),
-    supabase
-      .from("products")
-      .select("id,slug,name,description,audio_script,price,view_count,click_count,featured_until,new_until,category_id,seller_profile_id")
-      .eq("status", "approved")
-      .order("created_at", { ascending: false }),
-  ]);
+  const categoriesQuery = supabase
+    .from("categories")
+    .select("id,slug,name")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+  let productsQuery = supabase
+    .from("products")
+    .select("id,slug,name,description,audio_script,price,view_count,click_count,featured_until,new_until,category_id,seller_profile_id")
+    .eq("status", "approved")
+    .order("created_at", { ascending: false });
+
+  if (filter.slug) productsQuery = productsQuery.eq("slug", filter.slug);
+  if (filter.excludeSlug) productsQuery = productsQuery.neq("slug", filter.excludeSlug);
+  if (filter.limit !== undefined) productsQuery = productsQuery.limit(filter.limit);
+
+  const categoriesPromise = Promise.resolve(categoriesQuery);
+  if (filter.categorySlug) {
+    const categories = await categoriesPromise;
+    if (categories.error) throw categories.error;
+    const category = categories.data.find((item) => item.slug === filter.categorySlug);
+    if (category) {
+      productsQuery = filter.excludeCategory
+        ? productsQuery.neq("category_id", category.id)
+        : productsQuery.eq("category_id", category.id);
+    } else if (!filter.excludeCategory) {
+      return { categories: categories.data.map((item) => ({ id: item.slug, name: item.name })), products: [] };
+    }
+  }
+
+  const [categoriesResult, productsResult] = await Promise.all([categoriesPromise, productsQuery]);
 
   if (categoriesResult.error) throw categoriesResult.error;
   if (productsResult.error) throw productsResult.error;
@@ -138,4 +168,23 @@ export const getPublicCatalog = cache(async (): Promise<{
       };
     }),
   };
+}
+
+export const getPublicCatalog = cache(() => loadPublicCatalog());
+
+export const getPublicProduct = cache(async (slug: string) => {
+  const { products } = await loadPublicCatalog({ slug, limit: 1 });
+  return products[0] ?? null;
+});
+
+export const getRelatedPublicProducts = cache(async (slug: string, categorySlug: string) => {
+  const { products } = await loadPublicCatalog({ excludeSlug: slug, categorySlug, limit: 8 });
+  if (products.length === 8) return products;
+  const { products: otherProducts } = await loadPublicCatalog({
+    excludeSlug: slug,
+    categorySlug,
+    excludeCategory: true,
+    limit: 8 - products.length,
+  });
+  return [...products, ...otherProducts];
 });

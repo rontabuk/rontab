@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowLeft, ArrowRight, Mail } from "lucide-react";
 import { notFound } from "next/navigation";
-import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
+import { SiteHeader } from "@/components/SiteChrome";
 import { informationPages, supportEmail } from "@/data/information";
 
 type InformationRouteProps = { params: Promise<{ page: string }> };
@@ -26,7 +26,7 @@ async function InformationPageContent({ params }: InformationRouteProps) {
     <>
       <SiteHeader />
       <main className="information-page page-shell">
-        <Link className="back-link" href="/products"><ArrowLeft size={15} aria-hidden="true" /> Back to Rontab</Link>
+        <Link className="back-link" href="/products"><ArrowLeft size={15} aria-hidden="true" /> Back to products</Link>
         <div className="information-copy">
           <p className="eyebrow">{page.eyebrow}</p>
           <h1>{page.title}</h1>
@@ -46,7 +46,6 @@ async function InformationPageContent({ params }: InformationRouteProps) {
           <Link className="text-link information-link" href="/products">Explore available products <ArrowRight size={15} aria-hidden="true" /></Link>
         </div>
       </main>
-      <SiteFooter />
     </>
   );
 }

@@ -128,7 +128,7 @@ export function ShopVisitLink({
             if (event.key === "Escape") setShowPrompt(false);
           }}>
             <button className="visitor-prompt-close" type="button" aria-label="Close" autoFocus onClick={() => setShowPrompt(false)}><X size={18} /></button>
-            <p className="admin-eyebrow">RONTAB POINT</p>
+            <p className="admin-eyebrow">REWARD POINT</p>
             <h2 id={`visitor-prompt-${slug}`}>Earn 1 point?</h2>
             <p>Sign in to earn a point for this product, or continue as a guest.</p>
             <div className="visitor-prompt-actions">

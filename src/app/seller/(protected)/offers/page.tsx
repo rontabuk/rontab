@@ -90,7 +90,7 @@ export default async function SellerOfferRequestsPage({
       <header className="admin-page-heading">
         <p className="admin-eyebrow">SELLER WORKSPACE</p>
         <h1>Offer requests</h1>
-        <p>Propose a local promotion for review. Nothing is published until Rontab approves its final terms.</p>
+        <p>Propose a local promotion for review. Nothing is published until the team approves its final terms.</p>
       </header>
       {submitted === "1" && <p className="admin-save-success" role="status">Your offer request was sent for review.</p>}
       {redeemed === "1" && <p className="admin-save-success" role="status">Voucher verified and marked as used.</p>}

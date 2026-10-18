@@ -182,7 +182,7 @@ export function CreatorFanTools(props: CreatorFanToolsProps) {
           <h2>{props.displayName}</h2>
           <CreatorVerificationBadge fanCount={props.fanCount} />
         </div>
-        <p className="creator-fan-tools-label">Your Rontab fan code</p>
+        <p className="creator-fan-tools-label">Your fan code</p>
         <strong className="creator-fan-tools-code">{props.code}</strong>
         {props.firstReferralCount !== undefined && <small className="creator-fan-tools-referrals">{formatNumber(props.firstReferralCount)} original referrals</small>}
       </div>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { io } from "next/cache";
 import { ProductBrowser } from "@/components/ProductBrowser";
-import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
+import { SiteHeader } from "@/components/SiteChrome";
 import { TopVideoBanner } from "@/components/TopVideoBanner";
 import { getViewer } from "@/lib/auth/viewer";
 import { getPublicCatalog, getTopVideoAds } from "@/lib/supabase/catalog";
@@ -43,7 +43,7 @@ async function SearchableProductBrowser({ searchParams }: ProductsPageProps) {
       {parameters.emailVerified && (
         <p className="catalog-notice page-shell" data-tone={parameters.emailVerified === "1" ? "ok" : "error"} role="status">
           {parameters.emailVerified === "1"
-            ? "Your email is confirmed. You're now collecting Rontab points."
+            ? "Your email is confirmed. You're now collecting reward points."
             : "That confirmation link has expired or was already used. Open the bell to send a new one."}
         </p>
       )}
@@ -74,7 +74,6 @@ export default function ProductsPage({ searchParams }: ProductsPageProps) {
       <Suspense fallback={<main className="product-browser page-shell" aria-busy="true" />}>
         <SearchableProductBrowser searchParams={searchParams} />
       </Suspense>
-      <SiteFooter />
     </div>
   );
 }

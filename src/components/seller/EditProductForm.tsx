@@ -8,6 +8,7 @@ import { PHOTO_ACCEPT, REEL_ACCEPT, removeProductMedia, uploadProductMedia, vali
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
 import { isHttpsUrl } from "@/lib/validation";
+import { refreshSellerCatalog } from "@/app/seller/(protected)/actions";
 
 type EditableProduct = Pick<
   Database["public"]["Tables"]["products"]["Row"],
@@ -170,6 +171,7 @@ export function EditProductForm({
       return;
     }
 
+    await refreshSellerCatalog();
     if (replacingMedia) {
       const uploadedMedia = await uploadProductMedia(supabase, {
         sellerId,
@@ -208,6 +210,7 @@ export function EditProductForm({
       p_product_id: product.id,
     });
 
+    await refreshSellerCatalog();
     if (submitError) {
       setMessage("Changes are saved, but resubmission failed. The product remains out of the public catalogue until it can be resubmitted.");
       setIsSubmitting(false);

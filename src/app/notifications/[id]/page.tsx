@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
-import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
+import { SiteHeader } from "@/components/SiteChrome";
 import { NotificationsCenter } from "@/components/NotificationsCenter";
 import { getNotificationFeed } from "@/lib/notifications/feed";
 import { getViewer } from "@/lib/auth/viewer";
@@ -40,6 +40,6 @@ export default function NotificationRoute({ params }: NotificationRouteProps) {
   return (
     <><SiteHeader /><Suspense fallback={<main className="notifications-page page-shell" aria-busy="true">Loading notification...</main>}>
       <NotificationContent params={params} />
-    </Suspense><SiteFooter /></>
+    </Suspense></>
   );
 }

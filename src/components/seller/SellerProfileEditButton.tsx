@@ -16,7 +16,7 @@ export function SellerProfileEditButton({ targetId }: { targetId: string }) {
         editor.scrollIntoView({ behavior: "smooth", block: "start" });
       }}
     >
-      <Pencil size={14} aria-hidden="true" />Edit profile
+      <Pencil size={14} aria-hidden="true" />Edit
     </button>
   );
 }

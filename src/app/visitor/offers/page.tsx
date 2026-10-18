@@ -92,7 +92,7 @@ export default async function VisitorOfferGalleryPage({
       {couponsUnavailable && <p className="visitor-rewards-error" role="status">Confirm your email and choose a supported country to access vouchers. <Link href="/visitor">Update your profile</Link>.</p>}
       {pageError === "unavailable" && <p className="visitor-rewards-error" role="alert">That offer time is no longer available. Your points were not changed.</p>}
       {cancelled === "1" && <p className="admin-save-success" role="status">Reservation cancelled. Your points and the daily place were returned.</p>}
-      {reported === "1" && <p className="admin-save-success" role="status">Your voucher issue was sent to the Rontab team. Your points were not changed.</p>}
+      {reported === "1" && <p className="admin-save-success" role="status">Your voucher issue was sent to the support team. Your points were not changed.</p>}
       {pageError === "cancellationClosed" && <p className="visitor-rewards-error" role="alert">The offer window has started, so this voucher can no longer be cancelled.</p>}
       {pageError === "reportDetails" && <p className="visitor-rewards-error" role="alert">Choose an issue and describe it in at least 10 characters.</p>}
       {pageError === "reportUnavailable" && <p className="visitor-rewards-error" role="alert">This voucher cannot be reported right now. Your points were not changed.</p>}

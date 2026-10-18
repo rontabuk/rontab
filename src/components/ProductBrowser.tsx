@@ -139,9 +139,10 @@ export function ProductBrowser({
       <p className="visually-hidden" role="status" aria-live="polite">{filteredProducts.length} {filteredProducts.length === 1 ? "find" : "finds"}</p>
       {filteredProducts.length ? (
         <div className="product-grid" id="product-grid" data-mobile-columns={twoColumnMobileView ? "two" : "one"}>
-          {filteredProducts.map((product) => (
+          {filteredProducts.map((product, index) => (
             <ProductCard
               product={product}
+              priority={index < 2}
               compact={isMobileViewport && twoColumnMobileView}
               isFeatured={isActiveUntil(product.featuredUntil)}
               isShopFollowed={product.sellerProfileId ? followedShops.has(product.sellerProfileId) : false}
@@ -151,7 +152,7 @@ export function ProductBrowser({
         </div>
       ) : (
         <div className="empty-state">
-          <p className="eyebrow">{products.length ? "Nothing here just yet" : "Rontab catalogue"}</p>
+          <p className="eyebrow">{products.length ? "Nothing here just yet" : "Product catalogue"}</p>
           <h3>{products.length ? "No finds match that search." : "No products are published yet."}</h3>
           <p>{products.length ? "Try another word or clear the category filter." : "Approved products will appear here when sellers publish their listings."}</p>
           {products.length > 0 && <button className="button button-outline" type="button" onClick={clearFilters}>Clear filters</button>}

@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   Languages,
   LogIn,
+  Mail,
   Megaphone,
   Menu,
   Package,
@@ -35,6 +36,8 @@ import {
   type ClientPreferences,
 } from "@/lib/preferences/client";
 import { signOut, type SignOutDestination } from "@/lib/auth/actions";
+import { useNotificationReads } from "@/lib/notifications/read-state";
+import type { getNotificationFeed } from "@/lib/notifications/feed";
 
 const icons = {
   home: House,
@@ -51,6 +54,7 @@ const icons = {
   review: ShieldCheck,
   sellers: Store,
   ticket: Ticket,
+  inbox: Mail,
 } satisfies Record<string, LucideIcon>;
 
 type NavItem = {
@@ -75,10 +79,12 @@ export type MobileNavConfig = {
 // The splash is a full-screen entry page with its own choices.
 const HIDDEN_PATHS = new Set(["/"]);
 
-export function MobileBottomNavBar({ config }: { config: MobileNavConfig }) {
+export function MobileBottomNavBar({ config, notifications }: { config: MobileNavConfig; notifications: Awaited<ReturnType<typeof getNotificationFeed>> }) {
   const pathname = usePathname();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [preferences, setPreferences] = useState<ClientPreferences>(DEFAULT_CLIENT_PREFERENCES);
+  const { isUnread } = useNotificationReads(notifications);
+  const inboxUnread = notifications.items.filter(isUnread).length;
 
   useEffect(() => {
     const syncPreferences = () => setPreferences(readClientPreferences());
@@ -106,17 +112,19 @@ export function MobileBottomNavBar({ config }: { config: MobileNavConfig }) {
           );
         }
         const active = isActive(item);
+        const badge = item.icon === "inbox" ? (inboxUnread ? String(Math.min(inboxUnread, 99)) : undefined) : item.badge;
         return (
           <Link
             key={item.href}
             href={item.href}
             className={item.highlight ? "mobile-nav-highlight" : undefined}
             aria-current={active ? "page" : undefined}
-            aria-label={item.ariaLabel}
+            aria-label={item.icon === "inbox" ? (inboxUnread ? `Inbox, ${inboxUnread} unread` : "Inbox") : item.ariaLabel}
+            data-nav-icon={item.icon}
           >
             <span className="mobile-nav-icon"><Icon size={21} aria-hidden="true" /></span>
             <span className="mobile-nav-label">{item.label}</span>
-            {item.badge && <strong className="mobile-nav-badge" aria-hidden="true">{item.badge}</strong>}
+            {badge && <strong className="mobile-nav-badge" aria-hidden="true">{badge}</strong>}
             {item.dot && <span className="mobile-nav-dot" aria-hidden="true" />}
           </Link>
         );
@@ -160,6 +168,7 @@ export function MobileBottomNavBar({ config }: { config: MobileNavConfig }) {
           ) : (
             <div className="mobile-nav-menu-links">
               {config.menuLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}
+              <Link href="/information">Site information</Link>
               <button className="mobile-nav-settings-button" type="button" onClick={() => setSettingsOpen(true)}>Settings</button>
             </div>
           )}

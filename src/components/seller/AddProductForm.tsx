@@ -8,6 +8,7 @@ import { ProductPreview, type SellerCategoryOption } from "@/components/seller/P
 import { PHOTO_ACCEPT, REEL_ACCEPT, removeProductMedia, uploadProductMedia, validateProductMedia } from "@/components/seller/productMedia";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isHttpsUrl } from "@/lib/validation";
+import { refreshSellerCatalog } from "@/app/seller/(protected)/actions";
 
 type PreviewValues = {
   name: string;
@@ -189,6 +190,7 @@ export function AddProductForm({
       p_product_id: productId,
     });
 
+    await refreshSellerCatalog();
     if (submitError) {
       setMessage("Your draft and media were saved, but submission failed. Edit it from Your products to resubmit.");
       setIsSubmitting(false);

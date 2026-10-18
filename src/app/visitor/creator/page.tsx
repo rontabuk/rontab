@@ -43,7 +43,7 @@ const statusCopy: Record<string, string> = {
   changes_requested: "The review team asked for changes. Update your details and submit again.",
   rejected: "This application was not approved. You can revise it and submit again.",
   approved: "Your profile is public. Any changes you submit will be reviewed before they appear.",
-  suspended: "This profile is currently unavailable. Contact Rontab support if you need help.",
+  suspended: "This profile is currently unavailable. Contact support if you need help.",
   withdrawn: "Your profile is offline. You can submit it again with public consent.",
 };
 
@@ -152,7 +152,7 @@ export default async function VisitorCreatorPage({
           <div className="creator-profile-cover">
             {coverImageUrl
               ? <Image src={coverImageUrl} alt={`${profile.display_name} cover`} fill unoptimized sizes="(max-width: 700px) 100vw, 900px" />
-              : <div className="creator-profile-cover-default"><span>RONTAB CREATORS</span><strong>Creators who inspire everyday living</strong></div>}
+              : <div className="creator-profile-cover-default"><span>CREATORS</span><strong>Creators who inspire everyday living</strong></div>}
           </div>
           <div className="creator-studio-identity">
             <div className="creator-profile-avatar">
@@ -170,7 +170,7 @@ export default async function VisitorCreatorPage({
         <header className="admin-page-heading">
           <p className="admin-eyebrow">CREATOR PROGRAMME</p>
           <h1>{profile ? "Creator application" : "Introduce yourself"}</h1>
-          <p>Share what you create and where your audience follows you. Approved profiles are visible to the Rontab community and sellers.</p>
+          <p>Share what you create and where your audience follows you. Approved profiles are visible to the community and sellers.</p>
         </header>
       )}
 
@@ -321,7 +321,7 @@ export default async function VisitorCreatorPage({
                   );
                 })}
               </div>
-              <p className="creator-metrics-disclaimer">Numbers are displayed with their last update date and are not verified by Rontab.</p>
+              <p className="creator-metrics-disclaimer">Numbers are displayed with their last update date and are not independently verified.</p>
             </fieldset>
 
             <fieldset className="creator-portfolio">
@@ -339,7 +339,7 @@ export default async function VisitorCreatorPage({
 
             <label className="creator-public-consent">
               <input name="public_profile_consent" type="checkbox" required />
-              <span>I agree that my profile picture, cover image, name, introduction, specialties, audience cities, platform links, follower counts, and work samples may appear on my public Rontab creator profile.</span>
+              <span>I agree that my profile picture, cover image, name, introduction, specialties, audience cities, platform links, follower counts, and work samples may appear on my public creator profile.</span>
             </label>
             <button className="admin-primary-button" type="submit">{profile ? "Save and submit for review" : "Submit for review"}</button>
           </ActionForm>
@@ -373,7 +373,7 @@ export default async function VisitorCreatorPage({
               <div>
                 <span className={`creator-collaboration-status is-${request.status}`}>{request.status}</span>
                 <h3>{request.title}</h3>
-                <p>From {sellerNames.get(request.seller_profile_id) ?? "Rontab seller"} {sellerBadges.has(request.seller_profile_id) && <SellerVerificationBadge isBlue={sellerBadges.get(request.seller_profile_id)?.is_blue ?? false} />} · {formatDateTime(request.created_at)}</p>
+                <p>From {sellerNames.get(request.seller_profile_id) ?? "Seller"} {sellerBadges.has(request.seller_profile_id) && <SellerVerificationBadge isBlue={sellerBadges.get(request.seller_profile_id)?.is_blue ?? false} />} · {formatDateTime(request.created_at)}</p>
                 <p>{request.brief}</p>
                 {request.proposed_compensation && <p><strong>Proposed compensation:</strong> {request.proposed_compensation}</p>}
               </div>
@@ -398,7 +398,7 @@ export default async function VisitorCreatorPage({
           ))}
         </section>
       )}
-      <p className="creator-profile-footnote"><BadgeCheck size={14} aria-hidden="true" />Approval means the profile passed Rontab review. Platform metrics remain self-reported unless explicitly marked otherwise.</p>
+      <p className="creator-profile-footnote"><BadgeCheck size={14} aria-hidden="true" />Approval means the profile passed review. Platform metrics remain self-reported unless explicitly marked otherwise.</p>
     </main>
   );
 }

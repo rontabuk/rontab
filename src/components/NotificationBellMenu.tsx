@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
-import { BadgeCheck, Bell, Check, CheckCheck, Gift, LifeBuoy, MailWarning, Megaphone, MessageSquareText, Sparkles, Volume2, VolumeX } from "lucide-react";
+import { BadgeCheck, Bell, Check, CheckCheck, Gift, LifeBuoy, Mail, MailWarning, Megaphone, MessageSquareText, Sparkles, Volume2, VolumeX } from "lucide-react";
 import { sendVisitorEmailVerification } from "@/app/account/actions";
 import { useNotificationReads } from "@/lib/notifications/read-state";
 import type { SiteNotification } from "@/lib/notifications/feed";
+import { getNotificationChannel, type NotificationChannel } from "@/lib/notifications/channels";
 
 const icons = { "verify-email": MailWarning, announcement: Megaphone, "new-product": Sparkles, "loyalty-offer": Gift, "reward-result": BadgeCheck, "support-case": LifeBuoy, "collaboration-request": MessageSquareText, "creator-programme": MessageSquareText };
 const soundChangedEvent = "rontab:notification-sound-changed";
@@ -58,6 +59,7 @@ export function NotificationBellMenu({
   const [open, setOpen] = useState(false);
   const [hasOpened, setHasOpened] = useState(false);
   const [tab, setTab] = useState<"all" | "unread">("all");
+  const [channel, setChannel] = useState<NotificationChannel>("messages");
   const [resendState, setResendState] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [isResending, startResend] = useTransition();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -69,7 +71,9 @@ export function NotificationBellMenu({
   const { isUnread, markRead, error: readError, saving } = useNotificationReads({ userId, readIds, lastSeenAt });
   const unreadItems = items.filter(isUnread);
   const unread = unreadItems.length;
-  const visibleItems = tab === "unread" ? unreadItems : items;
+  const channelItems = items.filter((item) => getNotificationChannel(item) === channel);
+  const visibleItems = tab === "unread" ? channelItems.filter(isUnread) : channelItems;
+  const channelUnread = channelItems.filter(isUnread);
 
   useEffect(() => {
     const refreshNotifications = () => {
@@ -170,17 +174,18 @@ export function NotificationBellMenu({
         type="button"
         aria-expanded={open}
         aria-haspopup="true"
-        aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
+        aria-label={unread ? `Inbox, ${unread} unread` : "Inbox"}
+        title="Inbox"
         aria-controls="notification-panel"
         onClick={toggle}
       >
-        <Bell size={19} aria-hidden="true" />
+        <Mail size={19} aria-hidden="true" />
         {unread > 0 && <span className="notification-bell-count" aria-hidden="true">{unread > 9 ? "9+" : unread}</span>}
       </button>
-      <section id="notification-panel" className="notification-panel" data-open={open || undefined} aria-label="Notifications" aria-hidden={!open} inert={!open}>
+      <section id="notification-panel" className="notification-panel" data-open={open || undefined} aria-label="Inbox" aria-hidden={!open} inert={!open}>
         <header className="notification-panel-header">
           <div className="notification-panel-title">
-            <h2>Notifications</h2>
+            <h2>Inbox</h2>
             {userId && <div className="notification-panel-controls">
               <button type="button" className="notification-sound-toggle" title={soundEnabled ? "Turn notification sound off" : "Turn notification sound on"} aria-label={soundEnabled ? "Turn notification sound off" : "Turn notification sound on"} aria-pressed={soundEnabled} onClick={() => {
                 const nextEnabled = !soundEnabled;
@@ -190,17 +195,21 @@ export function NotificationBellMenu({
               }}>
                 {soundEnabled ? <Volume2 size={17} aria-hidden="true" /> : <VolumeX size={17} aria-hidden="true" />}
               </button>
-              {unreadItems.some((item) => item.kind !== "verify-email") && (
-                <button type="button" className="notification-mark-read" disabled={saving} onClick={() => void markRead(unreadItems.map((item) => item.id))}>
+              {channelUnread.some((item) => item.kind !== "verify-email") && (
+                <button type="button" className="notification-mark-read" disabled={saving} onClick={() => void markRead(channelUnread.map((item) => item.id))}>
                   <CheckCheck size={15} aria-hidden="true" /> Mark all as read
                 </button>
               )}
             </div>}
           </div>
+          <div className="notification-channels" role="group" aria-label="Inbox sections">
+            <button type="button" aria-pressed={channel === "messages"} onClick={() => setChannel("messages")}>Messages</button>
+            <button type="button" aria-pressed={channel === "ads"} onClick={() => setChannel("ads")}>Ad notifications</button>
+          </div>
           {userId && <div className="notification-tabs" role="tablist" aria-label="Filter notifications">
             <button type="button" role="tab" aria-selected={tab === "all"} onClick={() => setTab("all")}>All</button>
             <button type="button" role="tab" aria-selected={tab === "unread"} onClick={() => setTab("unread")}>
-              Unread{unreadItems.length > 0 && <span>{unreadItems.length}</span>}
+              Unread{channelUnread.length > 0 && <span>{channelUnread.length}</span>}
             </button>
           </div>}
         </header>
@@ -260,10 +269,10 @@ export function NotificationBellMenu({
         ) : (
           <div className="notification-empty">
             <Bell size={30} aria-hidden="true" />
-            <p>{tab === "unread" ? "No unread notifications." : "You're all caught up."}</p>
+            <p>{tab === "unread" ? "You're all caught up." : channel === "messages" ? "No messages yet." : "No ad notifications yet."}</p>
           </div>
         ))}
-        <Link className="notification-view-all" href="/notifications" onClick={() => setOpen(false)}>View all notifications</Link>
+        <Link className="notification-view-all" href={`/notifications?tab=${channel}`} onClick={() => setOpen(false)}>Open inbox</Link>
       </section>
     </div>
   );

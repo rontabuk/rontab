@@ -3,7 +3,6 @@ import Image from "next/image";
 import { Suspense } from "react";
 import { CircleUserRound, Menu } from "lucide-react";
 import { DismissibleDetails } from "@/components/DismissibleDetails";
-import { BrandMark } from "@/components/BrandMark";
 import { NotificationBell } from "@/components/NotificationBell";
 import { informationPages } from "@/data/information";
 import { getViewer } from "@/lib/auth/viewer";
@@ -14,11 +13,6 @@ export function SiteHeader() {
   return (
     <header className="site-header">
       <div className="site-header-inner page-shell">
-        <Link className="wordmark" href="/products" aria-label="RonTab products">
-          <BrandMark width={38} height={27} />
-          <span>RonTab</span>
-        </Link>
-
         <Suspense fallback={<AccountLinksFallback />}>
           <AccountLinks />
         </Suspense>
@@ -101,10 +95,11 @@ function HeaderActions({
             </div>
             <div className="site-menu-extras">
               {points !== null && (
-                <span className="visitor-points-badge" aria-label={`${points} Rontab points`}>Points <strong>{formatNumber(points)}</strong></span>
+                <span className="visitor-points-badge" aria-label={`${points} reward points`}>Points <strong>{formatNumber(points)}</strong></span>
               )}
                 <Link href="/creators">Creators</Link>
               {children}
+              <Link href="/information">Site information</Link>
             </div>
           </div>
         </DismissibleDetails>
@@ -125,12 +120,12 @@ function HeaderActions({
             <>
               <CircleUserRound size={18} aria-hidden="true" />
               <span>{accountLabel}</span>
-              {points !== null && <strong aria-label={`${points} Rontab points`}>{formatNumber(points)}</strong>}
+              {points !== null && <strong aria-label={`${points} reward points`}>{formatNumber(points)}</strong>}
             </>
           )}
         </Link>
         {accountImage !== undefined && points !== null && (
-          <strong className="header-account-avatar-points" aria-label={`${points} Rontab points`}>
+          <strong className="header-account-avatar-points" aria-label={`${points} reward points`}>
             {formatNumber(points)}
           </strong>
         )}
@@ -145,10 +140,6 @@ export function SiteFooter() {
       <div className="footer-inner page-shell">
         <div className="footer-top">
           <div className="footer-brand">
-            <Link className="wordmark wordmark-light" href="/products" aria-label="RonTab products">
-              <BrandMark width={42} height={30} onDarkBackground />
-              <span>RonTab</span>
-            </Link>
             <p>Good things for the everyday home.</p>
           </div>
           <nav className="footer-links" aria-label="Information">
@@ -156,7 +147,7 @@ export function SiteFooter() {
           </nav>
         </div>
         <div className="footer-bottom">
-          <span>© Rontab</span>
+          <span>All rights reserved</span>
           <span>Independent home & kitchen finds</span>
         </div>
       </div>

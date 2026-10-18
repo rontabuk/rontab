@@ -186,7 +186,7 @@ export default async function CreatorOpportunitiesPage({
           </nav>}
         </>
       )}
-      <p className="creator-opportunity-disclosure">Offers and payment are arranged directly by the seller and creator. Rontab does not handle campaign payments or guarantee delivery.</p>
+      <p className="creator-opportunity-disclosure">Offers and payment are arranged directly by the seller and creator. The platform does not handle campaign payments or guarantee delivery.</p>
     </main>
   );
 }

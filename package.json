@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test:billing": "node --test scripts/test-billing.mjs",
+    "test:catalog": "node --test scripts/test-catalog.mjs",
+    "test:notifications": "node --test scripts/test-notifications.mjs",
     "test:offer-concurrency": "node scripts/test-seller-offer-concurrency.mjs",
     "test:creator-programme": "node scripts/test-creator-programme.mjs",
     "data:uk-cities": "node scripts/generate-uk-city-seed.mjs",

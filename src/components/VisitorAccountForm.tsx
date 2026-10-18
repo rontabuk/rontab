@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Check, Eye, EyeOff, Loader2 } from "lucide-react";
-import { BrandMark } from "@/components/BrandMark";
+import { ArrowLeft, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { CityPicker, type SupportedCity, type SupportedCountry } from "@/components/CityPicker";
 import { registerVisitorAccount, sendVisitorEmailVerification } from "@/app/account/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -21,7 +20,7 @@ const copy = {
   },
   register: {
     title: "Create your free account",
-    intro: "Join Rontab to keep your points and take part in reward offers.",
+    intro: "Create an account to keep your points and take part in reward offers.",
     submit: "Create account",
     pending: "Creating account…",
   },
@@ -29,7 +28,7 @@ const copy = {
 
 const benefits = [
   "Collect points as you discover new products",
-  "Take part in Rontab reward offers",
+  "Take part in reward offers",
   "Your points stay safe on every device",
 ];
 
@@ -98,9 +97,8 @@ export function VisitorAccountForm({ nextPath, notice, initialMode = "login", co
       }
 
       const verificationResult = await sendVisitorEmailVerification().catch(() => ({ error: "We couldn't send the email right now." }));
-      const destination = new URL(nextPath === "/visitor" ? "/products" : nextPath, window.location.origin);
-      destination.searchParams.set("verificationEmail", verificationResult.error ? "failed" : "sent");
-      router.replace(`${destination.pathname}${destination.search}${destination.hash}`);
+      const destination = nextPath === "/visitor" ? "/products" : nextPath;
+      router.replace(`/?welcome=1&next=${encodeURIComponent(destination)}&verificationEmail=${verificationResult.error ? "failed" : "sent"}`);
       router.refresh();
       return;
     }
@@ -119,7 +117,7 @@ export function VisitorAccountForm({ nextPath, notice, initialMode = "login", co
   return (
     <main className="visitor-account-page">
       <section className="visitor-account-panel" aria-labelledby="visitor-account-title">
-        <Link className="visitor-account-wordmark" href="/products" aria-label="RonTab products"><BrandMark width={42} height={30} /><span>RonTab</span></Link>
+        <Link className="visitor-account-wordmark" href="/products" aria-label="Back to products" title="Back to products"><ArrowLeft size={22} aria-hidden="true" /></Link>
 
         <div className="visitor-account-tabs" role="group" aria-label="Account options">
           <button type="button" aria-pressed={mode === "login"} onClick={() => switchMode("login")}>Sign in</button>
@@ -186,7 +184,7 @@ export function VisitorAccountForm({ nextPath, notice, initialMode = "login", co
 
         <div className="visitor-account-footer">
           <Link href="/products">Continue browsing without an account</Link>
-          <span>Selling on Rontab? <Link href="/seller/login">Seller sign in</Link></span>
+          <span>Have a shop? <Link href="/seller/login">Seller sign in</Link></span>
         </div>
       </section>
     </main>

@@ -1,4 +1,4 @@
-import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
+import { SiteHeader } from "@/components/SiteChrome";
 import "../products/catalog.css";
 import "./creators.css";
 
@@ -7,7 +7,6 @@ export default function CreatorsLayout({ children }: { children: React.ReactNode
     <div className="catalog-theme">
       <SiteHeader />
       {children}
-      <SiteFooter />
     </div>
   );
 }

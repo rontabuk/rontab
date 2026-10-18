@@ -3,8 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShoppingBag, Store } from "lucide-react";
-import { BrandMark } from "@/components/BrandMark";
+import { LoaderCircle, ShoppingBag, Store } from "lucide-react";
 
 export function RontabSplash({ showOnly = false, destination = "/products" }: { showOnly?: boolean; destination?: string }) {
   const router = useRouter();
@@ -15,25 +14,27 @@ export function RontabSplash({ showOnly = false, destination = "/products" }: { 
     return () => window.clearTimeout(timer);
   }, [destination, router, showOnly]);
 
+  if (showOnly) {
+    return (
+      <main className="account-welcome-screen">
+        <h1>RonTab</h1>
+        <div className="account-welcome-loading" role="status" aria-label="Loading your account">
+          <LoaderCircle size={20} aria-hidden="true" />
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <main className={`rontab-splash${showOnly ? " rontab-splash-intro" : ""}`}>
+    <main className="rontab-splash">
       <div className="splash-blob splash-blob-a" aria-hidden="true" />
       <div className="splash-blob splash-blob-b" aria-hidden="true" />
       <div className="splash-blob splash-blob-c" aria-hidden="true" />
-      <section className="splash-content" aria-label="Rontab">
-        <div className="splash-brand-mark" aria-hidden="true">
-          <BrandMark className="splash-brand-logo" width={72} height={51} />
-        </div>
-        <h1 className="splash-wordmark">Ron<span>.</span>Tab</h1>
+      <section className="splash-content" aria-label="Welcome">
+        <h1 className="splash-wordmark">Welcome</h1>
         <p className="splash-tagline">Find it. Sell it. Grow it.</p>
         <p className="splash-sub">The marketplace where independent shops and shoppers meet.</p>
 
-        {showOnly ? (
-          <div className="splash-entering" role="status">
-            <span className="splash-loading-line" />
-            <span>Opening your Rontab</span>
-          </div>
-        ) : (
           <nav className="splash-actions" aria-label="Choose how to continue">
             <Link className="splash-action splash-action-primary" href="/products">
               <ShoppingBag size={18} aria-hidden="true" /> Start shopping
@@ -46,9 +47,8 @@ export function RontabSplash({ showOnly = false, destination = "/products" }: { 
               <Link href="/seller/login">Seller sign in</Link>
             </div>
           </nav>
-        )}
       </section>
-      <p className="splash-footer">RonTab · Independent commerce</p>
+      <p className="splash-footer">Independent commerce</p>
     </main>
   );
 }

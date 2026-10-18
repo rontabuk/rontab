@@ -57,7 +57,7 @@ export default async function VisitorSupportPage({
                   <p>{report.description}</p>
                   <small>Reported {formatDateTime(report.created_at)}</small>
                   {report.resolution_note && (
-                    <p className="visitor-support-resolution"><strong>Rontab response</strong>{report.resolution_note}</p>
+                    <p className="visitor-support-resolution"><strong>Support response</strong>{report.resolution_note}</p>
                   )}
                 </div>
               </article>

@@ -83,7 +83,7 @@ export default async function VisitorAccountPage({
               {avatarUrl ? <Image src={avatarUrl} alt="Your profile picture" fill sizes="104px" unoptimized /> : <UserRound size={38} aria-hidden="true" />}
             </div>
             <div>
-              <h2>{profile.display_name || "Rontab member"}</h2>
+              <h2>{profile.display_name || "Member"}</h2>
               {savedCity ? <p><MapPin size={14} aria-hidden="true" />{savedCity.city_name}, {savedCity.country_code}</p> : <p><MapPin size={14} aria-hidden="true" />Choose an offer location</p>}
             </div>
             <div className="visitor-account-profile-actions">
@@ -99,7 +99,7 @@ export default async function VisitorAccountPage({
                     currentUrl={avatarUrl}
                     alt="Your profile picture"
                   />
-                  <label>Display name<input name="display_name" defaultValue={profile.display_name ?? ""} maxLength={100} autoComplete="name" /><small>This name is for your Rontab account.</small></label>
+                  <label>Display name<input name="display_name" defaultValue={profile.display_name ?? ""} maxLength={100} autoComplete="name" /><small>This name is for your account.</small></label>
                   <label>Registered email<input type="email" value={user.email ?? ""} readOnly />
                     {profile.email_verified_at
                       ? <small className="seller-profile-verified">Email confirmed</small>

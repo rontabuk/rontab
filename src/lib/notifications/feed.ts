@@ -85,7 +85,7 @@ export const getNotificationFeed = cache(async (): Promise<NotificationFeed> => 
     ...(products.data ?? []).filter((item) => item.published_at).map((item) => ({
       id: `product-${item.id}`,
       kind: "new-product" as const,
-      title: "New on Rontab",
+      title: "New products",
       body: item.name,
       href: `/products/${item.slug}`,
       createdAt: item.published_at!,
@@ -138,7 +138,7 @@ export const getNotificationFeed = cache(async (): Promise<NotificationFeed> => 
       kind: "verify-email",
       title: viewer.emailVerifiedAt ? "Email confirmed" : "Confirm your email address",
       body: viewer.emailVerifiedAt
-        ? "Your email address is confirmed. You're now collecting Rontab points."
+        ? "Your email address is confirmed. You're now collecting reward points."
         : "Confirm your email to start collecting points and join reward offers. Check your inbox for the link we sent.",
       href: null,
       createdAt: new Date(reminderAt).toISOString(),

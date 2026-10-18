@@ -43,7 +43,7 @@ export function AdminLoginForm() {
       return;
     }
 
-    router.replace("/admin");
+    router.replace("/?welcome=1&next=%2Fadmin");
     router.refresh();
   }
 

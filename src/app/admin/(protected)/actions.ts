@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin/access";
 import { FormError, runFormAction, type FormState } from "@/lib/form-state";
@@ -41,6 +41,7 @@ export async function reviewProduct(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/products");
+  updateTag("public-catalog");
   revalidatePath("/");
 }
 
@@ -57,6 +58,7 @@ export async function setProductFeatured(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/products");
+  updateTag("public-catalog");
   revalidatePath("/");
 }
 
@@ -314,6 +316,7 @@ export async function setSellerStatus(formData: FormData) {
 
   revalidatePath("/admin/sellers");
   revalidatePath("/admin/seller-offers");
+  updateTag("public-catalog");
   revalidatePath("/visitor/offers");
 }
 
@@ -332,6 +335,7 @@ export async function setSellerVerificationBadge(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/sellers");
+  updateTag("public-catalog");
   revalidatePath("/products");
   revalidatePath("/shops");
   revalidatePath("/visitor/creator/opportunities");
@@ -425,6 +429,7 @@ export async function saveCategory(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/categories");
+  updateTag("public-catalog");
   revalidatePath("/");
 }
 

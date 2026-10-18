@@ -9,18 +9,17 @@ import { reportMarketplaceItem } from "@/app/visitor/actions";
 import { ProductCard } from "@/components/ProductCard";
 import { BrowserSpeechPlayer } from "@/components/BrowserSpeechPlayer";
 import { ShopVisitLink } from "@/components/ShopVisitLink";
-import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
+import { SiteHeader } from "@/components/SiteChrome";
 import { getViewer } from "@/lib/auth/viewer";
 import { formatPrice } from "@/lib/format";
-import { getPublicCatalog } from "@/lib/supabase/catalog";
+import { getPublicProduct, getRelatedPublicProducts } from "@/lib/supabase/catalog";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ProductPageProps = { params: Promise<{ slug: string }>; searchParams: Promise<{ report?: string }> };
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const catalog = await getPublicCatalog();
-  const product = catalog.products.find((item) => item.slug === slug);
+  const product = await getPublicProduct(slug);
   return product
     ? { title: product.name, description: product.description.slice(0, 160) }
     : { title: "Product not found" };
@@ -29,9 +28,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 async function ProductPageContent({ params, searchParams }: ProductPageProps) {
   const [{ slug }, { report }] = await Promise.all([params, searchParams]);
   await io();
-  const [catalog, viewer] = await Promise.all([getPublicCatalog(), getViewer()]);
-
-  const product = catalog.products.find((item) => item.slug === slug);
+  const [product, viewer] = await Promise.all([getPublicProduct(slug), getViewer()]);
   if (!product) notFound();
   let followedShopIds: string[] = [];
   if (viewer.role === "visitor") {
@@ -40,16 +37,8 @@ async function ProductPageContent({ params, searchParams }: ProductPageProps) {
     if (error) throw new Error(error.message);
     followedShopIds = (data ?? []).map((shop) => shop.seller_profile_id);
   }
-  const followedShops = new Set(followedShopIds);
-  const otherProducts = catalog.products.filter((item) => item.slug !== product.slug);
-  const relatedProducts = [
-    ...otherProducts.filter((item) => item.category === product.category),
-    ...otherProducts.filter((item) => item.category !== product.category),
-  ].slice(0, 8);
-
   return (
     <>
-      <SiteHeader />
       <main className="product-detail page-shell">
         <nav className="breadcrumbs" aria-label="Breadcrumb">
           <Link href="/products">Discover</Link><span aria-hidden="true">/</span>
@@ -65,7 +54,7 @@ async function ProductPageContent({ params, searchParams }: ProductPageProps) {
             ) : product.mediaType === "video" ? (
               <video src={product.image} aria-label={product.imageAlt} controls playsInline preload="metadata" />
             ) : (
-              <Image src={product.image} alt={product.imageAlt} fill unoptimized priority sizes="(max-width: 760px) 100vw, 55vw" />
+              <Image src={product.image} alt={product.imageAlt} fill priority sizes="(max-width: 760px) 100vw, 55vw" />
             )}
           </div>
           <div className="detail-copy">
@@ -88,13 +77,13 @@ async function ProductPageContent({ params, searchParams }: ProductPageProps) {
               )}
               {product.shopPhone && <a className="detail-shop-phone" href={`tel:${product.shopPhone}`}><Phone size={14} aria-hidden="true" />Call {product.maker}</a>}
             </div>
-            <p className="detail-note">Prices and availability are set by the shop and may change. Purchases are completed on the seller&apos;s website, not on Rontab.</p>
+            <p className="detail-note">Prices and availability are set by the shop and may change. Purchases are completed on the seller&apos;s website, not here.</p>
             {product.id && product.sellerProfileId && (
               <section className="marketplace-report" id="report" aria-labelledby="marketplace-report-title">
                 <h2 id="marketplace-report-title">Something wrong?</h2>
                 <details>
                   <summary>Report this product or seller</summary>
-                  <p>Reports are reviewed by the Rontab team. Sign in with an email-confirmed account to submit one.</p>
+                  <p>Reports are reviewed by the support team. Sign in with an email-confirmed account to submit one.</p>
                   {report === "sent" && <p className="marketplace-report-feedback" role="status">Thank you. Your report was sent for review. <Link href="/visitor/support">View my reports</Link></p>}
                   {report === "verification" && <p className="marketplace-report-feedback is-error" role="alert">Confirm your email from the notification bell before sending a report.</p>}
                   {report === "invalid" && <p className="marketplace-report-feedback is-error" role="alert">Choose a reason and add a description of at least 10 characters.</p>}
@@ -125,24 +114,36 @@ async function ProductPageContent({ params, searchParams }: ProductPageProps) {
             <Link className="back-link" href="/products#discover"><ArrowLeft size={15} aria-hidden="true" /> Back to all finds</Link>
           </div>
         </div>
-        {relatedProducts.length > 0 && (
-          <section className="related-section" aria-labelledby="related-title">
-            <div className="section-heading"><div><p className="eyebrow">In the same corner</p><h2 id="related-title">A little more to explore.</h2></div></div>
-            <div className="product-grid related-grid">
-              {relatedProducts.map((item) => <ProductCard product={item} isShopFollowed={item.sellerProfileId ? followedShops.has(item.sellerProfileId) : false} key={item.slug} />)}
-            </div>
-          </section>
-        )}
+        <Suspense fallback={null}>
+          <RelatedProducts slug={slug} category={product.category} followedShopIds={followedShopIds} />
+        </Suspense>
       </main>
-      <SiteFooter />
     </>
+  );
+}
+
+async function RelatedProducts({ slug, category, followedShopIds }: { slug: string; category: string; followedShopIds: string[] }) {
+  const products = await getRelatedPublicProducts(slug, category);
+  if (!products.length) return null;
+  const followedShops = new Set(followedShopIds);
+
+  return (
+    <section className="related-section" aria-labelledby="related-title">
+      <div className="section-heading"><div><p className="eyebrow">In the same corner</p><h2 id="related-title">A little more to explore.</h2></div></div>
+      <div className="product-grid related-grid">
+        {products.map((item) => <ProductCard product={item} isShopFollowed={item.sellerProfileId ? followedShops.has(item.sellerProfileId) : false} key={item.slug} />)}
+      </div>
+    </section>
   );
 }
 
 export default function ProductPage({ params, searchParams }: ProductPageProps) {
   return (
-      <Suspense fallback={<main className="product-detail page-shell" aria-busy="true" />}>
+    <>
+      <SiteHeader />
+      <Suspense fallback={<main className="product-detail page-shell" aria-busy="true"><p role="status">Loading product...</p></main>}>
         <ProductPageContent params={params} searchParams={searchParams} />
-    </Suspense>
+      </Suspense>
+    </>
   );
 }

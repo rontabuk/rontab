@@ -7,7 +7,7 @@ import { ArrowLeft, ArrowUpRight, Check, Phone, MapPin, Plus, UsersRound } from 
 import { ActionForm } from "@/components/ActionForm";
 import { SellerVerificationBadge } from "@/components/seller/SellerVerificationBadge";
 import { ProductCard } from "@/components/ProductCard";
-import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
+import { SiteHeader } from "@/components/SiteChrome";
 import { followShop } from "@/app/visitor/shop-follow-actions";
 import { getViewer } from "@/lib/auth/viewer";
 import { formatNumber } from "@/lib/format";
@@ -26,8 +26,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     .eq("is_public", true)
     .maybeSingle();
   return data
-    ? { title: `${data.shop_name} | Rontab Shops`, description: data.description?.slice(0, 160) ?? `Discover products from ${data.shop_name} on Rontab.` }
-    : { title: "Shop not found | Rontab" };
+    ? { title: `${data.shop_name} | Shops`, description: data.description?.slice(0, 160) ?? `Discover products from ${data.shop_name}.` }
+    : { title: "Shop not found" };
 }
 
 export default async function PublicShopPage({
@@ -126,7 +126,6 @@ export default async function PublicShopPage({
             : <p className="public-shop-empty">This shop has no published products right now.</p>}
         </section>
       </main>
-      <SiteFooter />
     </>
   );
 }

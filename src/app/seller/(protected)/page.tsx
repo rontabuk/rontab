@@ -34,7 +34,7 @@ export default async function SellerDashboardPage() {
       {seller.status === "suspended" && (
         <section className="seller-account-notice seller-account-suspended" role="status">
           <strong>Your seller account is suspended.</strong>
-          <span>Product submissions and edits are unavailable. Contact Rontab support for assistance.</span>
+          <span>Product submissions and edits are unavailable. Contact support for assistance.</span>
         </section>
       )}
       {seller.status === "active" && <AddProductForm sellerId={seller.id} shopName={seller.shop_name} shopLogo={seller.logo_url} categories={categories ?? []} />}

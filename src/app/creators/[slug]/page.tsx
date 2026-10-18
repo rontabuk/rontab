@@ -21,8 +21,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const supabase = createSupabasePublicClient();
   const { data } = await supabase.from("creator_profiles").select("published_display_name,published_bio").eq("slug", slug).eq("is_public", true).maybeSingle();
   return data
-    ? { title: `${data.published_display_name} | Rontab Creators`, description: data.published_bio?.slice(0, 160) }
-    : { title: "Creator profile | Rontab" };
+    ? { title: `${data.published_display_name} | Creators`, description: data.published_bio?.slice(0, 160) }
+    : { title: "Creator profile" };
 }
 
 export default async function CreatorProfilePage({
@@ -109,7 +109,7 @@ export default async function CreatorProfilePage({
         <div className="creator-profile-cover">
           {coverImageResult?.signedUrl
             ? <Image src={coverImageResult.signedUrl} alt={`${profile.published_display_name} cover`} fill unoptimized sizes="(max-width: 700px) 100vw, 900px" />
-            : <div className="creator-profile-cover-default"><span>RONTAB CREATORS</span><strong>Creators who inspire everyday living</strong></div>}
+            : <div className="creator-profile-cover-default"><span>CREATORS</span><strong>Creators who inspire everyday living</strong></div>}
         </div>
         <div className="creator-public-identity">
           <div className="creator-profile-avatar">
@@ -118,7 +118,7 @@ export default async function CreatorProfilePage({
               : <span aria-hidden="true">{profile.published_display_name?.slice(0, 1).toUpperCase() || "R"}</span>}
           </div>
           <div>
-            <p className="creator-directory-eyebrow">RONTAB CREATOR PROFILE</p>
+            <p className="creator-directory-eyebrow">CREATOR PROFILE</p>
             <h1 className="creator-profile-name">{profile.published_display_name}<CreatorVerificationBadge fanCount={fanCountResult.data ?? 0} /></h1>
           </div>
         </div>
@@ -128,9 +128,9 @@ export default async function CreatorProfilePage({
         <p className="creator-profile-bio">{profile.published_bio}</p>
         {audienceCities.length > 0 && <p className="creator-profile-audience"><MapPin size={14} aria-hidden="true" />Audience: {audienceCities.map((city) => city.city_name).join(", ")}</p>}
         {publicPhoneResult.data && <a className="creator-profile-phone" href={`tel:${publicPhoneResult.data}`}><Phone size={14} aria-hidden="true" />{publicPhoneResult.data}</a>}
-        <p className="creator-approved-mark"><BadgeCheck size={15} aria-hidden="true" />Profile reviewed by Rontab</p>
+        <p className="creator-approved-mark"><BadgeCheck size={15} aria-hidden="true" />Profile reviewed by the team</p>
         {profile.referral_code && <CreatorFanTools
-          displayName={profile.published_display_name ?? "Rontab Creator"}
+          displayName={profile.published_display_name ?? "Creator"}
           code={profile.referral_code}
           profileUrl={`/creators/${profile.slug}`}
           fanCount={fanCountResult.data ?? 0}
@@ -179,8 +179,8 @@ export default async function CreatorProfilePage({
           )}
         </section>
       )}
-      {viewer.role !== "seller" && <p className="creator-directory-note creator-seller-invite">Rontab sellers can <Link href="/seller/login">sign in</Link> to send a private collaboration request.</p>}
-      <p className="creator-directory-note">Rontab reviews creator applications. Social follower counts are supplied by creators and are not independently verified. Totals may include the same person on multiple platforms and exclude Rontab code followers.</p>
+      {viewer.role !== "seller" && <p className="creator-directory-note creator-seller-invite">Sellers can <Link href="/seller/login">sign in</Link> to send a private collaboration request.</p>}
+      <p className="creator-directory-note">The team reviews creator applications. Social follower counts are supplied by creators and are not independently verified. Totals may include the same person on multiple platforms and exclude creator-code followers.</p>
     </main>
   );
 }

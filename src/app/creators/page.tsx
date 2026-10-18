@@ -7,7 +7,7 @@ import { creatorSpecialties } from "@/lib/creator/catalog";
 import { formatNumber } from "@/lib/format";
 import { createSupabasePublicClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Creators | Rontab", description: "Discover Rontab creators and the platforms they share on." };
+export const metadata: Metadata = { title: "Creators", description: "Discover creators and the platforms they share on." };
 export const instant = false;
 
 export default async function CreatorsDirectoryPage({
@@ -87,7 +87,7 @@ export default async function CreatorsDirectoryPage({
   return (
     <main className="creator-directory">
       <header className="creator-directory-heading">
-        <p className="creator-directory-eyebrow">THE RONTAB COMMUNITY</p>
+        <p className="creator-directory-eyebrow">THE CREATOR COMMUNITY</p>
         <h1>Creators worth knowing.</h1>
         <p>Explore approved creator profiles, their specialties, and the platforms where they publish.</p>
       </header>

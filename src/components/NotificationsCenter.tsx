@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
-import { ArrowLeft, ArrowUpRight, BadgeCheck, Bell, CheckCheck, ChevronRight, Gift, LifeBuoy, MailOpen, MailWarning, Megaphone, MessageSquareText, Sparkles } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useSyncExternalStore, useTransition } from "react";
+import { ArrowLeft, ArrowUpRight, BadgeCheck, CheckCheck, ChevronRight, Gift, LifeBuoy, Mail, MailOpen, MailWarning, Megaphone, MessageSquareText, Sparkles } from "lucide-react";
 import { useNotificationReads } from "@/lib/notifications/read-state";
+import { getNotificationChannel } from "@/lib/notifications/channels";
+import { sendVisitorEmailVerification } from "@/app/account/actions";
 import type { SiteNotification } from "@/lib/notifications/feed";
 
 type Message = { id: string; title: string; body: string; link_url: string | null; created_at: string };
@@ -23,6 +25,18 @@ function ReceivedTime({ value, compact = false }: { value: string; compact?: boo
   return <time dateTime={value}>{formatted}</time>;
 }
 
+function EmailConfirmationAction() {
+  const [pending, startTransition] = useTransition();
+  const [feedback, setFeedback] = useState<string | null>(null);
+  return <div className="inbox-confirmation-action">
+    <button type="button" disabled={pending} onClick={() => startTransition(async () => {
+      const { error } = await sendVisitorEmailVerification();
+      setFeedback(error ?? "Sent! Check your inbox and spam folder.");
+    })}>{pending ? "Sending..." : "Resend confirmation email"}</button>
+    {feedback && <p role="status">{feedback}</p>}
+  </div>;
+}
+
 export function NotificationsCenter({ items, userId, readIds, lastSeenAt, message = null }: {
   items: SiteNotification[];
   userId: string | null;
@@ -31,28 +45,49 @@ export function NotificationsCenter({ items, userId, readIds, lastSeenAt, messag
   message?: Message | null;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const channel = message || searchParams.get("tab") !== "ads" ? "messages" : "ads";
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const { isUnread, markRead, error: readError, saving } = useNotificationReads({ userId, readIds, lastSeenAt, autoReadId: message ? `announcement-${message.id}` : undefined });
-  const unreadCount = items.filter(isUnread).length;
-  const visibleItems = filter === "unread" ? items.filter(isUnread) : items;
+  const channelItems = items.filter((item) => getNotificationChannel(item) === channel);
+  const unreadCount = channelItems.filter(isUnread).length;
+  const visibleItems = filter === "unread" ? channelItems.filter(isUnread) : channelItems;
+  const unreadMessages = items.filter((item) => getNotificationChannel(item) === "messages" && isUnread(item)).length;
+  const unreadAds = items.filter((item) => getNotificationChannel(item) === "ads" && isUnread(item)).length;
 
   return (
     <main className="notifications-page page-shell" data-message-open={message ? true : undefined}>
+      <header className="inbox-heading">
+        <div><h1>Inbox</h1></div>
+        {userId && <button className="inbox-mark-read" type="button" title="Mark this section as read" aria-label="Mark this section as read" onClick={() => void markRead(visibleItems.filter((item) => isUnread(item)).map((item) => item.id))} disabled={saving || !visibleItems.some((item) => item.kind !== "verify-email" && isUnread(item))}>
+          <CheckCheck size={18} aria-hidden="true" /><span>{saving ? "Updating..." : "Mark as read"}</span>
+        </button>}
+      </header>
+      <div className="inbox-channels" role="tablist" aria-label="Inbox sections" onKeyDown={(event) => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLAnchorElement>('[role="tab"]'));
+        const index = tabs.indexOf(event.target as HTMLAnchorElement);
+        const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+        event.preventDefault();
+        tabs[nextIndex]?.focus();
+        tabs[nextIndex]?.click();
+      }}>
+        <Link id="inbox-messages-tab" role="tab" aria-selected={channel === "messages"} aria-controls="inbox-channel-panel" href="/notifications?tab=messages" replace scroll={false}>Messages{unreadMessages > 0 && <span aria-label={`${unreadMessages} unread messages`}>{unreadMessages}</span>}</Link>
+        <Link id="inbox-ads-tab" role="tab" aria-selected={channel === "ads"} aria-controls="inbox-channel-panel" href="/notifications?tab=ads" replace scroll={false}>Ad notifications{unreadAds > 0 && <span aria-label={`${unreadAds} unread ad notifications`}>{unreadAds}</span>}</Link>
+      </div>
+      <div id="inbox-channel-panel" role="tabpanel" aria-labelledby={`inbox-${channel}-tab`} tabIndex={0}>
       {!userId ? (
         <>
-          <header className="inbox-heading">
-            <div><h1><Bell size={24} aria-hidden="true" /> Notifications</h1><p>Personal notifications are tied to your account.</p></div>
-          </header>
           <section className="notifications-guest-state" aria-labelledby="notifications-guest-title">
-            <Bell size={28} aria-hidden="true" />
-            <h2 id="notifications-guest-title">You&apos;re browsing as a guest</h2>
-            <p>Sign in or create an account to receive notifications about your activity, rewards, and messages.</p>
+            {channel === "messages" ? <Mail size={52} strokeWidth={1.5} aria-hidden="true" /> : <Megaphone size={52} strokeWidth={1.5} aria-hidden="true" />}
+            <h2 id="notifications-guest-title">{channel === "messages" ? "No messages yet" : "No ad notifications yet"}</h2>
+            <p>{channel === "messages" ? "Sign in to receive messages from the team, sellers, and creators." : "Sign in to receive product updates and offers."}</p>
             <div>
-              <Link href="/account?next=%2Fnotifications">Sign in</Link>
-              <Link href="/account?mode=register&next=%2Fnotifications">Create account</Link>
+              <Link href={`/account?next=${encodeURIComponent(`/notifications?tab=${channel}`)}`}>Sign in</Link>
+              <Link href={`/account?mode=register&next=${encodeURIComponent(`/notifications?tab=${channel}`)}`}>Create account</Link>
             </div>
             {message && <article className="inbox-message notifications-guest-message">
-              <div className="inbox-sender"><span className="inbox-kind" data-kind="announcement"><Megaphone size={20} aria-hidden="true" /></span><div><strong>Rontab</strong><span>Public announcement</span></div></div>
+              <div className="inbox-sender"><span className="inbox-kind" data-kind="announcement"><Megaphone size={20} aria-hidden="true" /></span><div><strong>Announcements</strong><span>Public announcement</span></div></div>
               <h2 dir="auto">{message.title}</h2>
               <div className="inbox-received"><ReceivedTime value={message.created_at} /></div>
               <div className="inbox-message-body" dir="auto">{message.body}</div>
@@ -61,14 +96,8 @@ export function NotificationsCenter({ items, userId, readIds, lastSeenAt, messag
           </section>
         </>
       ) : <>
-      <header className="inbox-heading">
-        <div><h1><Bell size={24} aria-hidden="true" /> Notifications</h1><p>{items.length} notifications{unreadCount > 0 ? ` / ${unreadCount} unread` : ""}</p></div>
-        <button className="inbox-mark-read" type="button" title="Mark all as read" onClick={() => void markRead(visibleItems.filter((item) => isUnread(item)).map((item) => item.id))} disabled={saving || !items.some((item) => item.kind !== "verify-email" && isUnread(item))}>
-          <CheckCheck size={18} aria-hidden="true" /><span>{saving ? "Updating..." : "Mark all as read"}</span>
-        </button>
-      </header>
       {readError && <p className="form-error" role="alert">{readError}</p>}
-      <div className="inbox-workspace">
+      <div className="inbox-workspace" data-empty={!channelItems.length && !message || undefined}>
         <section className="inbox-sidebar" aria-label="Notification list">
           <div className="inbox-filters" role="group" aria-label="Filter notifications">
             <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>All</button>
@@ -88,22 +117,24 @@ export function NotificationsCenter({ items, userId, readIds, lastSeenAt, messag
                   <span className="inbox-row-copy"><strong>{item.title}</strong><span className="inbox-preview">{item.body}</span><ReceivedTime value={item.createdAt} compact /></span>
                   {isUnread(item) ? <span className="inbox-unread" aria-label="Unread" /> : <ChevronRight size={14} aria-hidden="true" />}
                 </Link>
+                {item.kind === "verify-email" && !item.completed && <EmailConfirmationAction />}
               </li>;
             })}
-          </ul> : <div className="inbox-list-empty"><CheckCheck size={26} aria-hidden="true" /><p>{filter === "unread" ? "No unread notifications" : "No notifications yet"}</p></div>}
+          </ul> : <div className="inbox-list-empty">{channel === "messages" ? <Mail size={52} strokeWidth={1.5} aria-hidden="true" /> : <Megaphone size={52} strokeWidth={1.5} aria-hidden="true" />}<h2>{filter === "unread" ? "You're all caught up" : channel === "messages" ? "No messages yet" : "No ad notifications yet"}</h2><p>{filter === "unread" ? "No unread items in this section." : channel === "messages" ? "Messages from the team, sellers, and creators will appear here." : "Product updates and offers will appear here."}</p></div>}
         </section>
         <section className="inbox-reader" aria-label="Notification content">
           {message ? <article className="inbox-message">
-            <Link href="/notifications" className="inbox-back"><ArrowLeft size={17} aria-hidden="true" /> All notifications</Link>
-            <div className="inbox-sender"><span className="inbox-kind" data-kind="announcement"><Megaphone size={20} aria-hidden="true" /></span><div><strong>Rontab</strong><span>Administration</span></div></div>
+            <Link href="/notifications?tab=messages" className="inbox-back"><ArrowLeft size={17} aria-hidden="true" /> All messages</Link>
+            <div className="inbox-sender"><span className="inbox-kind" data-kind="announcement"><Megaphone size={20} aria-hidden="true" /></span><div><strong>Support team</strong><span>Administration</span></div></div>
             <h2 dir="auto">{message.title}</h2>
             <div className="inbox-received"><ReceivedTime value={message.created_at} /></div>
             <div className="inbox-message-body" dir="auto">{message.body}</div>
             {message.link_url && <a className="inbox-message-link" href={message.link_url} {...(message.link_url.startsWith("https://") ? { target: "_blank", rel: "noopener noreferrer" } : {})}>Open link <ArrowUpRight size={17} aria-hidden="true" /></a>}
-          </article> : <div className="inbox-reader-empty"><MailOpen size={36} strokeWidth={1.5} aria-hidden="true" /><p>Select a notification</p></div>}
+          </article> : <div className="inbox-reader-empty"><MailOpen size={36} strokeWidth={1.5} aria-hidden="true" /><p>{channel === "messages" ? "Select a message" : "Select an ad notification"}</p></div>}
         </section>
       </div>
       </>}
+      </div>
     </main>
   );
 }

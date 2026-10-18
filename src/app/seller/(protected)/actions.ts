@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { FormError, runFormAction, type FormState } from "@/lib/form-state";
@@ -152,6 +152,7 @@ async function persistSellerProfile(formData: FormData) {
   revalidatePath("/seller");
   revalidatePath("/seller/products");
   revalidatePath("/admin/sellers");
+  updateTag("public-catalog");
   revalidatePath("/");
   revalidatePath("/products", "page");
   revalidatePath("/products/[slug]", "page");
@@ -276,7 +277,14 @@ export async function deleteSellerProduct(formData: FormData) {
 
   if (deleteError) throw new Error(deleteError.message);
 
+  updateTag("public-catalog");
   revalidatePath("/seller/products");
   revalidatePath("/seller");
   revalidatePath("/");
+}
+
+export async function refreshSellerCatalog() {
+  await getSellerAccount();
+  updateTag("public-catalog");
+  revalidatePath("/seller/products");
 }

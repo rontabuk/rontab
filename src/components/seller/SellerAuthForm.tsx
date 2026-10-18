@@ -57,13 +57,13 @@ export function SellerAuthForm({ mode }: { mode: "register" | "login" }) {
       }
 
       if (!data.session) {
-        router.replace("/seller/login?registered=1&confirmation=1");
+        router.replace("/?welcome=1&next=%2Fseller%2Flogin%3Fregistered%3D1%26confirmation%3D1");
         router.refresh();
         return;
       }
 
       await supabase.auth.signOut();
-      router.replace("/seller/login?registered=1");
+      router.replace("/?welcome=1&next=%2Fseller%2Flogin%3Fregistered%3D1");
       router.refresh();
       return;
     } else {
@@ -101,7 +101,7 @@ export function SellerAuthForm({ mode }: { mode: "register" | "login" }) {
           <input id="shop-name" name="shop_name" autoComplete="organization" required />
           <label htmlFor="shop-slug">Shop handle</label>
           <input id="shop-slug" name="shop_slug" pattern="[a-z0-9]+(-[a-z0-9]+)*" autoComplete="off" placeholder="e.g. b2bmisr" aria-describedby="shop-handle-hint" required />
-          <small id="shop-handle-hint">Your unique shop identifier on Rontab, not a website address. Use lowercase letters, numbers or hyphens.</small>
+          <small id="shop-handle-hint">Your unique shop identifier, not a website address. Use lowercase letters, numbers or hyphens.</small>
         </>
       )}
       <label htmlFor="seller-email">Email</label>
@@ -114,7 +114,7 @@ export function SellerAuthForm({ mode }: { mode: "register" | "login" }) {
         {isSubmitting ? "Please wait…" : mode === "register" ? "Create seller account" : "Sign in"}
       </button>
       <p className="seller-auth-switch">
-        {mode === "register" ? "Already registered?" : "New to Rontab?"}{" "}
+        {mode === "register" ? "Already registered?" : "New here?"}{" "}
         <Link href={mode === "register" ? "/seller/login" : "/seller/register"}>
           {mode === "register" ? "Sign in" : "Create a seller account"}
         </Link>

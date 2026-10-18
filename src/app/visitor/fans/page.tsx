@@ -42,7 +42,7 @@ export default async function VisitorFansPage({
       <header className="admin-page-heading">
         <p className="admin-eyebrow">YOUR CREATOR COMMUNITY</p>
         <h1>I&apos;m a fan of</h1>
-        <p>Add a creator&apos;s Rontab code to follow them here. You can follow multiple creators.</p>
+        <p>Add a creator&apos;s code to follow them here. You can follow multiple creators.</p>
       </header>
       {follow === "added" && <p className="admin-save-success" role="status">Creator added to your fan list.{first === "1" ? " This is your first creator referral." : ""}</p>}
       {follow === "already" && <p className="admin-save-success" role="status">You already follow this creator. Your list was not duplicated.</p>}
@@ -56,7 +56,7 @@ export default async function VisitorFansPage({
       <section className="visitor-fan-code-section" aria-labelledby="visitor-fan-code-title">
         <div className="visitor-profile-heading">
           <p className="admin-eyebrow">FOLLOW A CREATOR</p>
-          <h2 id="visitor-fan-code-title">Enter their Rontab code</h2>
+          <h2 id="visitor-fan-code-title">Enter their creator code</h2>
         </div>
         <ActionForm className="visitor-fan-code-form" action={followCreatorByCode}>
           <label htmlFor="visitor-creator-code">Creator code</label>

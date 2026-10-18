@@ -124,7 +124,7 @@ export default async function SellerProductCreatorOpportunityPage({
               <label><input type="checkbox" name="contact_method" value="phone" disabled={!canSharePhone} /><span>Phone{!canSharePhone && " · verify your phone in seller profile first"}</span></label>
               {!canShareEmail && !canSharePhone && <Link href="/seller/profile">Add and verify your contact details</Link>}
             </fieldset>
-            <p className="creator-opportunity-payment-note">Rontab does not collect campaign payments. Agree on payment and delivery directly with the creator before work begins.</p>
+            <p className="creator-opportunity-payment-note">The platform does not collect campaign payments. Agree on payment and delivery directly with the creator before work begins.</p>
             <button className="seller-auth-submit" type="submit">Publish creator opportunity</button>
           </ActionForm>
           {latestOpportunity && <Link className="creator-opportunity-new-link" href={`/seller/products/${product.id}/creator-opportunity`}>Return to previous promotion</Link>}

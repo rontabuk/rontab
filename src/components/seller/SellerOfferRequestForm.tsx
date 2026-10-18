@@ -383,7 +383,7 @@ export function SellerOfferRequestForm({
         <input name="capacity_acknowledged" type="checkbox" defaultChecked={initialRequest?.capacity_acknowledged ?? false} required />
         I can supply the stated daily quantity and accept valid vouchers at every listed branch.
       </label>
-      <p className="seller-offer-policy-note">This is a request, not a live promotion. Rontab reviews the final terms, points cost, schedule, and quota before publication.</p>
+      <p className="seller-offer-policy-note">This is a request, not a live promotion. The team reviews the final terms, points cost, schedule, and quota before publication.</p>
       {message && <p className="seller-form-message" role="alert">{message}</p>}
       <button className="admin-primary-button" type="submit" disabled={isSubmitting}>{isSubmitting ? "Submitting…" : initialRequest ? "Update and resubmit" : "Submit offer for review"}</button>
     </form>

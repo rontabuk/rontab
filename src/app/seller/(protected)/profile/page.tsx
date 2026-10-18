@@ -52,9 +52,6 @@ export default async function SellerProfilePage({
 
   return (
     <main className="admin-overview seller-overview">
-      <header className="seller-profile-page-heading">
-        <p className="admin-eyebrow">SHOP PROFILE</p>
-      </header>
       {saved === "1" && <p className="admin-save-success" role="status">Seller profile saved successfully.</p>}
       {phoneConfirmed === "1" && <p className="admin-save-success" role="status">Phone contact confirmed through your registered email.</p>}
       <section className="seller-account-profile" aria-label="Shop overview">
@@ -65,11 +62,11 @@ export default async function SellerProfilePage({
               : <Store size={30} aria-hidden="true" />}
           </div>
           <div className="seller-account-details">
-            <h1>{seller.shop_name}{sellerBadge && <SellerVerificationBadge isBlue={sellerBadge.is_blue} />}</h1>
+            <div className="seller-account-name-line">
+              <h1>{seller.shop_name}{sellerBadge && <SellerVerificationBadge isBlue={sellerBadge.is_blue} />}</h1>
+              <SellerProfileEditButton targetId="seller-profile-editor" />
+            </div>
             <p><MapPin size={14} aria-hidden="true" />{savedCity ? `${savedCity.city_name}, ${savedCity.country_code}` : "Shop location not set"}</p>
-          </div>
-          <div className="seller-account-actions">
-            <SellerProfileEditButton targetId="seller-profile-editor" />
           </div>
         </div>
         {seller.description && <p className="seller-profile-public-description">{seller.description}</p>}
@@ -89,7 +86,7 @@ export default async function SellerProfilePage({
           <span>{formatNumber(products.length)}</span>
         </div>
         {products.length
-          ? <div className="seller-profile-product-grid">{products.map((product) => <ProductCard product={product} compact muteAutoplay key={product.slug} />)}</div>
+          ? <div className="seller-profile-product-grid">{products.map((product) => <ProductCard product={product} compact muteAutoplay priceBesideMaker key={product.slug} />)}</div>
           : <p className="seller-profile-products-empty">Published products will appear here.</p>}
       </section>
       <details id="seller-profile-editor" className="seller-profile-editor">
@@ -107,7 +104,7 @@ export default async function SellerProfilePage({
           <input name="shop_name" defaultValue={seller.shop_name} minLength={2} maxLength={100} required />
         </label>
         <label>
-          Rontab shop handle
+          Shop handle
           <input value={seller.slug} readOnly />
           <small>Internal identifier only; use the next field for your actual website link.</small>
         </label>
@@ -183,8 +180,8 @@ export default async function SellerProfilePage({
         </label>
         <label className="seller-profile-business-address">
           Business address
-          <textarea name="business_address" defaultValue={contact?.business_address ?? ""} rows={3} maxLength={300} placeholder="Business address for Rontab administration" />
-          <small>Private; visible to Rontab administration only.</small>
+          <textarea name="business_address" defaultValue={contact?.business_address ?? ""} rows={3} maxLength={300} placeholder="Business address for administration" />
+          <small>Private; visible to administration only.</small>
         </label>
         <section className="seller-profile-status" aria-label="Account status">
           <span>Account status <span className={`admin-status admin-status-${seller.status}`}>{seller.status}</span></span>

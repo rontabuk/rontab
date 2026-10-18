@@ -95,8 +95,8 @@ export function InstallPrompt() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/pwa-icon/192" alt="" width={72} height={72} />
         </div>
-        <h2 id="install-title">Get the RonTab app</h2>
-        <p className="install-lead">Add RonTab to your {mode === "safari-mac" ? "Dock" : mode.startsWith("ios") ? "Home Screen" : "device"} and shop like it&apos;s a native app.</p>
+        <h2 id="install-title">Get the app</h2>
+        <p className="install-lead">Add the app to your {mode === "safari-mac" ? "Dock" : mode.startsWith("ios") ? "Home Screen" : "device"} and shop like it&apos;s a native app.</p>
         <ul className="install-benefits">
           <li><Zap size={18} aria-hidden="true" /><span>One tap from your {mode.startsWith("ios") ? "Home Screen" : "desktop or dock"}</span></li>
           <li><Maximize size={18} aria-hidden="true" /><span>Full screen with no browser bars</span></li>
@@ -110,7 +110,7 @@ export function InstallPrompt() {
           <ol className="install-steps">
             <li><Share size={18} aria-hidden="true" /><span>Tap <b>Share</b> in Safari (or <b>•••</b> then <b>Share</b>)</span></li>
             <li><SquarePlus size={18} aria-hidden="true" /><span>Choose <b>Add to Home Screen</b></span></li>
-            <li><Download size={18} aria-hidden="true" /><span>Tap <b>Add</b> and open RonTab from your Home Screen</span></li>
+            <li><Download size={18} aria-hidden="true" /><span>Tap <b>Add</b> and open the app from your Home Screen</span></li>
           </ol>
         )}
         {mode === "ios-inapp" && (

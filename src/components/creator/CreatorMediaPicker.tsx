@@ -50,7 +50,7 @@ export function CreatorMediaPicker({ kind, initialUrl }: { kind: "profile" | "co
         <div className="creator-profile-cover creator-profile-cover-preview">
           {previewUrl
             ? <Image src={previewUrl} alt="Creator cover image preview" fill unoptimized sizes="(max-width: 700px) 100vw, 560px" />
-            : <div className="creator-profile-cover-default"><span>RONTAB CREATORS</span></div>}
+            : <div className="creator-profile-cover-default"><span>CREATORS</span></div>}
         </div>
       )}
       <label htmlFor={inputId}>Choose {label.toLowerCase()}</label>
