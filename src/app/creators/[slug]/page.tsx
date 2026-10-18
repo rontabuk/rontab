@@ -7,6 +7,8 @@ import { ArrowLeft, BadgeCheck, ExternalLink, MapPin, Phone, Send } from "lucide
 import { ActionForm } from "@/components/ActionForm";
 import { CreatorFanTools } from "@/components/creator/CreatorFanTools";
 import { CreatorVerificationBadge } from "@/components/creator/CreatorVerificationBadge";
+import { CreatorInfluenceSummary } from "@/components/creator/CreatorInfluence";
+import { getCreatorInfluence } from "@/lib/creator/influence-server";
 import { sendCreatorCollaborationRequest } from "@/app/seller/(protected)/creator-actions";
 import { getViewer } from "@/lib/auth/viewer";
 import { creatorSpecialties } from "@/lib/creator/catalog";
@@ -63,16 +65,22 @@ export default async function CreatorProfilePage({
     .order("platform");
   if (accountsError) throw new Error(accountsError.message);
 
-  const [portfolioResult, audienceCitiesResult, fanCountResult, publicPhoneResult] = await Promise.all([
+  const [portfolioResult, audienceCitiesResult, influenceById, publicPhoneResult] = await Promise.all([
     supabase.from("creator_portfolio_items").select("id,title,url,position").eq("creator_profile_id", profile.id).eq("is_published", true).order("position"),
     supabase.from("creator_profile_audience_cities").select("city_id").eq("creator_profile_id", profile.id).eq("is_published", true),
-    supabase.rpc("creator_get_public_fan_count", { p_creator_profile_id: profile.id }),
+    getCreatorInfluence(supabase, [profile.id]),
     supabase.rpc("get_public_creator_contact_phone", { p_creator_profile_id: profile.id }),
   ]);
   if (portfolioResult.error) throw new Error(portfolioResult.error.message);
   if (audienceCitiesResult.error) throw new Error(audienceCitiesResult.error.message);
-  if (fanCountResult.error) throw new Error(fanCountResult.error.message);
+  const influence = influenceById.get(profile.id);
   if (publicPhoneResult.error) throw new Error(publicPhoneResult.error.message);
+  let fanCount = influence?.fan_count;
+  if (fanCount === undefined) {
+    const result = await supabase.rpc("creator_get_public_fan_count", { p_creator_profile_id: profile.id });
+    if (result.error) throw new Error(result.error.message);
+    fanCount = result.data ?? 0;
+  }
   const audienceCityIds = [...new Set([
     ...(audienceCitiesResult.data ?? []).map((city) => city.city_id),
     ...(profile.published_audience_city_id ? [profile.published_audience_city_id] : []),
@@ -119,7 +127,7 @@ export default async function CreatorProfilePage({
           </div>
           <div>
             <p className="creator-directory-eyebrow">CREATOR PROFILE</p>
-            <h1 className="creator-profile-name">{profile.published_display_name}<CreatorVerificationBadge fanCount={fanCountResult.data ?? 0} /></h1>
+            <h1 className="creator-profile-name">{profile.published_display_name}<CreatorVerificationBadge /></h1>
           </div>
         </div>
         <p className="creator-profile-specialties">
@@ -129,11 +137,13 @@ export default async function CreatorProfilePage({
         {audienceCities.length > 0 && <p className="creator-profile-audience"><MapPin size={14} aria-hidden="true" />Audience: {audienceCities.map((city) => city.city_name).join(", ")}</p>}
         {publicPhoneResult.data && <a className="creator-profile-phone" href={`tel:${publicPhoneResult.data}`}><Phone size={14} aria-hidden="true" />{publicPhoneResult.data}</a>}
         <p className="creator-approved-mark"><BadgeCheck size={15} aria-hidden="true" />Profile reviewed by the team</p>
+        <CreatorInfluenceSummary influence={influence} />
         {profile.referral_code && <CreatorFanTools
           displayName={profile.published_display_name ?? "Creator"}
           code={profile.referral_code}
           profileUrl={`/creators/${profile.slug}`}
-          fanCount={fanCountResult.data ?? 0}
+          fanCount={fanCount}
+          influencePoints={influence?.qualified_referrals}
           platforms={accounts.map((account) => account.platform === "x" ? "X" : account.platform)}
         />}
       </header>

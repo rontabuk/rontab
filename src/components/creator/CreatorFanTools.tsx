@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { BadgeCheck, Copy, Download, FileDown, Share2 } from "lucide-react";
 import { CreatorVerificationBadge } from "@/components/creator/CreatorVerificationBadge";
+import { CreatorInfluenceBadge } from "@/components/creator/CreatorInfluence";
+import { getCreatorInfluenceLevel } from "@/lib/creator/influence";
 import { formatNumber } from "@/lib/format";
 
 type CreatorFanToolsProps = {
@@ -11,6 +13,7 @@ type CreatorFanToolsProps = {
   profileUrl: string;
   fanCount: number;
   firstReferralCount?: number;
+  influencePoints?: number;
   platforms: string[];
 };
 
@@ -32,7 +35,7 @@ function drawWrappedText(context: CanvasRenderingContext2D, text: string, x: num
   return lines.length;
 }
 
-async function createCertificateCanvas({ displayName, code, fanCount, platforms }: CreatorFanToolsProps) {
+async function createCertificateCanvas({ displayName, code, fanCount, platforms, influencePoints, profileUrl }: CreatorFanToolsProps) {
   await document.fonts.ready;
   const canvas = document.createElement("canvas");
   canvas.width = 1800;
@@ -74,14 +77,21 @@ async function createCertificateCanvas({ displayName, code, fanCount, platforms 
   context.font = "400 86px Georgia, serif";
   const nameLines = drawWrappedText(context, displayName, canvas.width / 2, 940, 1320, 110);
 
-  const isBlue = fanCount >= 10000;
+  const influenceLevel = influencePoints === undefined ? null : getCreatorInfluenceLevel(influencePoints).level;
+  const hasInfluenceBadge = influenceLevel && influenceLevel.symbol !== "none";
+  const badgePalette = {
+    neutral: { background: "#eceeea", foreground: "#5d665e" },
+    bronze: { background: "#fbf3eb", foreground: "#80502c" },
+    silver: { background: "#f0f4f6", foreground: "#485763" },
+    gold: { background: "#fff8dd", foreground: "#765400" },
+  }[influenceLevel?.tone ?? "neutral"];
   const badgeY = 1030 + Math.max(0, nameLines - 1) * 110;
-  const badgeText = isBlue ? "10,000+ RONTAB FANS" : "ADMIN-APPROVED CREATOR";
+  const badgeText = hasInfluenceBadge ? `${influenceLevel.label.toUpperCase()} - ${formatNumber(influencePoints!)} INFLUENCE POINTS` : "ADMIN-APPROVED CREATOR";
   context.font = "700 24px Arial, sans-serif";
   const badgeWidth = context.measureText(badgeText).width + 64;
-  context.fillStyle = isBlue ? "#e8f0fa" : "#eceeea";
+  context.fillStyle = badgePalette.background;
   context.fillRect((canvas.width - badgeWidth) / 2, badgeY, badgeWidth, 58);
-  context.fillStyle = isBlue ? "#315f91" : "#5d665e";
+  context.fillStyle = badgePalette.foreground;
   context.fillText(badgeText, canvas.width / 2, badgeY + 39);
 
   context.fillStyle = "#737c71";
@@ -108,7 +118,8 @@ async function createCertificateCanvas({ displayName, code, fanCount, platforms 
 
   context.fillStyle = "#858d82";
   context.font = "400 22px Arial, sans-serif";
-  context.fillText("Enter this code in Rontab to follow this creator.", canvas.width / 2, 2180);
+  context.fillText(`Snapshot ${new Date().toISOString().slice(0, 10)}. Current metrics: ${window.location.origin}${profileUrl}`, canvas.width / 2, 2140, 1400);
+  context.fillText("Influence reflects qualified code attribution, not identity verification or sales.", canvas.width / 2, 2180, 1400);
   context.fillStyle = "#c77b5c";
   context.fillRect(760, 2250, 280, 8);
   return canvas;
@@ -180,7 +191,8 @@ export function CreatorFanTools(props: CreatorFanToolsProps) {
       <div className="creator-fan-tools-identity">
         <div className="creator-fan-tools-name-line">
           <h2>{props.displayName}</h2>
-          <CreatorVerificationBadge fanCount={props.fanCount} />
+          <CreatorVerificationBadge />
+          {props.influencePoints !== undefined && <CreatorInfluenceBadge points={props.influencePoints} />}
         </div>
         <p className="creator-fan-tools-label">Your fan code</p>
         <strong className="creator-fan-tools-code">{props.code}</strong>

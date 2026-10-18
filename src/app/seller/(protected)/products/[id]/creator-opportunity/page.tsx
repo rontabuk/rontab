@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ArrowLeft, ArrowUpRight, CalendarDays, MapPin, PackageCheck, UsersRound } from "lucide-react";
 import { CreatorVerificationBadge } from "@/components/creator/CreatorVerificationBadge";
+import { CreatorInfluenceSummary } from "@/components/creator/CreatorInfluence";
+import { getCreatorInfluence } from "@/lib/creator/influence-server";
 import { ActionForm } from "@/components/ActionForm";
 import { OpportunityTargeting } from "@/components/creator-opportunities/OpportunityTargeting";
 import { closeCreatorProductOpportunity, createCreatorProductOpportunity, selectCreatorProductOpportunityProposal } from "@/app/seller/(protected)/creator-opportunity-actions";
@@ -69,9 +71,11 @@ export default async function SellerProductCreatorOpportunityPage({
   }
   const availableProposalCities = [...new Set(proposals.flatMap((proposal) => proposal.audienceCities.map((city) => city.city_id)))];
   const selectedCity = availableProposalCities.includes(query.city ?? "") ? query.city : undefined;
-  const sort = ["price-low", "price-high", "followers"].includes(query.sort ?? "") ? query.sort! : "price-low";
+  const sort = ["price-low", "price-high", "followers", "influence", "active"].includes(query.sort ?? "") ? query.sort! : "price-low";
   const visibleProposals = proposals.filter((proposal) => !selectedCity || proposal.audienceCities.some((city) => city.city_id === selectedCity))
-    .sort((left, right) => sort === "followers" ? right.totalFollowers - left.totalFollowers || left.amount - right.amount
+    .sort((left, right) => sort === "influence" ? (right.influence?.qualified_referrals ?? 0) - (left.influence?.qualified_referrals ?? 0) || left.amount - right.amount
+      : sort === "active" ? (right.influence?.active_referrals_30d ?? 0) - (left.influence?.active_referrals_30d ?? 0) || left.amount - right.amount
+      : sort === "followers" ? right.totalFollowers - left.totalFollowers || left.amount - right.amount
       : sort === "price-high" ? right.amount - left.amount || right.totalFollowers - left.totalFollowers
         : left.amount - right.amount || right.totalFollowers - left.totalFollowers);
   cityNamesById = new Map(cities.map((city) => [city.city_id, city.city_name]));
@@ -142,13 +146,14 @@ export default async function SellerProductCreatorOpportunityPage({
           <section className="creator-opportunity-proposals" aria-labelledby="creator-opportunity-proposals-title">
             <div className="creator-opportunity-section-heading"><div><p className="admin-eyebrow">CREATOR OFFERS</p><h2 id="creator-opportunity-proposals-title">Compare proposals</h2></div><span>{formatNumber(proposals.length)} received</span></div>
             {proposals.length > 0 && <form className="creator-opportunity-filters" action={`/seller/products/${product.id}/creator-opportunity`} method="get">
-              <label>Sort by<select name="sort" defaultValue={sort}><option value="price-low">Lowest price</option><option value="price-high">Highest price</option><option value="followers">Most social followers</option></select></label>
+              <label>Sort by<select name="sort" defaultValue={sort}><option value="price-low">Lowest price</option><option value="price-high">Highest price</option><option value="followers">Most social followers</option><option value="influence">Most Rontab influence</option><option value="active">Most active referrals · 30 days</option></select></label>
               <label>Audience city<select name="city" defaultValue={selectedCity ?? "all"}><option value="all">All audience cities</option>{availableProposalCities.map((cityId) => <option value={cityId} key={cityId}>{cityNamesById.get(cityId) ?? cityId}</option>)}</select></label>
               <button type="submit">Apply filters</button>
             </form>}
             {visibleProposals.length ? <ol className="creator-opportunity-proposal-list">{visibleProposals.map((proposal) => (
               <li key={proposal.id}>
-                <header><div><h3><Link href={`/creators/${proposal.creator.slug}`} target="_blank">{proposal.creator.published_display_name}<ArrowUpRight size={14} aria-hidden="true" /></Link><CreatorVerificationBadge fanCount={proposal.fanCount} /></h3><p>{proposal.audienceCities.map((city) => city.city_name).join(", ") || "No audience cities listed"}</p></div><strong>{formatPrice(proposal.amount, opportunity.currency)}</strong></header>
+                <header><div><h3><Link href={`/creators/${proposal.creator.slug}`} target="_blank">{proposal.creator.published_display_name}<ArrowUpRight size={14} aria-hidden="true" /></Link><CreatorVerificationBadge /></h3><p>{proposal.audienceCities.map((city) => city.city_name).join(", ") || "No audience cities listed"}</p></div><strong>{formatPrice(proposal.amount, opportunity.currency)}</strong></header>
+                <CreatorInfluenceSummary influence={proposal.influence} />
                 <p className="creator-opportunity-follower-count"><UsersRound size={14} aria-hidden="true" />{formatNumber(proposal.totalFollowers)} self-reported social followers</p>
                 <p>{proposal.offer_details}</p>
                 <span className={`creator-opportunity-proposal-status is-${proposal.status}`}>{proposal.status.replaceAll("_", " ")}</span>
@@ -179,11 +184,7 @@ async function loadProposals(supabase: Awaited<ReturnType<typeof getSellerAccoun
     supabase.from("creator_profile_audience_cities").select("creator_profile_id,city_id").in("creator_profile_id", creatorIds).eq("is_published", true),
   ]);
   for (const result of [creatorsResult, accountsResult, audienceResult]) if (result.error) throw new Error(result.error.message);
-  const fanCounts = new Map(await Promise.all(creatorIds.map(async (creatorId) => {
-    const { data, error } = await supabase.rpc("creator_get_public_fan_count", { p_creator_profile_id: creatorId });
-    if (error) throw new Error(error.message);
-    return [creatorId, data ?? 0] as const;
-  })));
+  const influenceById = await getCreatorInfluence(supabase, creatorIds);
   const creators = new Map((creatorsResult.data ?? []).map((creator) => [creator.id, creator]));
   const followersByCreator = new Map<string, number>();
   for (const account of accountsResult.data ?? []) followersByCreator.set(account.creator_profile_id, (followersByCreator.get(account.creator_profile_id) ?? 0) + account.follower_count);
@@ -194,6 +195,6 @@ async function loadProposals(supabase: Awaited<ReturnType<typeof getSellerAccoun
     const creator = creators.get(proposal.creator_profile_id);
     if (!creator) return [];
     const audienceCities = (audienceByCreator.get(creator.id) ?? []).flatMap((cityId) => cityById.has(cityId) ? [cityById.get(cityId)!] : []);
-    return [{ ...proposal, creator, audienceCities, totalFollowers: followersByCreator.get(creator.id) ?? 0, fanCount: fanCounts.get(creator.id) ?? 0 }];
+    return [{ ...proposal, creator, audienceCities, totalFollowers: followersByCreator.get(creator.id) ?? 0, influence: influenceById.get(creator.id) }];
   });
 }

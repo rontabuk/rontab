@@ -7,6 +7,8 @@ import { ActionForm } from "@/components/ActionForm";
 import { CreatorMediaPicker } from "@/components/creator/CreatorMediaPicker";
 import { SellerVerificationBadge } from "@/components/seller/SellerVerificationBadge";
 import { CreatorFanTools } from "@/components/creator/CreatorFanTools";
+import { CreatorInfluenceSummary } from "@/components/creator/CreatorInfluence";
+import { getCreatorInfluence } from "@/lib/creator/influence-server";
 import { MultiCityPicker } from "@/components/MultiCityPicker";
 import { respondToCreatorCollaborationRequest, saveCreatorContactPreferences, withdrawCreatorProfile } from "@/app/visitor/creator-actions";
 import { creatorPlatforms, creatorSpecialties } from "@/lib/creator/catalog";
@@ -60,6 +62,7 @@ export default async function VisitorCreatorPage({
   ]);
   const { data: profileId, error: profileIdError } = await supabase.rpc("get_my_creator_profile_id");
   if (profileIdError) throw new Error(profileIdError.message);
+  const influence = profileId ? (await getCreatorInfluence(supabase, [profileId])).get(profileId) : undefined;
 
   let profile: CreatorProfile | null = null;
   let accounts: CreatorPlatformAccount[] = [];
@@ -206,6 +209,8 @@ export default async function VisitorCreatorPage({
         </section>
       )}
 
+      {profile && <CreatorInfluenceSummary influence={influence} showProgress />}
+
       {profile?.is_public && profile.referral_code && (
         <CreatorFanTools
           displayName={profile.display_name}
@@ -213,6 +218,7 @@ export default async function VisitorCreatorPage({
           profileUrl={`/creators/${profile.slug}`}
           fanCount={fanCount}
           firstReferralCount={firstReferralCount}
+          influencePoints={influence?.qualified_referrals}
           platforms={accounts.filter((account) => account.is_published).map((account) => account.platform === "x" ? "X" : account.platform)}
         />
       )}

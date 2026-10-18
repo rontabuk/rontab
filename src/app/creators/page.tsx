@@ -3,6 +3,8 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { ArrowLeft, ArrowRight, ArrowUpRight, ListFilter, Send, UsersRound } from "lucide-react";
 import { CreatorVerificationBadge } from "@/components/creator/CreatorVerificationBadge";
+import { CreatorInfluenceBadge } from "@/components/creator/CreatorInfluence";
+import { getCreatorInfluence } from "@/lib/creator/influence-server";
 import { creatorSpecialties } from "@/lib/creator/catalog";
 import { formatNumber } from "@/lib/format";
 import { createSupabasePublicClient } from "@/lib/supabase/server";
@@ -20,7 +22,7 @@ export default async function CreatorsDirectoryPage({
   const specialty = creatorSpecialties.find(({ value }) => value === requestedSpecialty)?.value;
   const followerThresholds = [1000, 10000, 50000, 100000];
   const minimumFollowers = followerThresholds.find((value) => String(value) === requestedFollowers) ?? 0;
-  const sort = requestedSort === "name" ? "name" : "followers";
+  const sort = ["name", "influence", "active"].includes(requestedSort ?? "") ? requestedSort! : "followers";
   const supabase = createSupabasePublicClient();
   async function loadProfilesBatch(offset: number) {
     const { data, error } = await supabase.from("creator_profiles")
@@ -39,6 +41,7 @@ export default async function CreatorsDirectoryPage({
     profiles.push(...batch);
     if (batch.length < 200) break;
   }
+  const influenceById = await getCreatorInfluence(supabase, profiles.map((profile) => profile.id));
   const profilesWithAudienceCities = profiles.map((profile) => ({
     ...profile,
     audienceCityIds: [...new Set([
@@ -63,19 +66,16 @@ export default async function CreatorsDirectoryPage({
   })).filter((profile) => (!specialty || profile.published_specialties?.includes(specialty))
     && (!city || profile.audienceCityIds.includes(city))
     && (!minimumFollowers || profile.totalFollowers > minimumFollowers))
-    .sort((left, right) => (sort === "followers" ? right.totalFollowers - left.totalFollowers : 0)
+    .sort((left, right) => (sort === "influence" ? (influenceById.get(right.id)?.qualified_referrals ?? 0) - (influenceById.get(left.id)?.qualified_referrals ?? 0)
+      : sort === "active" ? (influenceById.get(right.id)?.active_referrals_30d ?? 0) - (influenceById.get(left.id)?.active_referrals_30d ?? 0)
+        : sort === "followers" ? right.totalFollowers - left.totalFollowers : 0)
       || (left.published_display_name ?? "").localeCompare(right.published_display_name ?? "")
       || left.id.localeCompare(right.id));
   const pageCount = Math.max(1, Math.ceil(matchingProfiles.length / 60));
   const pageNumber = Number(requestedPage);
   const page = Number.isSafeInteger(pageNumber) && pageNumber > 0 ? Math.min(pageNumber, pageCount) : 1;
   const visibleProfiles = matchingProfiles.slice((page - 1) * 60, page * 60);
-  const fanCountsById = new Map(await Promise.all(visibleProfiles.map(async (profile) => {
-    const { data, error } = await supabase.rpc("creator_get_public_fan_count", { p_creator_profile_id: profile.id });
-    if (error) throw new Error(error.message);
-    return [profile.id, data ?? 0] as const;
-  })));
-  const hasFilters = Boolean(specialty || city || minimumFollowers || sort === "name");
+  const hasFilters = Boolean(specialty || city || minimumFollowers || sort !== "followers");
   function pageHref(targetPage: number) {
     const params = new URLSearchParams({ sort, page: String(targetPage) });
     if (specialty) params.set("specialty", specialty);
@@ -115,6 +115,8 @@ export default async function CreatorsDirectoryPage({
           <label htmlFor="creator-sort">Sort by
             <select id="creator-sort" name="sort" defaultValue={sort}>
               <option value="followers">Most social followers</option>
+              <option value="influence">Most Rontab influence</option>
+              <option value="active">Most active referrals · 30 days</option>
               <option value="name">Name</option>
             </select>
           </label>
@@ -129,9 +131,10 @@ export default async function CreatorsDirectoryPage({
           {visibleProfiles.map((profile) => (
               <article className="creator-directory-item" key={profile.id}>
                 <div className="creator-directory-item-main">
-                  <h2 className="creator-directory-name"><Link href={`/creators/${profile.slug}`}>{profile.published_display_name}</Link><CreatorVerificationBadge fanCount={fanCountsById.get(profile.id) ?? 0} /></h2>
+                  <h2 className="creator-directory-name"><Link href={`/creators/${profile.slug}`}>{profile.published_display_name}</Link><CreatorVerificationBadge /></h2>
+                  {influenceById.has(profile.id) && <><CreatorInfluenceBadge points={influenceById.get(profile.id)!.qualified_referrals} /><p className="creator-directory-total"><strong>{formatNumber(influenceById.get(profile.id)!.qualified_referrals)}</strong> influence points · {formatNumber(influenceById.get(profile.id)!.active_referrals_30d)} active referrals in 30 days</p></>}
                   <Link className="creator-directory-request" href={`/creators/${profile.slug}#creator-collaboration-form-title`}><Send size={13} aria-hidden="true" />Send private request</Link>
-                  <p className="creator-directory-total"><strong>{formatNumber(profile.totalFollowers)}</strong> social followers</p>
+                  <p className="creator-directory-total"><strong>{formatNumber(profile.totalFollowers)}</strong> self-reported social followers</p>
                 </div>
                 <Link className="creator-directory-view" href={`/creators/${profile.slug}`}>View profile <ArrowUpRight size={14} aria-hidden="true" /></Link>
               </article>

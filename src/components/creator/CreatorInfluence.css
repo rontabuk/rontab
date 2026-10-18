@@ -1,0 +1,26 @@
+.creator-influence-badge { display: inline-flex; max-width: 100%; min-height: 24px; align-items: center; gap: 5px; padding: 3px 7px; border: 1px solid currentColor; border-radius: 4px; font-size: 11px; font-weight: 700; line-height: 1.35; letter-spacing: 0; vertical-align: middle; }
+.creator-influence-badge svg { flex: 0 0 auto; }
+.creator-influence-badge span { overflow-wrap: anywhere; }
+.creator-influence-badge.is-bronze { color: #80502c; background: #fbf3eb; }
+.creator-influence-badge.is-silver { color: #485763; background: #f0f4f6; }
+.creator-influence-badge.is-gold { color: #765400; background: #fff8dd; }
+.creator-influence { min-width: 0; margin-block: 18px; padding-block: 18px; border-block: 1px solid #dde2d9; }
+.creator-influence-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.creator-influence-heading h2 { margin: 0; color: var(--ink, #29332a); font: inherit; font-size: 16px; font-weight: 700; letter-spacing: 0; }
+.creator-influence-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 18px 0 0; }
+.creator-influence-metrics div { display: flex; min-width: 0; flex-direction: column; gap: 7px; }
+.creator-influence-metrics dt { color: #626b63; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.creator-influence-metrics dd { order: -1; margin: 0; color: #304034; font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.2; overflow-wrap: anywhere; }
+.creator-influence-progress { display: grid; gap: 8px; margin-top: 18px; color: #526453; font-size: 12px; }
+.creator-influence-progress progress { width: 100%; height: 8px; accent-color: #527852; }
+.creator-influence-progress p { margin: 0; }
+.creator-influence-definition { margin-top: 16px; color: #626b63; font-size: 11px; line-height: 1.7; }
+.creator-influence-definition summary { width: fit-content; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.creator-influence-definition summary:focus-visible { outline: 2px solid #527852; outline-offset: 4px; }
+.creator-influence-definition p { max-width: 75ch; margin: 8px 0 0; }
+.creator-influence-unavailable { color: #737c72; font-size: 12px; }
+.creator-directory-item .creator-influence-badge { margin-top: 10px; }
+@media (max-width: 620px) {
+  .creator-influence-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 14px; }
+  .creator-influence-metrics dd { font-size: 22px; }
+}

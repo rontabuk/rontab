@@ -34,6 +34,29 @@ Each approved creator receives a unique `RT-` code. A confirmed visitor can foll
 
 Creator points are separate from visitor loyalty points. Administrators can grant points to approved creators with a recorded reason. Grants are positive, bounded, idempotent, and recorded in the admin audit log. Creators can view their balance and grant history. Creator points do not currently have a redemption flow.
 
+## Rontab influence
+
+Influence points are a third, non-spendable metric, not a balance transfer or an admin grant. One point represents one qualified original referral from `creator_first_referrals`. The visitor must have a confirmed auth email, actual inbox verification in `profiles.email_verified_at`, an enabled supported country, and at least one `visit_earned` transaction at or after the original code attribution. Banned/deleted accounts, administrators, sellers, and the creator's own account are excluded. Multiple product visits never multiply one visitor's influence contribution. The separate 30-day metric counts qualified referrals with earned product-visit activity in the last 30 days, still after attribution.
+
+Raw fan follows and original referrals remain separate counts. Following multiple creators, repeatedly entering a code, or unfollowing cannot duplicate or transfer original referral credit. Existing referrals qualify automatically when these criteria are met; no historical balances are rewritten. Metrics are computed on read, so verification and account eligibility changes take effect on the next page request. Admin-granted creator points and ordinary personal loyalty points remain unchanged. A visitor can earn personal points and independently qualify their original creator's influence without transferring or spending those personal points.
+
+| Qualified referrals | Influence badge |
+| --- | --- |
+| 0-99 | No earned badge |
+| 100-499 | Bronze star |
+| 500-999 | Silver star |
+| 1,000-4,999 | Gold star |
+| 5,000-9,999 | Silver shield |
+| 10,000+ | Gold shield |
+
+Profile approval keeps its neutral badge and never changes colour based on follower counts. Influence stars/shields are separate from identity verification. Displayed influence includes the qualified count and, in detailed views, raw fans, first referrals, and recent active referrals. The studio includes progress to the next level. Public profiles, the creator directory, seller proposals and requests, followed creators, and admin creator review use the same thresholds. Sellers can sort proposals or the directory by influence or recent active referrals; this does not override campaign eligibility, location/specialty matching, price, or the seller's selection. Social follower counts remain explicitly self-reported. Downloaded certificates are dated snapshots with the live profile URL, not signed proof.
+
+The first accepted code establishes attribution; it is not proof of a new signup or a conversion from a particular external platform. Existing users may enter their first code, and recent activity is not proof of incremental sales. Email/activity checks and uniqueness reduce simple inflation but do not prove unique people or replace dedicated fraud monitoring. No device/IP tracking or automated external-platform verification is introduced.
+
+`get_creator_influence(uuid[])` accepts at most 200 profile IDs and returns only aggregate counts. Public creators are visible to everyone; unpublished metrics are limited to the owner and administrators. Fan identities remain private. The server batches/deduplicates requests and treats an undeployed RPC (`PGRST202`) as unavailable, not as zero earned influence. Apply `20261018220000_creator_influence.sql` before expecting live influence counts; no remote database deployment is performed by the code change alone.
+
+Validation: `npm run test:creator-influence`, `npx tsc --noEmit`, and `supabase/tests/creator_influence.sql` (a transaction that rolls back all fixture data) against a local database after applying the migration.
+
 ## Database rollout
 
 Apply all migrations in timestamp order, including `20261015140000_creator_profiles.sql`, `20261015150000_restrict_creator_private_select.sql`, `20261015160000_creator_profile_enrichment.sql`, `20261015170000_creator_private_draft_policies.sql`, `20261015180000_creator_platform_revision_uniqueness.sql`, `20261015190000_creator_collaboration_notifications.sql`, `20261015200000_creator_fan_codes.sql`, `20261015210000_prevent_creator_self_follow.sql`, `20261015220000_creator_lifecycle_controls.sql`, `20261015230000_creator_notification_events.sql`, `20261016090000_creator_product_opportunities.sql`, the follow-up validation migrations `20261016091000_fix_creator_opportunity_array_validation.sql`, `20261016092000_fix_creator_proposal_contact_upsert.sql`, `20261016093000_cast_creator_opportunity_contacts.sql`, contact-visibility migrations `20261016100000_creator_seller_phone_visibility.sql`, `20261016101000_public_seller_contact_phone_batch.sql`, `20261016102000_public_creator_contact_phone.sql`, `20261016103000_keep_public_creator_phone_during_profile_review.sql`, `20261016104000_require_public_shop_for_creator_opportunities.sql`, and creator media migrations `20261017120000_creator_profile_media_and_publication.sql`, `20261017130000_require_review_for_creator_media_changes.sql`, `20261017140000_fix_creator_media_storage_rls.sql`, `20261017150000_fix_public_creator_media_policy.sql`, and `20261017160000_require_full_creator_resubmission_for_media.sql`. These migrations add private draft and approved image snapshots in addition to audience-city snapshots, targeted product opportunities, proposals, explicit phone visibility preferences, and narrow public/selected-party contact RPCs.

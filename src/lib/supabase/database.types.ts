@@ -378,6 +378,7 @@ export type Database = {
       creator_get_my_follows: { Args: Record<PropertyKey, never>; Returns: { audience_city_name: string | null; country_code: string | null; creator_profile_id: string; display_name: string; followed_at: string; referral_code: string; slug: string; specialties: string[] }[] };
       creator_get_my_fan_stats: { Args: Record<PropertyKey, never>; Returns: { fan_count: number; first_referral_count: number }[] };
       creator_get_public_fan_count: { Args: { p_creator_profile_id: string }; Returns: number | null };
+      get_creator_influence: { Args: { p_creator_profile_ids: string[] }; Returns: { creator_profile_id: string; fan_count: number; first_referral_count: number; qualified_referrals: number; active_referrals_30d: number }[] };
       creator_save_contact_preferences: { Args: { p_phone: string | null; p_phone_visibility: string }; Returns: undefined };
       creator_save_profile_media_paths: { Args: { p_cover_image_path: string | null; p_profile_image_path: string | null }; Returns: undefined };
       get_public_creator_contact_phone: { Args: { p_creator_profile_id: string }; Returns: string | null };
