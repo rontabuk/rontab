@@ -6,8 +6,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type Viewer =
   | { role: "guest" }
-  | { role: "admin"; userId: string }
-  | { role: "seller"; userId: string; hasNewAdCreditGrants: boolean }
+  | { role: "admin"; userId: string; createdAt: string }
+  | { role: "seller"; userId: string; createdAt: string; hasNewAdCreditGrants: boolean }
   | { role: "visitor"; userId: string; createdAt: string; emailVerifiedAt: string | null; avatarUrl: string | null; points: number | null; creatorProfileStatus: string | null; creatorProfileIsPublic: boolean };
 
 // Shared by the header and the mobile navigation so each request resolves the account once.
@@ -17,7 +17,7 @@ export const getViewer = cache(async (): Promise<Viewer> => {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user?.email_confirmed_at) return { role: "guest" };
-  if (user.app_metadata?.role === "admin") return { role: "admin", userId: user.id };
+  if (user.app_metadata?.role === "admin") return { role: "admin", userId: user.id, createdAt: user.created_at };
 
   const { data: seller } = await supabase
     .from("seller_profiles")
@@ -27,7 +27,7 @@ export const getViewer = cache(async (): Promise<Viewer> => {
 
   if (seller) {
     const { data: hasNewGrants } = await supabase.rpc("seller_has_new_ad_credit_grants");
-    return { role: "seller", userId: user.id, hasNewAdCreditGrants: Boolean(hasNewGrants) };
+    return { role: "seller", userId: user.id, createdAt: user.created_at, hasNewAdCreditGrants: Boolean(hasNewGrants) };
   }
 
   const [{ data: points, error }, { data: profile, error: profileError }, { data: creatorProfileId, error: creatorProfileIdError }] = await Promise.all([

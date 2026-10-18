@@ -83,8 +83,8 @@ export function MobileBottomNavBar({ config, notifications }: { config: MobileNa
   const pathname = usePathname();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [preferences, setPreferences] = useState<ClientPreferences>(DEFAULT_CLIENT_PREFERENCES);
-  const { isUnread } = useNotificationReads(notifications);
-  const inboxUnread = notifications.items.filter(isUnread).length;
+  const { getUnreadCount } = useNotificationReads(notifications);
+  const inboxUnread = getUnreadCount("messages") + getUnreadCount("ads");
 
   useEffect(() => {
     const syncPreferences = () => setPreferences(readClientPreferences());

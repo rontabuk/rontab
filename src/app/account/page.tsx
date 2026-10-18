@@ -17,7 +17,8 @@ export default async function VisitorAccountPage({
 }) {
   await connection();
   const { next, confirm, confirmationError, mode } = await searchParams;
-  const nextPath = getSafeVisitorPath(next);
+  const requestedPath = getSafeVisitorPath(next);
+  const nextPath = requestedPath === "/visitor" ? "/products" : requestedPath;
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (user?.email_confirmed_at) redirect(`/?welcome=1&next=${encodeURIComponent(nextPath)}`);

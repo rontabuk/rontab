@@ -4,18 +4,21 @@ import { Suspense } from "react";
 import { CircleUserRound, Menu } from "lucide-react";
 import { DismissibleDetails } from "@/components/DismissibleDetails";
 import { NotificationBell } from "@/components/NotificationBell";
+import { HeaderSettings } from "@/components/HeaderSettings";
 import { informationPages } from "@/data/information";
 import { getViewer } from "@/lib/auth/viewer";
 import { formatNumber } from "@/lib/format";
 import { getCreatorWorkspaceLabel } from "@/lib/creator/workspace";
 
-export function SiteHeader() {
+export function SiteHeader({ showSiteName = false }: { showSiteName?: boolean }) {
   return (
     <header className="site-header">
       <div className="site-header-inner page-shell">
+        {showSiteName && <span className="wordmark products-wordmark">RonTab</span>}
         <Suspense fallback={<AccountLinksFallback />}>
           <AccountLinks />
         </Suspense>
+        {showSiteName && <Link className="products-sell-link" href="/seller">Sell now</Link>}
       </div>
     </header>
   );
@@ -100,6 +103,7 @@ function HeaderActions({
                 <Link href="/creators">Creators</Link>
               {children}
               <Link href="/information">Site information</Link>
+              <HeaderSettings />
             </div>
           </div>
         </DismissibleDetails>

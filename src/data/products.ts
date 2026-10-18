@@ -3,6 +3,7 @@ export type ProductOverlayTone = "ceramic" | "linen" | "glass" | "coffee" | "wov
 export type ProductCategory = {
   id: string;
   name: string;
+  parentId?: string | null;
 };
 
 export type Product = {

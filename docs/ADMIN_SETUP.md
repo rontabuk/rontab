@@ -12,6 +12,28 @@ The admin portal is separate from the public storefront and has no public sign-u
 
 Never expose a Supabase `service_role` key to the browser or commit it to the repository. Any future admin data actions must repeat a server-side role check and use database RLS policies.
 
+## Category Defaults
+
+Apply `20261018140000_women_category_hierarchy.sql`, `20261018150000_category_visibility_control.sql`, `20261018160000_men_designer_kids_categories.sql`, `20261018170000_home_electronics_categories.sql`, `20261018180000_books_hobbies_sports_categories.sql` and `20261018190000_restaurants_grocery_categories.sql` before deploying the updated category manager. From a locally authenticated, linked Supabase CLI session:
+
+```powershell
+npx supabase login
+npx supabase db push --linked --dry-run
+npx supabase db push --linked
+```
+
+The defaults include Women (76 categories), Men (51), Designer (10), Kids (124), Home (143), Electronics (102), Books & Media (22), Hobbies & collectables (67) and Sports (125), counting each department itself. Men contains Clothing, Shoes, Accessories and Grooming; Designer has separate women and men groups; Kids has 12 groups covering clothing, toys, baby equipment, furniture, care, feeding, bedding, school supplies and other items. Home has 14 groups for appliances, kitchenware, household care, textiles, decor, office supplies, celebrations, tools, garden, furniture and pets. Electronics has 10 groups for gaming, computing, phones, audio, photography, tablets, TV, personal care, wearables and other devices. Books & Media has four groups; Hobbies & collectables and Sports each have 12. Only subcategories supplied in the reference screenshots are seeded. Magazines, Board games, Puzzles, Tabletop & miniature gaming and Postcards are directly selectable without unspecified child defaults. The "All" entries are navigation controls, not duplicate database categories. Further departments are not added until specified. Existing custom categories, including legacy Kitchen or Tableware entries and their assigned products, are preserved; matching slugs are not overwritten, moved or reactivated.
+
+Restaurants adds 21 categories: the root and 20 directly selectable cuisine or meal-type branches, without another seeded level. Grocery adds 63 categories: the root, 22 groups and 40 subcategories across 12 larger groups (produce, meat, fish, dairy, bakery, grains, frozen food, cooking essentials, drinks, baby essentials, cleaning and paper goods). Smaller groups stay directly selectable. These are catalogue classifications, not delivery, checkout, restaurant-menu modifiers or dietary filters. Flat departments display a single two-column list without repeating their branches; mixed hierarchies retain their group-and-subcategory layout. Both follow the same administrator-owned visibility rules.
+
+Manage them at `/admin/categories` using the expandable, searchable tree. **Visible** saves publication immediately, changing only visibility rather than rewriting the category's other fields. Hiding a parent hides its entire branch and its products from the public catalogue without changing each child's saved visibility. Restoring a parent restores only children that remain individually visible.
+
+Use **Add category**, the plus icon beside a section, or its edit icon to open the single editor. **Parent category** places an entry under another section; **Sort order** determines sibling order. Slug, description and image URL are under **Advanced settings**. New categories receive a generated unique slug when it is left blank, including names written in non-Latin scripts. Editing an existing category preserves its slug and advanced fields unless explicitly changed. Circular parent relationships are rejected. Saves invalidate the public catalogue cache.
+
+Desktop and phone navigation both read this database hierarchy. Main tabs display root sections; their category menu exposes the groups and subcategories. Selecting a parent includes its descendants. No runtime fallback silently reintroduces categories hidden by an administrator.
+
+Rollback-only database smoke tests are `supabase/tests/women_categories_smoke.sql`, `supabase/tests/men_designer_kids_categories_smoke.sql`, `supabase/tests/home_electronics_categories_smoke.sql`, `supabase/tests/books_hobbies_sports_categories_smoke.sql` and `supabase/tests/restaurants_grocery_categories_smoke.sql`. Category visibility, descendant filters and desktop/phone interaction regressions run with `npm run test:catalog`.
+
 ## Stripe Sandbox: Advertising Credits
 
 Only one-time advertising credit purchases in GBP are supported. Live payments and subscriptions are disabled. Use dedicated test shops: sandbox purchases add spendable credits to the existing advertising balance, so do not allowlist real sellers.

@@ -25,6 +25,10 @@ export type Database = {
   __InternalSupabase: { PostgrestVersion: "14.18" };
   public: {
     Tables: {
+      notification_events: Table<
+        { notification_id: string; recipient_id: string | null; audience: string; kind: string; title: string; body: string; href: string | null; link_url: string | null; created_at: string; city_ids: string[] | null; random_draw: boolean },
+        never
+      >;
       admin_audit_logs: Table<
         { action: string; actor_id: string; created_at: string; details: Json; entity_id: string | null; entity_type: string; id: number },
         { action: string; actor_id: string; created_at?: string; details?: Json; entity_id?: string | null; entity_type: string; id?: never }
@@ -330,6 +334,8 @@ export type Database = {
       seller_confirm_contact_email: { Args: Record<PropertyKey, never>; Returns: undefined };
       visitor_mark_email_verified: { Args: Record<PropertyKey, never>; Returns: boolean };
       mark_notifications_seen: { Args: Record<PropertyKey, never>; Returns: undefined };
+      get_notification_inbox: { Args: { p_channel: string; p_before_time?: string | null; p_before_id?: string | null; p_limit?: number }; Returns: { notification_id: string; kind: "welcome" | "announcement" | "new-product" | "loyalty-offer" | "reward-result" | "support-case" | "creator-programme"; title: string; body: string; href: string | null; created_at: string; is_read: boolean }[] };
+      get_notification_inbox_counts: { Args: Record<PropertyKey, never>; Returns: { channel: string; unread_count: number }[] };
       mark_notification_items_read: { Args: { p_notification_ids: string[] }; Returns: string[] };
       seller_create_credit_purchase: { Args: { p_clicks: number; p_expected_rate: number; p_request_id: string; p_seller_id: string }; Returns: Database["public"]["Tables"]["seller_credit_purchases"]["Row"][] };
       billing_attach_credit_checkout: { Args: { p_purchase_id: string; p_session_id: string }; Returns: undefined };
@@ -341,6 +347,8 @@ export type Database = {
       admin_update_top_video_ad: { Args: { p_ad_id: string; p_display_seconds: number; p_is_active: boolean; p_sort_order: number; p_target_url: string | null; p_title: string }; Returns: undefined };
       admin_delete_top_video_ad: { Args: { p_ad_id: string }; Returns: string };
       admin_save_category: { Args: { p_category_id: string | null; p_description: string | null; p_image_url: string | null; p_is_active: boolean; p_name: string; p_slug: string; p_sort_order: number }; Returns: string };
+      admin_save_category_with_parent: { Args: { p_category_id: string | null; p_description: string | null; p_image_url: string | null; p_is_active: boolean; p_name: string; p_slug: string; p_sort_order: number; p_parent_id: string | null }; Returns: string };
+      admin_set_category_visibility: { Args: { p_category_id: string; p_is_active: boolean }; Returns: undefined };
       admin_set_seller_status: { Args: { p_is_public: boolean; p_next_status: Database["public"]["Enums"]["seller_status"]; p_seller_id: string }; Returns: undefined };
       get_public_seller_verification_badges: { Args: { p_seller_profile_ids: string[] }; Returns: { is_blue: boolean; is_verified: boolean; seller_profile_id: string }[] };
       get_public_seller_follower_count: { Args: { p_seller_profile_id: string }; Returns: number };

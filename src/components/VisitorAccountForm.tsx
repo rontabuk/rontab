@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { ArrowLeft, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { CityPicker, type SupportedCity, type SupportedCountry } from "@/components/CityPicker";
@@ -39,7 +38,7 @@ export function VisitorAccountForm({ nextPath, notice, initialMode = "login", co
   countries: SupportedCountry[];
   cities: SupportedCity[];
 }) {
-  const router = useRouter();
+  const destination = nextPath === "/visitor" ? "/products" : nextPath;
   const [mode, setMode] = useState<Mode>(initialMode);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -97,9 +96,7 @@ export function VisitorAccountForm({ nextPath, notice, initialMode = "login", co
       }
 
       const verificationResult = await sendVisitorEmailVerification().catch(() => ({ error: "We couldn't send the email right now." }));
-      const destination = nextPath === "/visitor" ? "/products" : nextPath;
-      router.replace(`/?welcome=1&next=${encodeURIComponent(destination)}&verificationEmail=${verificationResult.error ? "failed" : "sent"}`);
-      router.refresh();
+      window.location.replace(`/?welcome=1&next=${encodeURIComponent(destination)}&verificationEmail=${verificationResult.error ? "failed" : "sent"}`);
       return;
     }
 
@@ -110,8 +107,7 @@ export function VisitorAccountForm({ nextPath, notice, initialMode = "login", co
       return;
     }
 
-    router.replace(`/?welcome=1&next=${encodeURIComponent(nextPath)}`);
-    router.refresh();
+    window.location.replace(`/?welcome=1&next=${encodeURIComponent(destination)}`);
   }
 
   return (

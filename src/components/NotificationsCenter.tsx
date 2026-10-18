@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useSyncExternalStore, useTransition } from "react";
-import { ArrowLeft, ArrowUpRight, BadgeCheck, CheckCheck, ChevronRight, Gift, LifeBuoy, Mail, MailOpen, MailWarning, Megaphone, MessageSquareText, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, BadgeCheck, CheckCheck, ChevronDown, ChevronRight, Gift, LifeBuoy, Mail, MailOpen, MailWarning, Megaphone, MessageSquareText, Sparkles } from "lucide-react";
 import { useNotificationReads } from "@/lib/notifications/read-state";
-import { getNotificationChannel } from "@/lib/notifications/channels";
+import { getNotificationChannel, type NotificationChannel } from "@/lib/notifications/channels";
+import { loadMoreNotifications } from "@/lib/notifications/actions";
 import { sendVisitorEmailVerification } from "@/app/account/actions";
 import type { SiteNotification } from "@/lib/notifications/feed";
 
 type Message = { id: string; title: string; body: string; link_url: string | null; created_at: string };
-const icons = { announcement: Megaphone, "new-product": Sparkles, "verify-email": MailWarning, "loyalty-offer": Gift, "reward-result": BadgeCheck, "support-case": LifeBuoy, "collaboration-request": MessageSquareText, "creator-programme": MessageSquareText };
+const icons = { welcome: Mail, announcement: Megaphone, "new-product": Sparkles, "verify-email": MailWarning, "loyalty-offer": Gift, "reward-result": BadgeCheck, "support-case": LifeBuoy, "collaboration-request": MessageSquareText, "creator-programme": MessageSquareText };
 function subscribeTime() { return () => {}; }
 
 function ReceivedTime({ value, compact = false }: { value: string; compact?: boolean }) {
@@ -37,30 +38,59 @@ function EmailConfirmationAction() {
   </div>;
 }
 
-export function NotificationsCenter({ items, userId, readIds, lastSeenAt, message = null }: {
+export function NotificationsCenter({ items, userId, readIds, lastSeenAt, message = null, hasMore, unreadCounts }: {
   items: SiteNotification[];
   userId: string | null;
   readIds: string[];
   lastSeenAt: string | null;
   message?: Message | null;
+  hasMore?: Record<NotificationChannel, boolean>;
+  unreadCounts?: Record<NotificationChannel, number>;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const channel = message || searchParams.get("tab") !== "ads" ? "messages" : "ads";
   const [filter, setFilter] = useState<"all" | "unread">("all");
-  const { isUnread, markRead, error: readError, saving } = useNotificationReads({ userId, readIds, lastSeenAt, autoReadId: message ? `announcement-${message.id}` : undefined });
-  const channelItems = items.filter((item) => getNotificationChannel(item) === channel);
-  const unreadCount = channelItems.filter(isUnread).length;
+  const [older, setOlder] = useState<{ userId: string | null; items: SiteNotification[]; readIds: string[]; hasMore: Partial<Record<NotificationChannel, boolean>> }>({ userId, items: [], readIds: [], hasMore: {} });
+  const [loading, startLoading] = useTransition();
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const extraItems = older.userId === userId ? older.items : [];
+  const allItems = [...new Map([...extraItems, ...items].map((item) => [item.id, item])).values()].sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt) || (first.id < second.id ? 1 : first.id > second.id ? -1 : 0));
+  const allReadIds = [...readIds, ...(older.userId === userId ? older.readIds : [])];
+  const { isUnread, getUnreadCount, markRead, error: readError, saving } = useNotificationReads({ userId, readIds: allReadIds, lastSeenAt, items, unreadCounts, autoReadId: message ? `announcement-${message.id}` : undefined });
+  const channelItems = allItems.filter((item) => getNotificationChannel(item) === channel);
+  const unreadCount = getUnreadCount(channel);
   const visibleItems = filter === "unread" ? channelItems.filter(isUnread) : channelItems;
-  const unreadMessages = items.filter((item) => getNotificationChannel(item) === "messages" && isUnread(item)).length;
-  const unreadAds = items.filter((item) => getNotificationChannel(item) === "ads" && isUnread(item)).length;
+  const unreadMessages = getUnreadCount("messages");
+  const unreadAds = getUnreadCount("ads");
+  const moreAvailable = (older.userId === userId ? older.hasMore[channel] : undefined) ?? hasMore?.[channel] ?? false;
+
+  function loadMore() {
+    const last = channelItems.filter((item) => item.kind !== "verify-email").at(-1);
+    if (!last || !userId || loading) return;
+    setLoadError(null);
+    startLoading(async () => {
+      const result = await loadMoreNotifications(channel, { createdAt: last.createdAt, id: last.id }, userId);
+      if (result.error || !result.page) {
+        setLoadError(result.error ?? "We couldn't load more notifications. Please try again.");
+        return;
+      }
+      const page = result.page;
+      setOlder((current) => ({
+        userId,
+        items: [...(current.userId === userId ? current.items : []), ...items.filter((item) => item.kind !== "verify-email"), ...page.items],
+        readIds: [...(current.userId === userId ? current.readIds : []), ...readIds, ...page.readIds],
+        hasMore: { ...(current.userId === userId ? current.hasMore : {}), [channel]: page.hasMore },
+      }));
+    });
+  }
 
   return (
     <main className="notifications-page page-shell" data-message-open={message ? true : undefined}>
       <header className="inbox-heading">
         <div><h1>Inbox</h1></div>
-        {userId && <button className="inbox-mark-read" type="button" title="Mark this section as read" aria-label="Mark this section as read" onClick={() => void markRead(visibleItems.filter((item) => isUnread(item)).map((item) => item.id))} disabled={saving || !visibleItems.some((item) => item.kind !== "verify-email" && isUnread(item))}>
-          <CheckCheck size={18} aria-hidden="true" /><span>{saving ? "Updating..." : "Mark as read"}</span>
+        {userId && <button className="inbox-mark-read" type="button" title="Mark displayed notifications as read" aria-label="Mark displayed notifications as read" onClick={() => void markRead(visibleItems.filter((item) => isUnread(item)).map((item) => item.id))} disabled={saving || !visibleItems.some((item) => item.kind !== "verify-email" && isUnread(item))}>
+          <CheckCheck size={18} aria-hidden="true" /><span>{saving ? "Updating..." : "Mark displayed as read"}</span>
         </button>}
       </header>
       <div className="inbox-channels" role="tablist" aria-label="Inbox sections" onKeyDown={(event) => {
@@ -98,7 +128,7 @@ export function NotificationsCenter({ items, userId, readIds, lastSeenAt, messag
       ) : <>
       {readError && <p className="form-error" role="alert">{readError}</p>}
       <div className="inbox-workspace" data-empty={!channelItems.length && !message || undefined}>
-        <section className="inbox-sidebar" aria-label="Notification list">
+        <section className="inbox-sidebar" aria-label="Notification list" aria-busy={loading}>
           <div className="inbox-filters" role="group" aria-label="Filter notifications">
             <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>All</button>
             <button type="button" aria-pressed={filter === "unread"} onClick={() => setFilter("unread")}>Unread <span>{unreadCount}</span></button>
@@ -121,6 +151,8 @@ export function NotificationsCenter({ items, userId, readIds, lastSeenAt, messag
               </li>;
             })}
           </ul> : <div className="inbox-list-empty">{channel === "messages" ? <Mail size={52} strokeWidth={1.5} aria-hidden="true" /> : <Megaphone size={52} strokeWidth={1.5} aria-hidden="true" />}<h2>{filter === "unread" ? "You're all caught up" : channel === "messages" ? "No messages yet" : "No ad notifications yet"}</h2><p>{filter === "unread" ? "No unread items in this section." : channel === "messages" ? "Messages from the team, sellers, and creators will appear here." : "Product updates and offers will appear here."}</p></div>}
+          {loadError && <p className="form-error" role="alert">{loadError}</p>}
+          {moreAvailable && <button className="inbox-load-more" type="button" disabled={loading} onClick={loadMore}><ChevronDown size={17} aria-hidden="true" />{loading ? "Loading..." : "Load more"}</button>}
         </section>
         <section className="inbox-reader" aria-label="Notification content">
           {message ? <article className="inbox-message">

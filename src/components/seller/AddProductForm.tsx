@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ImagePlus, Video } from "lucide-react";
 import { BrowserSpeechPlayer } from "@/components/BrowserSpeechPlayer";
 import { ProductPreview, type SellerCategoryOption } from "@/components/seller/ProductPreview";
+import { ProductCategoryPicker } from "@/components/seller/ProductCategoryPicker";
 import { PHOTO_ACCEPT, REEL_ACCEPT, removeProductMedia, uploadProductMedia, validateProductMedia } from "@/components/seller/productMedia";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isHttpsUrl } from "@/lib/validation";
@@ -250,13 +251,13 @@ export function AddProductForm({
           {imagePreviewUrl && <button className="seller-media-clear" type="button" onClick={clearSelectedImages}>Remove selected photo</button>}
         </section>
         <section className="seller-product-form-section">
+          <h2>Item details</h2>
+          <ProductCategoryPicker categories={categories} value={previewValues.categoryId} onChange={(categoryId) => setPreviewValues({ ...previewValues, categoryId })} />
+        </section>
+        <section className="seller-product-form-section">
           <h2>About your item</h2>
           <label><span>Title</span><input name="name" maxLength={120} value={previewValues.name} onChange={(event) => setPreviewValues({ ...previewValues, name: event.target.value })} required /></label>
           <label className="seller-product-description"><span>Description</span><textarea name="description" rows={4} maxLength={1000} value={previewValues.description} onChange={(event) => setPreviewValues({ ...previewValues, description: event.target.value })} required /><small>Up to 1,000 characters.</small></label>
-        </section>
-        <section className="seller-product-form-section">
-          <h2>Item details</h2>
-          <label><span>Category</span><select name="category_id" value={previewValues.categoryId} onChange={(event) => setPreviewValues({ ...previewValues, categoryId: event.target.value })} required><option value="" disabled>Select a category</option>{categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></label>
         </section>
         <section className="seller-product-form-section">
           <h2>Pricing</h2>

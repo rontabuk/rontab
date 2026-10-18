@@ -404,21 +404,26 @@ export async function grantSellerAdCredits(formData: FormData) {
 
 export async function saveCategory(formData: FormData) {
   const categoryId = String(formData.get("category_id") ?? "").trim();
-  const slug = String(formData.get("slug") ?? "").trim().toLowerCase();
+  const parentId = String(formData.get("parent_id") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
+  const enteredSlug = String(formData.get("slug") ?? "").trim().toLowerCase();
+  const slugBase = name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80).replace(/-$/, "");
+  const slug = enteredSlug || (!categoryId ? `${slugBase || "category"}-${crypto.randomUUID().slice(0, 8)}` : "");
   const description = String(formData.get("description") ?? "").trim();
   const imageUrl = String(formData.get("image_url") ?? "").trim();
   const sortOrder = Number(formData.get("sort_order") ?? 0);
   const isActive = formData.get("is_active") === "on";
 
-  if ((categoryId && !isUuid(categoryId)) || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || !name || !Number.isInteger(sortOrder)
+  if ((categoryId && !isUuid(categoryId)) || (parentId && !isUuid(parentId)) || (categoryId && categoryId === parentId)
+    || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || !name || !Number.isInteger(sortOrder)
     || (imageUrl && !isHttpsUrl(imageUrl))) {
-    throw new Error("Enter a valid category name, slug, sort order, and HTTPS image URL.");
+    throw new FormError("Enter a valid category name, parent, slug, sort order, and HTTPS image URL.");
   }
 
   const supabase = await requireAdminClient();
-  const { error } = await supabase.rpc("admin_save_category", {
+  const { error } = await supabase.rpc("admin_save_category_with_parent", {
     p_category_id: categoryId || null,
+    p_parent_id: parentId || null,
     p_slug: slug,
     p_name: name,
     p_description: description || null,
@@ -426,11 +431,34 @@ export async function saveCategory(formData: FormData) {
     p_is_active: isActive,
     p_sort_order: sortOrder,
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.code === "23505") throw new FormError("That slug is already used by another category.");
+    throw new Error(error.message);
+  }
 
+  refreshCategories();
+}
+
+function refreshCategories() {
   revalidatePath("/admin/categories");
   updateTag("public-catalog");
+  revalidatePath("/products");
+  revalidatePath("/seller");
   revalidatePath("/");
+}
+
+export async function saveCategoryDetails(formData: FormData): Promise<FormState> {
+  return runFormAction(() => saveCategory(formData));
+}
+
+export async function setCategoryVisibility(categoryId: string, isActive: boolean): Promise<FormState> {
+  return runFormAction(async () => {
+    if (!isUuid(categoryId) || typeof isActive !== "boolean") throw new FormError("Select a valid category.");
+    const supabase = await requireAdminClient();
+    const { error } = await supabase.rpc("admin_set_category_visibility", { p_category_id: categoryId, p_is_active: isActive });
+    if (error) throw new Error(error.message);
+    refreshCategories();
+  });
 }
 
 const TOP_VIDEO_AD_PATH = /^[0-9a-f-]{36}\.(mp4|webm|jpg|png|webp)$/;

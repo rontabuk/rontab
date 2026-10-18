@@ -28,11 +28,29 @@ Open [http://localhost:3000](http://localhost:3000).
 The product requirements document is in `docs/Rontab_Product_Specification.docx`.
 The loyalty and rewards behavior is specified in `docs/LOYALTY_REWARDS.md`.
 
+## Notifications
+
+- Signed-in inboxes include administration announcements and product updates only from the account's creation time onward.
+- The durable inbox migration stores event snapshots independently of the source's active status. Each channel loads 20 items at a time with a stable time-and-ID cursor; unread totals cover the entire eligible archive.
+- Each account receives one persistent welcome message. Email confirmation remains a separate account reminder, and opening the inbox does not mark its contents as read.
+- Reward offers that started before registration remain available on the rewards page when eligible, but do not appear as new-account notifications.
+- Support, reward results, and creator collaboration messages remain restricted to their recipient. Existing per-message read status is preserved.
+- Members cannot open administration messages predating their registration through inbox links. Administrators can still inspect older messages; public announcements remain readable by guests.
+
+The durable inbox migration `supabase/migrations/20261018210000_durable_notification_inbox.sql` was applied to the linked hosted project `jwcfrrfainrdnifkezzb` on 2026-10-18 after explicit approval; the post-deployment dry-run reported no pending migrations. Other environments must apply it before relying on permanent history. Until deployed, the application retains the legacy 60-day announcement and 14-day product windows. The migration backfills available sources; deleted sources and earlier support states cannot be reconstructed. Future hosted deployments still require target and migration confirmation.
+
+To test the migration and account isolation against the running local database without persisting changes (PowerShell):
+
+```powershell
+@('BEGIN;', (Get-Content -Raw supabase/migrations/20261018210000_durable_notification_inbox.sql), (Get-Content -Raw supabase/tests/durable_notification_inbox.sql), 'ROLLBACK;') | docker exec -i supabase_db_rontab psql -U postgres -d postgres -v ON_ERROR_STOP=1
+```
+
 ## Checks
 
 ```bash
 npm run lint
 npx tsc --noEmit
+npm run test:notifications
 npm run build
 ```
 
@@ -46,7 +64,7 @@ npm run test:offer-concurrency
 
 `.env.local` contains the project URL and publishable key and is ignored by Git. Copy `.env.example` when configuring another environment. Product visit redirects also require `SUPABASE_SERVICE_ROLE_KEY`, available in the Supabase project's API keys. Add it only to the server-side `.env.local` file, never to a `NEXT_PUBLIC_` variable or source control, then restart `npm run dev`.
 
-All migrations under `supabase/migrations`, including loyalty and supported locations, are applied to the hosted Supabase project.
+Local migration files do not imply hosted deployment. Confirm the linked project's migration status before deploying changes.
 
 ### Optional local database
 

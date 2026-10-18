@@ -79,6 +79,13 @@
 .seller-product-audio-preview .browser-speech-player { margin: 0; }
 .seller-product-preview-card { width: min(100%, 280px); }
 .seller-product-form > label { display: grid; align-content: start; gap: 5px; color: #626c60; font-size: 11px; font-weight: 700; }
+.seller-category-picker { display: grid; min-width: 0; grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 11px; }
+.seller-category-picker > label { display: grid; min-width: 0; align-content: start; gap: 5px; color: #626c60; font-size: 11px; font-weight: 700; }
+.seller-category-picker select { min-width: 0; }
+@media (max-width: 600px) {
+	.seller-category-picker { grid-template-columns: minmax(0, 1fr); gap: 9px; }
+	.seller-category-picker > label { gap: 6px; font-size: 12px; font-weight: 500; }
+}
 .seller-product-form .seller-product-description, .seller-product-form .seller-product-audio-script, .seller-product-form .seller-form-message, .seller-product-form .seller-auth-submit { grid-column: 1 / -1; }
 .seller-product-form textarea { min-height: 74px; resize: vertical; }
 .seller-product-form .seller-product-audio-script textarea { min-height: 68px; }

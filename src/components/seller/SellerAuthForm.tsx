@@ -89,8 +89,7 @@ export function SellerAuthForm({ mode }: { mode: "register" | "login" }) {
       }
     }
 
-    router.replace("/?welcome=1&next=%2Fproducts");
-    router.refresh();
+    window.location.replace("/?welcome=1&next=%2Fproducts");
   }
 
   return (

@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { cacheLife, cacheTag } from "next/cache";
 import { getOverlayTone, type Product, type ProductCategory } from "@/data/products";
+import { getVisibleCategoryRows } from "@/lib/categories";
 import type { Database } from "@/lib/supabase/database.types";
 import { createSupabasePublicClient } from "@/lib/supabase/server";
 import { createProductMediaUrls } from "@/lib/supabase/storage";
@@ -64,7 +65,7 @@ async function loadPublicCatalog(filter: CatalogFilter = {}): Promise<{
   const supabase = createSupabasePublicClient();
   const categoriesQuery = supabase
     .from("categories")
-    .select("id,slug,name")
+    .select("id,slug,name,parent_id")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
   let productsQuery = supabase
@@ -81,13 +82,13 @@ async function loadPublicCatalog(filter: CatalogFilter = {}): Promise<{
   if (filter.categorySlug) {
     const categories = await categoriesPromise;
     if (categories.error) throw categories.error;
-    const category = categories.data.find((item) => item.slug === filter.categorySlug);
+    const category = getVisibleCategoryRows(categories.data).find((item) => item.slug === filter.categorySlug);
     if (category) {
       productsQuery = filter.excludeCategory
         ? productsQuery.neq("category_id", category.id)
         : productsQuery.eq("category_id", category.id);
     } else if (!filter.excludeCategory) {
-      return { categories: categories.data.map((item) => ({ id: item.slug, name: item.name })), products: [] };
+      return { categories: [], products: [] };
     }
   }
 
@@ -96,7 +97,9 @@ async function loadPublicCatalog(filter: CatalogFilter = {}): Promise<{
   if (categoriesResult.error) throw categoriesResult.error;
   if (productsResult.error) throw productsResult.error;
 
-  const productRows = productsResult.data;
+  const visibleCategories = getVisibleCategoryRows(categoriesResult.data);
+  const categoryById = new Map(visibleCategories.map((category) => [category.id, category]));
+  const productRows = productsResult.data.filter((product) => categoryById.has(product.category_id));
   const sellerIds = [...new Set(productRows.map((product) => product.seller_profile_id))];
   const productIds = productRows.map((product) => product.id);
 
@@ -127,7 +130,6 @@ async function loadPublicCatalog(filter: CatalogFilter = {}): Promise<{
       const sellerPhones = new Map((sellerPhonesResult.data ?? []).map((contact) => [contact.seller_profile_id, contact.phone]));
       const sellerBadges = new Map((sellerBadgesResult.data ?? []).filter((badge) => badge.is_verified).map((badge) => [badge.seller_profile_id, badge.is_blue ? "blue" as const : "grey" as const]));
       const sellers = new Map(sellersResult.data.map((seller) => [seller.id, { ...seller, phone: sellerPhones.get(seller.id) ?? null, badge: sellerBadges.get(seller.id) }]));
-  const categoryById = new Map(categoriesResult.data.map((category) => [category.id, category]));
   const leadMediaByProduct = pickLeadMedia(mediaResult.data);
   const mediaUrls = await createProductMediaUrls(
     supabase,
@@ -135,7 +137,11 @@ async function loadPublicCatalog(filter: CatalogFilter = {}): Promise<{
   );
 
   return {
-    categories: categoriesResult.data.map((category) => ({ id: category.slug, name: category.name })),
+    categories: visibleCategories.map((category) => ({
+      id: category.slug,
+      name: category.name,
+      parentId: category.parent_id ? categoryById.get(category.parent_id)?.slug ?? null : null,
+    })),
     products: productRows.map((row) => {
       const category = categoryById.get(row.category_id);
       const media = leadMediaByProduct.get(row.id);

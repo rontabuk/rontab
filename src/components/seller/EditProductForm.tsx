@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ProductPreview, type SellerCategoryOption } from "@/components/seller/ProductPreview";
+import { ProductCategoryPicker } from "@/components/seller/ProductCategoryPicker";
 import { PHOTO_ACCEPT, REEL_ACCEPT, removeProductMedia, uploadProductMedia, validateProductMedia } from "@/components/seller/productMedia";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
@@ -232,7 +233,7 @@ export function EditProductForm({
           <p>Combined replacement media must not exceed 100 MB. If no new files are selected, current media is kept.</p>
         </aside>
         <label>Product name<input value={name} onChange={(event) => setName(event.target.value)} maxLength={120} required /></label>
-        <label>Category<select value={categoryId} onChange={(event) => setCategoryId(event.target.value)} required><option value="" disabled>Select a category</option>{categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></label>
+        <ProductCategoryPicker categories={categories} value={categoryId} onChange={setCategoryId} />
         <label>Price in GBP<input value={price} onChange={(event) => setPrice(event.target.value)} type="number" min="0" step="0.01" /></label>
         <label>Shop URL<input value={externalUrl} onChange={(event) => setExternalUrl(event.target.value)} type="url" placeholder="https://" required /></label>
         <label className="seller-product-description"><span>Product description</span><textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} maxLength={1000} required /><small>Up to 1,000 characters.</small></label>

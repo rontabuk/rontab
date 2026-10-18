@@ -9,11 +9,11 @@ import { reportMarketplaceItem } from "@/app/visitor/actions";
 import { ProductCard } from "@/components/ProductCard";
 import { BrowserSpeechPlayer } from "@/components/BrowserSpeechPlayer";
 import { ShopVisitLink } from "@/components/ShopVisitLink";
-import { SiteHeader } from "@/components/SiteChrome";
 import { getViewer } from "@/lib/auth/viewer";
 import { formatPrice } from "@/lib/format";
 import { getPublicProduct, getRelatedPublicProducts } from "@/lib/supabase/catalog";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import "../catalog.css";
 
 type ProductPageProps = { params: Promise<{ slug: string }>; searchParams: Promise<{ report?: string }> };
 
@@ -140,7 +140,6 @@ async function RelatedProducts({ slug, category, followedShopIds }: { slug: stri
 export default function ProductPage({ params, searchParams }: ProductPageProps) {
   return (
     <>
-      <SiteHeader />
       <Suspense fallback={<main className="product-detail page-shell" aria-busy="true"><p role="status">Loading product...</p></main>}>
         <ProductPageContent params={params} searchParams={searchParams} />
       </Suspense>

@@ -20,12 +20,24 @@ async function NotificationContent({ params }: NotificationRouteProps) {
   if (!UUID_PATTERN.test(id)) notFound();
 
   const supabase = await createSupabaseServerClient();
-  const [result, feed, viewer] = await Promise.all([supabase
+  const viewer = await getViewer();
+  if (viewer.role !== "guest") {
+    const saved = await supabase.from("notification_events")
+      .select("title,body,link_url,created_at")
+      .eq("notification_id", `announcement-${id}`)
+      .maybeSingle();
+    if (saved.error && saved.error.code !== "42P01" && saved.error.code !== "PGRST205") throw new Error("Your message is temporarily unavailable.");
+    if (saved.data) {
+      const feed = await getNotificationFeed();
+      return <NotificationsCenter {...feed} message={{ ...saved.data, id }} />;
+    }
+  }
+  const [result, feed] = await Promise.all([supabase
     .from("site_announcements")
     .select("id,title,body,link_url,created_at,audience")
     .eq("id", id)
     .eq("is_active", true)
-    .maybeSingle(), getNotificationFeed(), getViewer()]);
+    .maybeSingle(), getNotificationFeed()]);
   const announcement = result.data;
   if (!announcement) notFound();
   const canRead = viewer.role === "admin"
@@ -33,6 +45,7 @@ async function NotificationContent({ params }: NotificationRouteProps) {
     || (viewer.role === "visitor" && announcement.audience === "visitors")
     || (viewer.role === "seller" && announcement.audience === "sellers");
   if (!canRead) notFound();
+  if (viewer.role !== "guest" && viewer.role !== "admin" && Date.parse(announcement.created_at) < Date.parse(viewer.createdAt)) notFound();
   return <NotificationsCenter {...feed} message={announcement} />;
 }
 

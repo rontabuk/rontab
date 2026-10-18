@@ -10,6 +10,7 @@ const channels: Record<SiteNotification["kind"], NotificationChannel> = {
   "creator-programme": "messages",
   "reward-result": "messages",
   "new-product": "ads",
+  welcome: "messages",
   "loyalty-offer": "ads",
 };
 

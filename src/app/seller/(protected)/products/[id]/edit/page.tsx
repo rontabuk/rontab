@@ -27,7 +27,7 @@ export default async function EditSellerProductPage({ params }: EditProductPageP
   if (!product) notFound();
 
   const [{ data: categories, error: categoryError }, { data: mediaRows, error: mediaError }] = await Promise.all([
-    supabase.from("categories").select("id,slug,name").eq("is_active", true).order("sort_order", { ascending: true }),
+    supabase.from("categories").select("id,slug,name,parent_id").eq("is_active", true).order("sort_order", { ascending: true }),
     supabase.from("product_images").select("storage_path,media_type").eq("product_id", product.id).order("sort_order", { ascending: true }),
   ]);
 

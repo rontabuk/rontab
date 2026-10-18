@@ -9,7 +9,7 @@ import { useNotificationReads } from "@/lib/notifications/read-state";
 import type { SiteNotification } from "@/lib/notifications/feed";
 import { getNotificationChannel, type NotificationChannel } from "@/lib/notifications/channels";
 
-const icons = { "verify-email": MailWarning, announcement: Megaphone, "new-product": Sparkles, "loyalty-offer": Gift, "reward-result": BadgeCheck, "support-case": LifeBuoy, "collaboration-request": MessageSquareText, "creator-programme": MessageSquareText };
+const icons = { welcome: Mail, "verify-email": MailWarning, announcement: Megaphone, "new-product": Sparkles, "loyalty-offer": Gift, "reward-result": BadgeCheck, "support-case": LifeBuoy, "collaboration-request": MessageSquareText, "creator-programme": MessageSquareText };
 const soundChangedEvent = "rontab:notification-sound-changed";
 const volatileSoundPreferences = new Set<string>();
 
@@ -49,11 +49,13 @@ export function NotificationBellMenu({
   userId,
   readIds,
   lastSeenAt,
+  unreadCounts,
 }: {
   items: SiteNotification[];
   userId: string | null;
   readIds: string[];
   lastSeenAt: string | null;
+  unreadCounts?: Record<NotificationChannel, number>;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -68,9 +70,8 @@ export function NotificationBellMenu({
   const pendingToneRef = useRef(false);
   const soundStorageKey = `rontab:notification-sound:v1:${userId ?? "guest"}`;
   const soundEnabled = useSyncExternalStore(subscribeToSoundPreference, () => getSoundPreference(soundStorageKey), () => false);
-  const { isUnread, markRead, error: readError, saving } = useNotificationReads({ userId, readIds, lastSeenAt });
-  const unreadItems = items.filter(isUnread);
-  const unread = unreadItems.length;
+  const { isUnread, getUnreadCount, markRead, error: readError, saving } = useNotificationReads({ userId, readIds, lastSeenAt, items, unreadCounts });
+  const unread = getUnreadCount("messages") + getUnreadCount("ads");
   const channelItems = items.filter((item) => getNotificationChannel(item) === channel);
   const visibleItems = tab === "unread" ? channelItems.filter(isUnread) : channelItems;
   const channelUnread = channelItems.filter(isUnread);
@@ -197,7 +198,7 @@ export function NotificationBellMenu({
               </button>
               {channelUnread.some((item) => item.kind !== "verify-email") && (
                 <button type="button" className="notification-mark-read" disabled={saving} onClick={() => void markRead(channelUnread.map((item) => item.id))}>
-                  <CheckCheck size={15} aria-hidden="true" /> Mark all as read
+                  <CheckCheck size={15} aria-hidden="true" /> Mark displayed as read
                 </button>
               )}
             </div>}
@@ -209,7 +210,7 @@ export function NotificationBellMenu({
           {userId && <div className="notification-tabs" role="tablist" aria-label="Filter notifications">
             <button type="button" role="tab" aria-selected={tab === "all"} onClick={() => setTab("all")}>All</button>
             <button type="button" role="tab" aria-selected={tab === "unread"} onClick={() => setTab("unread")}>
-              Unread{channelUnread.length > 0 && <span>{channelUnread.length}</span>}
+              Unread{getUnreadCount(channel) > 0 && <span>{getUnreadCount(channel)}</span>}
             </button>
           </div>}
         </header>

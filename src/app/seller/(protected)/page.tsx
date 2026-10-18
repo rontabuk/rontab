@@ -11,7 +11,7 @@ export default async function SellerDashboardPage() {
   const { supabase, seller } = await getSellerAccount();
   const { data: categories, error: categoryError } = await supabase
     .from("categories")
-    .select("id,slug,name")
+    .select("id,slug,name,parent_id")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
 

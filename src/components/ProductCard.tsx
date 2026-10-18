@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Eye, Image as ImageIcon } from "lucide-react";
+import { ArrowUpRight, Eye, Image as ImageIcon, Pause, Play } from "lucide-react";
 import type { Product } from "@/data/products";
 import { ShopFollowButton } from "@/components/ShopFollowButton";
 import { ShopVisitLink } from "@/components/ShopVisitLink";
@@ -37,6 +37,12 @@ export function ProductCard({
   const [visibleDetailLength, setVisibleDetailLength] = useState(0);
   const [soundBlocked, setSoundBlocked] = useState(false);
   const [preferences, setPreferences] = useState(DEFAULT_CLIENT_PREFERENCES);
+  const [preferencesReady, setPreferencesReady] = useState(false);
+  const [isDesktop, setIsDesktop] = useState<boolean | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [desktopSoundEnabled, setDesktopSoundEnabled] = useState(false);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [videoProgress, setVideoProgress] = useState(0);
   const audioMuted = muteAutoplay || !preferences.reelSoundEnabled || soundBlocked;
   const [viewCount, setViewCount] = useState(product.viewCount ?? 0);
   const closeTimer = useRef<number | null>(null);
@@ -78,16 +84,57 @@ export function ProductCard({
     resetCloseTimer();
   };
 
+  const toggleVideoPlayback = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (!video.paused) {
+      video.pause();
+      return;
+    }
+    document.querySelectorAll<HTMLVideoElement>("[data-product-card] .product-card-media").forEach((other) => {
+      if (other !== video) other.pause();
+    });
+    setDesktopSoundEnabled(true);
+    video.muted = false;
+    void video.play().catch(() => setIsPlaying(false));
+  };
+
   useEffect(() => () => clearCloseTimer(), []);
 
   useEffect(() => {
     const syncPreferences = () => {
       setPreferences(readClientPreferences());
       setSoundBlocked(false);
+      setPreferencesReady(true);
     };
     syncPreferences();
     return subscribeToClientPreferences(syncPreferences);
   }, []);
+
+  useEffect(() => {
+    if (product.mediaType !== "video") return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    const showPreview = () => {
+      if (video.paused && video.currentTime === 0 && Number.isFinite(video.duration) && video.duration > 0) {
+        video.currentTime = Math.min(0.1, video.duration / 2);
+      }
+    };
+
+    showPreview();
+    video.addEventListener("loadedmetadata", showPreview);
+    return () => video.removeEventListener("loadedmetadata", showPreview);
+  }, [product.image, product.mediaType]);
+
+  useEffect(() => {
+    if (product.mediaType !== "video") return;
+    const viewport = window.matchMedia("(min-width: 761px)");
+    const syncViewport = () => setIsDesktop(viewport.matches);
+    syncViewport();
+    viewport.addEventListener("change", syncViewport);
+    return () => viewport.removeEventListener("change", syncViewport);
+  }, [product.mediaType]);
 
   useEffect(() => {
     if (!descriptionOpen) return;
@@ -114,14 +161,20 @@ export function ProductCard({
     const video = videoRef.current;
     if (!video) return;
 
-    if (!preferences.autoplayReels) {
+    if (!preferencesReady || isDesktop !== false || !preferences.autoplayReels) {
       video.pause();
       return;
     }
 
+    let cancelled = false;
+    const canAutoplay = () => !cancelled
+      && !window.matchMedia("(min-width: 761px)").matches
+      && readClientPreferences().autoplayReels;
     const play = () => {
+      if (!canAutoplay()) return;
       video.muted = audioMuted || !preferences.reelSoundEnabled;
       void video.play().catch(() => {
+        if (!canAutoplay()) return;
         video.muted = true;
         setSoundBlocked(true);
         void video.play().catch(() => {});
@@ -130,7 +183,10 @@ export function ProductCard({
 
     if (previewOnly) {
       play();
-      return () => video.pause();
+      return () => {
+        cancelled = true;
+        video.pause();
+      };
     }
 
     const observer = new IntersectionObserver(([entry]) => {
@@ -140,10 +196,11 @@ export function ProductCard({
 
     observer.observe(video);
     return () => {
+      cancelled = true;
       observer.disconnect();
       video.pause();
     };
-  }, [audioMuted, previewOnly, preferences.autoplayReels, preferences.reelSoundEnabled, product.mediaType]);
+  }, [audioMuted, isDesktop, preferencesReady, previewOnly, preferences.autoplayReels, preferences.reelSoundEnabled, product.mediaType]);
 
   useEffect(() => {
     const productId = product.id;
@@ -193,12 +250,35 @@ export function ProductCard({
       className="product-card-media"
       src={product.image}
       aria-label={product.imageAlt}
-      muted={audioMuted || !preferences.reelSoundEnabled}
+      muted={isDesktop === true ? !desktopSoundEnabled : audioMuted}
       playsInline
-      preload="none"
-      onEnded={(event) => {
+      preload="metadata"
+      onPlay={() => {
+        setIsPlaying(true);
+        if (window.matchMedia("(min-width: 761px)").matches) {
+          document.querySelectorAll<HTMLVideoElement>("[data-product-card] .product-card-media").forEach((other) => {
+            if (other !== videoRef.current) other.pause();
+          });
+        }
+      }}
+      onPause={() => setIsPlaying(false)}
+      onDurationChange={(event) => {
+        const duration = event.currentTarget.duration;
+        setVideoDuration(Number.isFinite(duration) ? duration : 0);
+      }}
+      onTimeUpdate={(event) => {
         const video = event.currentTarget;
-        if (!preferences.autoplayReels || automaticReplayCount.current >= 3) return;
+        setVideoProgress(Number.isFinite(video.duration) && video.duration > 0 ? video.currentTime / video.duration * 100 : 0);
+      }}
+      onEnded={(event) => {
+        setIsPlaying(false);
+        const video = event.currentTarget;
+        if (window.matchMedia("(min-width: 761px)").matches || !preferencesReady || !readClientPreferences().autoplayReels || automaticReplayCount.current >= 3) {
+          video.pause();
+          video.currentTime = Math.min(0.1, video.duration / 2);
+          setVideoProgress(0);
+          return;
+        }
 
         automaticReplayCount.current += 1;
         video.currentTime = 0;
@@ -234,6 +314,18 @@ export function ProductCard({
     </>
   );
 
+  const productTitleContent = (
+    <>
+      <span className="product-description-name">
+        <span className="product-description-name-text">{product.maker}</span>
+        {product.sellerBadge && <SellerVerificationBadge isBlue={product.sellerBadge === "blue"} />}
+      </span>
+      <span className="product-description-maker">
+        <span className="product-description-maker-name">{product.name}</span>
+      </span>
+    </>
+  );
+
   const productTitleButton = (
     <button
       className="product-description-preview animate-pulse"
@@ -244,13 +336,7 @@ export function ProductCard({
       onClick={toggleDescription}
       onPointerEnter={() => descriptionOpen && resetCloseTimer()}
     >
-      <span className="product-description-name">
-        <span className="product-description-name-text">{product.maker}</span>
-        {product.sellerBadge && <SellerVerificationBadge isBlue={product.sellerBadge === "blue"} />}
-      </span>
-      <span className="product-description-maker">
-        <span className="product-description-maker-name">{product.name}</span>
-      </span>
+      {productTitleContent}
     </button>
   );
 
@@ -286,6 +372,28 @@ export function ProductCard({
           <Link className="product-image-link" href={`/products/${product.slug}`} aria-label={`View details for ${product.name}`}>
             {mediaElement}
           </Link>
+        )}
+        {product.mediaType === "video" && product.image && (
+          <div className="product-reel-controls" role="group" aria-label={`Video controls for ${product.name}`}>
+            <button type="button" onClick={toggleVideoPlayback} aria-label={isPlaying ? "Pause video" : "Play video with sound"} title={isPlaying ? "Pause" : "Play with sound"}>
+              {isPlaying ? <Pause size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="0.1"
+              value={videoProgress}
+              disabled={videoDuration <= 0}
+              aria-label="Video progress"
+              onChange={(event) => {
+                const video = videoRef.current;
+                if (!video || !Number.isFinite(video.duration) || video.duration <= 0) return;
+                video.currentTime = Number(event.currentTarget.value) / 100 * video.duration;
+                setVideoProgress(Number(event.currentTarget.value));
+              }}
+            />
+          </div>
         )}
         {product.image && (
           <span className="product-view-count-badge" aria-label={`${formatCompactNumber(viewCount)} views`}>
@@ -348,6 +456,8 @@ export function ProductCard({
               <span className="advertiser-avatar advertiser-avatar-placeholder" aria-hidden="true">{getMakerInitials(product.maker)}</span>
             )}
             {productTitleButton}
+            <div className="product-card-desktop-identity">{productTitleContent}</div>
+            <p className="product-card-desktop-description">{product.description}</p>
             {previewOnly ? (
               <span className="product-visit-button">{visitLabel}</span>
             ) : (

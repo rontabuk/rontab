@@ -66,11 +66,11 @@ async function TopVideoAdSlot() {
 
 export default function ProductsPage({ searchParams }: ProductsPageProps) {
   return (
-    <div className="catalog-theme">
+    <div className="catalog-theme catalog-storefront">
       <Suspense fallback={null}>
         <TopVideoAdSlot />
       </Suspense>
-      <SiteHeader />
+      <SiteHeader showSiteName />
       <Suspense fallback={<main className="product-browser page-shell" aria-busy="true" />}>
         <SearchableProductBrowser searchParams={searchParams} />
       </Suspense>
