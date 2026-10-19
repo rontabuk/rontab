@@ -26,13 +26,15 @@ export default async function EditSellerProductPage({ params }: EditProductPageP
   if (productError) throw new Error(productError.message);
   if (!product) notFound();
 
-  const [{ data: categories, error: categoryError }, { data: mediaRows, error: mediaError }] = await Promise.all([
+  const [{ data: categories, error: categoryError }, { data: mediaRows, error: mediaError }, { data: canUploadReels, error: reelsError }] = await Promise.all([
     supabase.from("categories").select("id,slug,name,parent_id").eq("is_active", true).order("sort_order", { ascending: true }),
     supabase.from("product_images").select("storage_path,media_type").eq("product_id", product.id).order("sort_order", { ascending: true }),
+    supabase.rpc("get_seller_reel_upload_enabled"),
   ]);
 
   if (categoryError) throw new Error(categoryError.message);
   if (mediaError) throw new Error(mediaError.message);
+  if (reelsError) throw new Error(reelsError.message);
 
   const mediaUrls = await createProductMediaUrls(supabase, mediaRows.map((item) => item.storage_path));
   const media = mediaRows.map((item) => ({
@@ -56,6 +58,7 @@ export default async function EditSellerProductPage({ params }: EditProductPageP
           categories={categories}
           product={product}
           currentMedia={media}
+          canUploadReels={canUploadReels}
         />
       ) : (
         <section className="seller-account-notice seller-account-suspended" role="status">

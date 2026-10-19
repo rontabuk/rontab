@@ -9,13 +9,13 @@ export const instant = false;
 export default async function SellerDashboardPage() {
   await connection();
   const { supabase, seller } = await getSellerAccount();
-  const { data: categories, error: categoryError } = await supabase
-    .from("categories")
-    .select("id,slug,name,parent_id")
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true });
+  const [{ data: categories, error: categoryError }, { data: reelsEnabled, error: reelsError }] = await Promise.all([
+    supabase.from("categories").select("id,slug,name,parent_id").eq("is_active", true).order("sort_order", { ascending: true }),
+    supabase.rpc("get_seller_reel_upload_enabled"),
+  ]);
 
   if (categoryError) throw new Error(categoryError.message);
+  if (reelsError) throw new Error(reelsError.message);
 
   return (
     <main className="admin-overview seller-overview">
@@ -37,7 +37,7 @@ export default async function SellerDashboardPage() {
           <span>Product submissions and edits are unavailable. Contact support for assistance.</span>
         </section>
       )}
-      {seller.status === "active" && <AddProductForm sellerId={seller.id} shopName={seller.shop_name} shopLogo={seller.logo_url} categories={categories ?? []} />}
+      {seller.status === "active" && <AddProductForm sellerId={seller.id} shopName={seller.shop_name} shopLogo={seller.logo_url} categories={categories ?? []} canUploadReels={reelsEnabled} />}
     </main>
   );
 }

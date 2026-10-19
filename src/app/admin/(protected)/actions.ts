@@ -70,6 +70,7 @@ export async function saveMarketplaceSettings(formData: FormData) {
   const newProductsDurationMinutes = Number(formData.get("new_products_duration_minutes"));
   const clickPriceGbpPer1000 = Number(formData.get("click_price_gbp_per_1000"));
   const visitorDailyVisitPointsCap = Number(formData.get("visitor_daily_visit_points_cap"));
+  const sellerReelUploadEnabled = formData.get("seller_reel_upload_enabled") === "on";
   const clickPricePencePer1000 = Math.round(clickPriceGbpPer1000 * 100);
 
   if (
@@ -100,6 +101,7 @@ export async function saveMarketplaceSettings(formData: FormData) {
     p_new_products_duration_minutes: newProductsDurationMinutes,
     p_click_price_pence_per_1000: clickPricePencePer1000,
     p_visitor_daily_visit_points_cap: visitorDailyVisitPointsCap,
+    p_seller_reel_upload_enabled: sellerReelUploadEnabled,
   });
   if (error) throw new Error(error.message);
 

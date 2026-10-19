@@ -23,7 +23,7 @@ export default async function AdminSettingsPage({
   const { supabase } = await requireAdmin();
   const { data: settings, error } = await supabase
     .from("marketplace_settings")
-    .select("product_approval_mode,seller_approval_mode,featured_duration_minutes,new_products_duration_minutes,click_price_pence_per_1000,visitor_daily_visit_points_cap")
+    .select("product_approval_mode,seller_approval_mode,featured_duration_minutes,new_products_duration_minutes,click_price_pence_per_1000,visitor_daily_visit_points_cap,seller_reel_upload_enabled")
     .eq("singleton", true)
     .single();
 
@@ -104,6 +104,16 @@ export default async function AdminSettingsPage({
             Maximum points per visitor
             <input name="visitor_daily_visit_points_cap" type="number" min="1" max="250" step="1" defaultValue={settings.visitor_daily_visit_points_cap} required />
             <small>Between 1 and 250 points per rolling 24 hours. Default: 250.</small>
+          </label>
+        </section>
+        <section className="admin-settings-section" aria-labelledby="seller-reel-upload-title">
+          <div>
+            <h2 id="seller-reel-upload-title">Seller Reel uploads</h2>
+            <p>Control whether sellers can add new Reel videos or replace product media with a Reel. Existing Reels remain visible when uploads are disabled.</p>
+          </div>
+          <label className="admin-settings-toggle">
+            <input type="checkbox" name="seller_reel_upload_enabled" defaultChecked={settings.seller_reel_upload_enabled} />
+            <span>Allow sellers to upload Reels</span>
           </label>
         </section>
         <button className="admin-primary-button" type="submit">Save marketplace settings</button>

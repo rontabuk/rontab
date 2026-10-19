@@ -133,8 +133,8 @@ export type Database = {
         never
       >;
       marketplace_settings: Table<
-        { click_price_pence_per_1000: number; featured_duration_minutes: number; loyalty_random_draws_enabled: boolean; new_products_duration_minutes: number; product_approval_mode: "manual" | "automatic"; seller_approval_mode: "manual" | "automatic"; singleton: boolean; updated_at: string; visitor_daily_visit_points_cap: number },
-        { click_price_pence_per_1000?: number; featured_duration_minutes?: number; loyalty_random_draws_enabled?: boolean; new_products_duration_minutes?: number; product_approval_mode?: "manual" | "automatic"; seller_approval_mode?: "manual" | "automatic"; singleton?: boolean; updated_at?: string; visitor_daily_visit_points_cap?: number }
+        { click_price_pence_per_1000: number; featured_duration_minutes: number; loyalty_random_draws_enabled: boolean; new_products_duration_minutes: number; product_approval_mode: "manual" | "automatic"; seller_approval_mode: "manual" | "automatic"; seller_reel_upload_enabled: boolean; singleton: boolean; updated_at: string; visitor_daily_visit_points_cap: number },
+        { click_price_pence_per_1000?: number; featured_duration_minutes?: number; loyalty_random_draws_enabled?: boolean; new_products_duration_minutes?: number; product_approval_mode?: "manual" | "automatic"; seller_approval_mode?: "manual" | "automatic"; seller_reel_upload_enabled?: boolean; singleton?: boolean; updated_at?: string; visitor_daily_visit_points_cap?: number }
       >;
       top_video_ads: Table<
         { created_at: string; display_seconds: number; id: string; is_active: boolean; media_type: "video" | "image"; sort_order: number; storage_path: string; target_url: string | null; title: string; updated_at: string },
@@ -309,7 +309,8 @@ export type Database = {
     Functions: {
       admin_review_product: { Args: { p_next_status: Database["public"]["Enums"]["product_status"]; p_product_id: string }; Returns: undefined };
       admin_set_product_featured: { Args: { p_is_featured: boolean; p_product_id: string }; Returns: string | null };
-      admin_update_marketplace_settings: { Args: { p_click_price_pence_per_1000: number; p_featured_duration_minutes: number; p_new_products_duration_minutes: number; p_product_approval_mode: "manual" | "automatic"; p_seller_approval_mode: "manual" | "automatic"; p_visitor_daily_visit_points_cap: number }; Returns: undefined };
+      admin_update_marketplace_settings: { Args: { p_click_price_pence_per_1000: number; p_featured_duration_minutes: number; p_new_products_duration_minutes: number; p_product_approval_mode: "manual" | "automatic"; p_seller_approval_mode: "manual" | "automatic"; p_seller_reel_upload_enabled: boolean; p_visitor_daily_visit_points_cap: number }; Returns: undefined };
+      get_seller_reel_upload_enabled: { Args: Record<PropertyKey, never>; Returns: boolean };
       admin_get_visitor_directory: { Args: { p_limit: number; p_offset: number; p_query: string; p_status: string }; Returns: { banned_until: string | null; created_at: string; email_confirmed_at: string | null; last_sign_in_at: string | null; total_count: number; visitor_email: string | null; visitor_id: string; visitor_name: string | null }[] };
       visitor_report_marketplace_item: { Args: { p_description: string; p_issue_type: string; p_target_id: string; p_target_type: string }; Returns: string };
       admin_get_marketplace_support_cases: { Args: { p_limit: number; p_offset: number }; Returns: { case_id: string; created_at: string; description: string; issue_type: string; reporter_email: string | null; reporter_id: string; resolution_note: string | null; status: string; target_id: string; target_name: string; target_type: string; target_url: string | null; total_case_count: number; updated_at: string }[] };

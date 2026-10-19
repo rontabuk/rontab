@@ -28,6 +28,7 @@ export function EditProductForm({
   categories,
   product,
   currentMedia,
+  canUploadReels,
 }: {
   sellerId: string;
   shopName: string;
@@ -35,6 +36,7 @@ export function EditProductForm({
   categories: SellerCategoryOption[];
   product: EditableProduct;
   currentMedia: ExistingMedia[];
+  canUploadReels: boolean;
 }) {
   const router = useRouter();
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -107,6 +109,11 @@ export function EditProductForm({
 
     const imageFiles = Array.from(imageInputRef.current?.files ?? []);
     const reelFile = videoInputRef.current?.files?.[0] ?? null;
+    if (reelFile && !canUploadReels) {
+      setMessage("Reel uploads are currently disabled by the marketplace administrator.");
+      setIsSubmitting(false);
+      return;
+    }
     const replacingMedia = imageFiles.length > 0 || Boolean(reelFile) || removeCurrentMedia;
     const nextMediaCount = replacingMedia
       ? imageFiles.length + (reelFile ? 1 : 0)
@@ -150,6 +157,15 @@ export function EditProductForm({
       setMessage("Product editing is temporarily unavailable.");
       setIsSubmitting(false);
       return;
+    }
+
+    if (reelFile) {
+      const { data: reelsEnabled, error: settingsError } = await supabase.rpc("get_seller_reel_upload_enabled");
+      if (settingsError || !reelsEnabled) {
+        setMessage("Reel uploads are currently disabled by the marketplace administrator.");
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     const { error: updateError } = await supabase
@@ -227,9 +243,9 @@ export function EditProductForm({
     <div className="seller-product-workspace">
       <form className="seller-product-form" onSubmit={handleSubmit}>
         <aside className="seller-media-guide" aria-labelledby="edit-product-media-title">
-          <h2 id="edit-product-media-title">Photo and Reel guidelines</h2>
-          <p>Choose up to 5 photos or one vertical Reel. Selecting replacement media replaces all existing media.</p>
-          <p>Photos: 4:5, ideally 1080 × 1350 px. Reel: 9:16, ideally 1080 × 1920 px, MP4 or WebM.</p>
+          <h2 id="edit-product-media-title">{canUploadReels ? "Photo and Reel guidelines" : "Photo guidelines"}</h2>
+          <p>{canUploadReels ? "Choose up to 5 photos or one vertical Reel. Selecting replacement media replaces all existing media." : "Choose up to 5 photos to replace current media. Existing media can be kept unchanged."}</p>
+          <p>Photos: 4:5, ideally 1080 × 1350 px.{canUploadReels && " Reel: 9:16, ideally 1080 × 1920 px, MP4 or WebM."}</p>
           <p>Combined replacement media must not exceed 100 MB. If no new files are selected, current media is kept.</p>
         </aside>
         <label>Product name<input value={name} onChange={(event) => setName(event.target.value)} maxLength={120} required /></label>
@@ -239,7 +255,7 @@ export function EditProductForm({
         <label className="seller-product-description"><span>Product description</span><textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} maxLength={1000} required /><small>Up to 1,000 characters.</small></label>
         <label className="seller-product-audio-script"><span>Audio summary <small>(optional)</small></span><textarea value={audioScript} onChange={(event) => setAudioScript(event.target.value)} rows={3} maxLength={300} /><small>Up to 300 characters, around 30 seconds. Preview uses a voice on your device.</small></label>
         <label>Replace with product photos<input ref={imageInputRef} type="file" accept={PHOTO_ACCEPT} onChange={handleImageChange} multiple /></label>
-        <label>Replace with Reel video<input ref={videoInputRef} type="file" accept={REEL_ACCEPT} onChange={handleVideoChange} /></label>
+        {canUploadReels && <label>Replace with Reel video<input ref={videoInputRef} type="file" accept={REEL_ACCEPT} onChange={handleVideoChange} /></label>}
         {currentMedia.length > 0 && (
           <div className="seller-current-media">
             {removeCurrentMedia ? (

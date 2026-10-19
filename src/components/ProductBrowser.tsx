@@ -65,7 +65,7 @@ export function ProductBrowser({
   const [query, setQuery] = useState(initialQuery);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [currentTime, setCurrentTime] = useState(0);
-  const [twoColumnMobileView, setTwoColumnMobileView] = useState(false);
+  const [twoColumnMobileView, setTwoColumnMobileView] = useState(true);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [openGroup, setOpenGroup] = useState<string | null>(null);

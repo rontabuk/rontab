@@ -32,11 +32,13 @@ export function AddProductForm({
   shopName,
   shopLogo,
   categories,
+  canUploadReels,
 }: {
   sellerId: string;
   shopName: string;
   shopLogo: string | null;
   categories: SellerCategoryOption[];
+  canUploadReels: boolean;
 }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
@@ -101,8 +103,14 @@ export function AddProductForm({
     const reelValue = formData.get("reel");
     const reelFile = reelValue instanceof File && reelValue.size > 0 ? reelValue : null;
 
+    if (reelFile && !canUploadReels) {
+      setMessage("Reel uploads are currently disabled by the marketplace administrator.");
+      setIsSubmitting(false);
+      return;
+    }
+
     if (imageFiles.length === 0 && !reelFile) {
-      setMessage("Add at least one product photo or a vertical Reel video.");
+      setMessage(canUploadReels ? "Add at least one product photo or a vertical Reel video." : "Add at least one product photo.");
       setIsSubmitting(false);
       return;
     }
@@ -126,6 +134,15 @@ export function AddProductForm({
       setMessage("Product submission is temporarily unavailable.");
       setIsSubmitting(false);
       return;
+    }
+
+    if (reelFile) {
+      const { data: reelsEnabled, error: settingsError } = await supabase.rpc("get_seller_reel_upload_enabled");
+      if (settingsError || !reelsEnabled) {
+        setMessage("Reel uploads are currently disabled by the marketplace administrator.");
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     const productId = crypto.randomUUID();
@@ -215,9 +232,9 @@ export function AddProductForm({
       <form className="seller-product-form" onSubmit={handleSubmit}>
         <section className="seller-product-feature" aria-label="Product preview and media">
           <aside className="seller-media-guide" aria-labelledby="seller-media-guide-title">
-            <h2 id="seller-media-guide-title">Photo and Reel tips</h2>
-            <p><strong>Photos:</strong> 4:5 (1080 × 1350), JPEG/WebP. <strong>Reels:</strong> 9:16 (1080 × 1920), MP4/WebM.</p>
-            <p>Choose 1 photo or 1 Reel, max 100 MB. Choosing one replaces the other; Reels play muted and loop.</p>
+            <h2 id="seller-media-guide-title">{canUploadReels ? "Photo and Reel tips" : "Photo tips"}</h2>
+            <p><strong>Photos:</strong> 4:5 (1080 × 1350), JPEG/WebP.{canUploadReels && <> <strong>Reels:</strong> 9:16 (1080 × 1920), MP4/WebM.</>}</p>
+            <p>{canUploadReels ? "Choose 1 photo or 1 Reel, max 100 MB. Choosing one replaces the other; Reels play muted and loop." : "Choose up to 5 photos, max 100 MB combined."}</p>
           </aside>
           {(imagePreviewUrl || videoPreviewUrl) && (
             <>
@@ -239,10 +256,10 @@ export function AddProductForm({
           )}
         </section>
         <section className="seller-product-media-section" aria-label="Product photos and video">
-          <label className="seller-media-upload seller-media-upload-reel" title="Add a Reel video">
+          {canUploadReels && <label className="seller-media-upload seller-media-upload-reel" title="Add a Reel video">
             <input className="seller-media-file-input" ref={videoInputRef} name="reel" type="file" accept={REEL_ACCEPT} onChange={handleVideoPreviewChange} aria-label="Add a Reel video" />
             <span className="seller-media-upload-content"><Video size={24} aria-hidden="true" /></span>
-          </label>
+          </label>}
           <label className="seller-media-upload seller-media-upload-photos" title="Add a product photo">
             <input className="seller-media-file-input" ref={imageInputRef} name="images" type="file" accept={PHOTO_ACCEPT} onChange={handleImagePreviewChange} aria-label="Add a product photo" />
             <span className="seller-media-upload-content"><ImagePlus size={24} aria-hidden="true" /></span>

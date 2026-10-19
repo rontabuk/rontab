@@ -802,6 +802,21 @@ for (const mobile of [false, true]) {
   });
 }
 
+test("phone product catalog defaults to two columns and toggles to one column", () => {
+  const browser = browserFixture(true);
+  let tree = browser.render();
+  let grid = browser.find(tree, (node) => node.props.id === "product-grid");
+  let toggle = browser.find(tree, (node) => node.props.className === "product-view-toggle");
+  assert.equal(grid.props["data-mobile-columns"], "two");
+  assert.equal(toggle.props["aria-pressed"], true);
+  toggle.props.onClick();
+  tree = browser.render();
+  grid = browser.find(tree, (node) => node.props.id === "product-grid");
+  toggle = browser.find(tree, (node) => node.props.className === "product-view-toggle");
+  assert.equal(grid.props["data-mobile-columns"], "one");
+  assert.equal(toggle.props["aria-pressed"], false);
+});
+
 function adminActionsFixture() {
   const calls = [];
   const paths = [];

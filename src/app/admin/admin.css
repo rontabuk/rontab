@@ -155,6 +155,8 @@
 .admin-settings-section p { max-width: 480px; margin: 7px 0 0; color: #6f776e; font-size: 12px; line-height: 1.6; }
 .admin-settings-section label { display: grid; gap: 7px; color: #586258; font-size: 11px; font-weight: 700; }
 .admin-settings-section select, .admin-settings-section input { width: 100%; min-height: 38px; padding: 0 9px; border: 1px solid #d9ded5; border-radius: 3px; background: #fff; color: #374239; font: inherit; font-size: 13px; }
+.admin-settings-section .admin-settings-toggle { display: flex; min-height: 40px; align-items: center; gap: 10px; font-size: 12px; cursor: pointer; }
+.admin-settings-section .admin-settings-toggle input[type="checkbox"] { width: 18px; height: 18px; min-height: 18px; flex: 0 0 18px; margin: 0; padding: 0; accent-color: #34483a; }
 .admin-settings-section small { color: #7d857b; font-size: 11px; font-weight: 400; line-height: 1.5; }
 .admin-settings-form > .admin-primary-button { width: fit-content; min-width: 210px; padding-inline: 16px; }
 .admin-dashboard-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 22px; }
