@@ -7,7 +7,7 @@ import type { SupportedCity, SupportedCountry } from "@/components/CityPicker";
 import { MultiCityPicker } from "@/components/MultiCityPicker";
 import { publishProductOffer } from "@/app/seller/(protected)/product-offer-actions";
 import { formatNumber } from "@/lib/format";
-import { getMaximumOfferClaims, getOfferDateCount, getProductOfferPoints, PRODUCT_REWARD_POINTS, type OfferAudience, type OfferFulfillment } from "@/lib/seller/offer-policy";
+import { DEFAULT_DISCOUNT_PER_CUSTOMER, getProductOfferPoints, MAX_PRODUCT_OFFER_VOUCHERS, PRODUCT_REWARD_POINTS, type OfferAudience, type OfferFulfillment } from "@/lib/seller/offer-policy";
 import type { Database } from "@/lib/supabase/database.types";
 
 export function ProductOfferForm({ productId, requestId, countries, cities, postcode, today, audienceCounts, shopUrl, rewardPoints = PRODUCT_REWARD_POINTS }: {
@@ -24,13 +24,9 @@ export function ProductOfferForm({ productId, requestId, countries, cities, post
   const [audience, setAudience] = useState<OfferAudience>("general");
   const [fulfillment, setFulfillment] = useState<OfferFulfillment>("branch");
   const [kind, setKind] = useState("discount");
-  const [validFrom, setValidFrom] = useState(today);
-  const [validUntil, setValidUntil] = useState(today);
-  const [dailyCapacity, setDailyCapacity] = useState(10);
+  const [maxClaims, setMaxClaims] = useState(50);
+  const [maxPerCustomer, setMaxPerCustomer] = useState(DEFAULT_DISCOUNT_PER_CUSTOMER);
   const branchPointsCost = getProductOfferPoints("branch", rewardPoints);
-  const offerDateCount = getOfferDateCount(validFrom, validUntil);
-  const maximumClaims = getMaximumOfferClaims(validFrom, validUntil, dailyCapacity);
-  const scheduledClaims = dailyCapacity * offerDateCount;
   const countsByCity = new Map(audienceCounts.map((count) => [count.city_id, count]));
   const cityDetails = Object.fromEntries(cities.map((city) => {
     const estimate = countsByCity.get(city.city_id);
@@ -49,24 +45,24 @@ export function ProductOfferForm({ productId, requestId, countries, cities, post
       {kind === "discount" && <label>Discount %<input name="discount_percent" type="number" min="0.01" max="100" step="0.01" required /></label>}
     </div>
     <label>Offer details<textarea name="benefit_details" rows={3} minLength={3} maxLength={1000} placeholder="State exactly what is included, exclusions and any minimum spend." required /></label>
-    <p className="seller-product-offer-note">{kind === "discount" ? "Up to 3 reservations per customer during this offer. Cancelled reservations do not count." : kind === "free_item" || kind === "meal" ? "One free benefit per customer for this product every 7 days, including republished offers." : "One reservation per customer per day."}</p>
+    <p className="seller-product-offer-note">{kind === "discount" ? `Each customer can reserve this discount up to ${formatNumber(maxPerCustomer)} times. Cancelled reservations do not count.` : kind === "free_item" || kind === "meal" ? "One free benefit per customer for this product every 7 days, including republished offers." : "One reservation per customer per day."}</p>
     <fieldset className="seller-offer-targeting"><legend>Audience cities</legend>
       <p className="seller-product-offer-note">{countries.find((country) => country.country_code === "GB")?.country_name ?? "United Kingdom"}</p>
       <MultiCityPicker name="city_ids" cities={cities} maxSelected={10} cityDetails={cityDetails} emptySelectionLabel="All UK · no specific cities selected" />
       <p className="seller-product-offer-note">Verified eligible customer accounts, based on saved profile cities, not verified residence. Exact counts below 5 are withheld for privacy.</p>
     </fieldset>
-    <div className="seller-product-offer-row"><label>Starts<input name="valid_from" type="date" min={today} value={validFrom} onChange={(event) => { const nextDate = event.target.value; setValidFrom(nextDate); if (nextDate > validUntil) setValidUntil(nextDate); }} required /></label><label>Ends<input name="valid_until" type="date" min={validFrom || today} value={validUntil} onChange={(event) => setValidUntil(event.target.value)} required /></label></div>
+    <div className="seller-product-offer-row"><label>Starts<input name="valid_from" type="date" min={today} defaultValue={today} required /></label><label>Ends<input name="valid_until" type="date" min={today} defaultValue={today} required /></label></div>
     <fieldset className="seller-offer-choice"><legend>Redemption</legend>
       <label><input type="radio" name="fulfillment" value="branch" checked={fulfillment === "branch"} onChange={() => setFulfillment("branch")} /><span>Branch voucher</span></label>
       <label><input type="radio" name="fulfillment" value="online" checked={fulfillment === "online"} disabled={audience === "reward" || !shopUrl.startsWith("https://")} onChange={() => setFulfillment("online")} /><span>Seller website<small>Public offers only</small></span></label>
     </fieldset>
     {fulfillment === "branch" ? <>
-      <p className="seller-product-offer-note">One redemption branch. Daily and total voucher quantities are shared across all selected cities.</p>
+      <p className="seller-product-offer-note">One redemption branch. Total vouchers are shared across all selected cities and dates.</p>
       <label>Branch postcode<input name="postcode" autoComplete="postal-code" maxLength={8} defaultValue={postcode} placeholder="SW1A 1AA" required /></label>
       <div className="seller-product-offer-row"><label>From · UK time<input name="starts_at" type="time" defaultValue="10:00" required /></label><label>Until · UK time<input name="ends_at" type="time" defaultValue="18:00" required /></label></div>
       <div className="seller-product-offer-row">
-        <label>Daily vouchers<input name="daily_capacity" type="number" min="1" max="1000" step="1" value={dailyCapacity} onChange={(event) => setDailyCapacity(Number(event.target.value))} required /></label>
-        <div className="seller-product-offer-capacity-summary"><span>Maximum total vouchers</span><output aria-label="Maximum total vouchers" aria-live="polite">{formatNumber(maximumClaims)}</output><small>{formatNumber(dailyCapacity)} per date × {formatNumber(offerDateCount)} {offerDateCount === 1 ? "date" : "dates"}, inclusive{scheduledClaims > maximumClaims ? " · 1,000 total-voucher limit applies" : ""}</small></div>
+        <label>Total vouchers<input name="max_claims" type="number" min="1" max={MAX_PRODUCT_OFFER_VOUCHERS} step="1" value={maxClaims} onChange={(event) => { const nextTotal = Number(event.target.value); setMaxClaims(nextTotal); setMaxPerCustomer((current) => Math.min(current, nextTotal || 1)); }} required /></label>
+        {kind === "discount" && <label>Maximum vouchers per customer<input name="max_per_customer" type="number" min="1" max={maxClaims} step="1" value={maxPerCustomer} onChange={(event) => setMaxPerCustomer(Number(event.target.value))} required /></label>}
       </div>
     </> : <><p className="seller-product-offer-note">{shopUrl}</p><label>Public discount code · optional<input name="external_code" maxLength={80} autoComplete="off" /></label><p className="seller-product-offer-note">Usage and quantity cannot be verified on external websites.</p></>}
     <label className="seller-product-offer-accept"><input name="accept_terms" type="checkbox" required /><span>I will honor this offer as described{audience === "reward" ? " as an exclusive benefit for RonTab voucher holders" : ""}. {fulfillment === "branch" ? "Early customer cancellation releases the reserved place. Cancelling the offer cancels unused active vouchers." : "Payment, delivery and returns remain my responsibility."}</span></label>

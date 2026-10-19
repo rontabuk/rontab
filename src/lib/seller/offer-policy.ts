@@ -1,6 +1,8 @@
 export const PRODUCT_REWARD_POINTS = 100;
 export const MIN_PRODUCT_REWARD_POINTS = 50;
 export const MAX_PRODUCT_REWARD_POINTS = 1_000_000;
+export const DEFAULT_DISCOUNT_PER_CUSTOMER = 1;
+export const MAX_PRODUCT_OFFER_VOUCHERS = 1000;
 
 export type OfferAudience = "general" | "reward";
 export type OfferFulfillment = "branch" | "online";
@@ -13,26 +15,20 @@ export function getProductOfferPoints(fulfillment: OfferFulfillment, pointsCost 
   return fulfillment === "branch" ? pointsCost : 0;
 }
 
-export function getOfferDateCount(validFrom: string, validUntil: string): number {
-  const start = new Date(`${validFrom}T00:00:00.000Z`);
-  const end = new Date(`${validUntil}T00:00:00.000Z`);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(validFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(validUntil)
-    || !Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())
-    || start.toISOString().slice(0, 10) !== validFrom || end.toISOString().slice(0, 10) !== validUntil || end < start) return 0;
-  return Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1;
+export function isValidOfferQuantity(quantity: number): boolean {
+  return Number.isSafeInteger(quantity) && quantity >= 1 && quantity <= MAX_PRODUCT_OFFER_VOUCHERS;
 }
 
-export function getMaximumOfferClaims(validFrom: string, validUntil: string, dailyCapacity: number): number {
-  if (!Number.isSafeInteger(dailyCapacity) || dailyCapacity < 1 || dailyCapacity > 1000) return 0;
-  return Math.min(getOfferDateCount(validFrom, validUntil) * dailyCapacity, 1000);
+export function isValidCustomerOfferLimit(limit: number, totalQuantity: number): boolean {
+  return isValidOfferQuantity(totalQuantity) && Number.isSafeInteger(limit) && limit >= 1 && limit <= totalQuantity;
 }
 
 export function isOfferCombinationSupported(audience: OfferAudience, fulfillment: OfferFulfillment): boolean {
   return audience !== "reward" || fulfillment === "branch";
 }
 
-export function getOfferBookingBlock(kind: string, reservationsUsed: number, nextFreeAt: string | null, now: number): string | null {
-  if (kind === "discount" && reservationsUsed >= 3) return "You have reached the 3-reservation limit for this discount offer.";
+export function getOfferBookingBlock(kind: string, reservationsUsed: number, nextFreeAt: string | null, now: number, customerLimit = DEFAULT_DISCOUNT_PER_CUSTOMER): string | null {
+  if (kind === "discount" && reservationsUsed >= customerLimit) return `You have reached the ${customerLimit}-reservation limit for this discount offer.`;
   if ((kind === "free_item" || kind === "meal") && nextFreeAt && new Date(nextFreeAt).getTime() > now) {
     return `Available again ${new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", dateStyle: "medium", timeStyle: "short" }).format(new Date(nextFreeAt))} UK time`;
   }

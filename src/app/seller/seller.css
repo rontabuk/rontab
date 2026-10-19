@@ -23,9 +23,6 @@
 .seller-product-offer-form input, .seller-product-offer-form select, .seller-product-offer-form textarea { width: 100%; min-width: 0; min-height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--ink); font: inherit; font-size: 12px; }
 .seller-product-offer-form label { display: grid; min-width: 0; gap: 7px; font-size: 12px; font-weight: 600; }
 .seller-product-offer-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.seller-product-offer-capacity-summary { display: grid; min-width: 0; gap: 7px; font-size: 12px; font-weight: 600; }
-.seller-product-offer-capacity-summary output { display: flex; min-height: 40px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--ink); font: inherit; }
-.seller-product-offer-capacity-summary small { color: #657064; font-size: 11px; font-weight: 400; line-height: 1.5; }
 .seller-product-offer-form .seller-offer-choice { display: flex; flex-wrap: wrap; gap: 12px; margin: 0; padding: 12px 0; border: 0; border-block: 1px solid var(--line); }
 .seller-offer-choice legend { margin-bottom: 5px; font-size: 12px; font-weight: 700; }
 .seller-product-offer-form .seller-offer-choice label { display: flex; flex: 1 1 220px; align-items: center; min-height: 44px; gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 4px; }

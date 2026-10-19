@@ -38,7 +38,7 @@ function formFixture(rewardPoints = 100) {
   const hooks = [];
   let cursor = 0;
   const { ProductOfferForm } = loadSource("components/seller/ProductOfferForm.tsx", {
-    react: { useState(initial) { const index = cursor++; if (!(index in hooks)) hooks[index] = initial; return [hooks[index], (value) => { hooks[index] = value; }]; } },
+    react: { useState(initial) { const index = cursor++; if (!(index in hooks)) hooks[index] = initial; return [hooks[index], (value) => { hooks[index] = typeof value === "function" ? value(hooks[index]) : value; }]; } },
     "@/components/ActionForm": { ActionForm }, "@/components/CityPicker": cityModule, "@/components/MultiCityPicker": multiCityModule,
     "@/lib/format": { formatNumber: (value) => value.toLocaleString("en-GB") },
     "@/app/seller/(protected)/product-offer-actions": { publishProductOffer() {} },
@@ -66,9 +66,9 @@ function publishFixture(error = null) {
     "@/lib/seller/offer-schema": loadSource("lib/seller/offer-schema.ts"),
     "@/lib/validation": loadSource("lib/validation.ts"),
   });
-  return { calls, publish(cityIds) {
+  return { calls, publish(cityIds, overrides = {}) {
     const data = new FormData();
-    for (const [name, value] of Object.entries({ product_id: "10000000-0000-4000-8000-000000000001", request_id: "10000000-0000-4000-8000-000000000002", audience: "reward", fulfillment: "branch", postcode: "SW1A 1AA", valid_from: "2026-10-20", valid_until: "2026-10-21", offer_kind: "discount", benefit_details: "Half price on this product", discount_percent: "50", starts_at: "10:00", ends_at: "15:00", daily_capacity: "10", max_claims: "50", accept_terms: "on" })) data.set(name, value);
+    for (const [name, value] of Object.entries({ product_id: "10000000-0000-4000-8000-000000000001", request_id: "10000000-0000-4000-8000-000000000002", audience: "reward", fulfillment: "branch", postcode: "SW1A 1AA", valid_from: "2026-10-20", valid_until: "2026-10-21", offer_kind: "discount", benefit_details: "Half price on this product", discount_percent: "50", starts_at: "10:00", ends_at: "15:00", max_claims: "50", max_per_customer: "3", accept_terms: "on", ...overrides })) data.set(name, value);
     for (const cityId of cityIds) data.append("city_ids", cityId);
     return publishProductOffer({}, data);
   } };
@@ -84,14 +84,13 @@ test("branch vouchers use the configured points cost independently of audience a
   assert.equal(policy.isOfferCombinationSupported("general", "online"), true);
 });
 
-test("total voucher capacity follows inclusive offer dates and daily capacity", () => {
-  assert.equal(policy.getOfferDateCount("2026-10-19", "2026-10-19"), 1);
-  assert.equal(policy.getOfferDateCount("2026-10-19", "2026-10-20"), 2);
-  assert.equal(policy.getMaximumOfferClaims("2026-10-19", "2026-10-20", 10), 20);
-  assert.equal(policy.getMaximumOfferClaims("2026-10-19", "2026-10-19", 10), 10);
-  assert.equal(policy.getMaximumOfferClaims("2026-10-19", "2026-11-18", 100), 1000);
-  assert.equal(policy.getOfferDateCount("2026-10-20", "2026-10-19"), 0);
-  assert.equal(policy.getMaximumOfferClaims("2026-10-19", "2026-10-20", 0), 0);
+test("total voucher count and per-customer discount limit are direct seller choices", () => {
+  for (const quantity of [1, 10, 150, 1000]) assert.equal(policy.isValidOfferQuantity(quantity), true);
+  for (const quantity of [0, -1, 1.5, 1001, NaN]) assert.equal(policy.isValidOfferQuantity(quantity), false);
+  assert.equal(policy.isValidCustomerOfferLimit(3, 50), true);
+  assert.equal(policy.isValidCustomerOfferLimit(50, 50), true);
+  assert.equal(policy.isValidCustomerOfferLimit(51, 50), false);
+  assert.equal(policy.isValidCustomerOfferLimit(0, 50), false);
 });
 
 test("selecting a reward switches an online offer back to branch redemption", () => {
@@ -103,15 +102,17 @@ test("selecting a reward switches an online offer back to branch redemption", ()
   assert.equal(field(tree, "fulfillment", "online").props.disabled, true);
   assert.equal(field(tree, "fulfillment", "branch").props.checked, true);
   assert.equal(field(tree, "external_code"), undefined);
-  assert.equal(field(tree, "max_claims"), undefined);
-  assert.equal(nodes(tree).find((node) => node.type === "output" && node.props?.["aria-label"] === "Maximum total vouchers").props.children, "10");
+  assert.equal(field(tree, "max_claims").props.value, 50);
+  assert.equal(field(tree, "max_per_customer").props.value, 1);
   assert.equal(field(tree, "points_cost"), undefined);
 });
 
 test("discount eligibility allows three uses and free-product eligibility unlocks exactly after seven days", () => {
   const now = Date.parse("2026-10-19T12:00:00Z");
-  for (const used of [0, 1, 2]) assert.equal(policy.getOfferBookingBlock("discount", used, null, now), null);
-  assert.match(policy.getOfferBookingBlock("discount", 3, null, now), /3-reservation limit/);
+  for (const used of [0, 1, 2]) assert.equal(policy.getOfferBookingBlock("discount", used, null, now, 3), null);
+  assert.match(policy.getOfferBookingBlock("discount", 3, null, now, 3), /3-reservation limit/);
+  assert.equal(policy.getOfferBookingBlock("discount", 3, null, now, 5), null);
+  assert.match(policy.getOfferBookingBlock("discount", 5, null, now, 5), /5-reservation limit/);
   for (const kind of ["free_item", "meal"]) {
     assert.match(policy.getOfferBookingBlock(kind, 0, "2026-10-19T12:00:01Z", now), /Available again.*UK time/);
     assert.equal(policy.getOfferBookingBlock(kind, 1, "2026-10-19T12:00:00Z", now), null);
@@ -271,7 +272,7 @@ test("admin point controls enforce a minimum of 50 and send default or per-offer
   assert.equal(calls[1].parameters.p_points_cost, 125);
 });
 
-test("product offer form submits multiple audience cities and distinguishes hidden and unavailable counts", () => {
+test("product offer form submits a total quantity and clamps the discount limit to it", () => {
   const fixture = formFixture();
   const picker = field(fixture.render(), "city_ids");
   assert.equal(picker.props.maxSelected, 10);
@@ -280,19 +281,25 @@ test("product offer form submits multiple audience cities and distinguishes hidd
   assert.equal(picker.props.cityDetails["GB-test"], "Fewer than 5 eligible customers");
   assert.equal(picker.props.cityDetails["GB-second"], "12 eligible customers");
   assert.equal(picker.props.cityDetails["GB-third"], "Audience count unavailable");
-  field(fixture.render(), "valid_until").props.onChange({ target: { value: "2026-10-20" } });
-  assert.equal(nodes(fixture.render()).find((node) => node.type === "output" && node.props?.["aria-label"] === "Maximum total vouchers").props.children, "20");
+  field(fixture.render(), "max_per_customer").props.onChange({ target: { value: "4" } });
+  field(fixture.render(), "max_claims").props.onChange({ target: { value: "2" } });
+  assert.equal(field(fixture.render(), "max_per_customer").props.value, 2);
 });
 
 test("publishing normalizes multiple cities and retains the original RPC for a single city", async () => {
   const fixture = publishFixture();
   await fixture.publish(["GB-test", "GB-second", "GB-test"]);
   assert.equal(fixture.calls[0].name, "seller_publish_product_offer_in_cities");
-  assert.equal(fixture.calls[0].parameters.p_payload.max_claims, 20);
+  assert.equal(fixture.calls[0].parameters.p_payload.max_claims, 50);
+  assert.equal(fixture.calls[0].parameters.p_payload.daily_capacity, 50);
+  assert.equal(fixture.calls[0].parameters.p_payload.max_per_customer, 3);
   assert.deepEqual(Array.from(fixture.calls[0].parameters.p_city_ids), ["GB-second", "GB-test"]);
   await fixture.publish(["GB-test"]);
   assert.equal(fixture.calls[1].name, "seller_publish_product_offer");
   assert.equal(fixture.calls[1].parameters.p_payload.city_id, "GB-test");
+  const invalid = publishFixture();
+  await assert.rejects(invalid.publish(["GB-test"], { max_claims: "2", max_per_customer: "3" }), /per-customer limit/);
+  assert.equal(invalid.calls.length, 0);
 });
 
 test("publishing treats no selected cities as All UK and rejects invalid or excessive cities", async () => {

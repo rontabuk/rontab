@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { FormError, runFormAction, type FormState } from "@/lib/form-state";
 import { getSellerAccount } from "@/lib/seller/access";
-import { getMaximumOfferClaims, isOfferCombinationSupported } from "@/lib/seller/offer-policy";
+import { isOfferCombinationSupported, isValidCustomerOfferLimit, isValidOfferQuantity } from "@/lib/seller/offer-policy";
 import { isSellerOfferSchemaUnavailable } from "@/lib/seller/offer-schema";
 import { isCityId, isUuid, normalizeUkPostcode } from "@/lib/validation";
 
@@ -28,10 +28,11 @@ export async function publishProductOffer(_state: FormState, formData: FormData)
     if (!["discount", "free_item", "meal", "other"].includes(kind) || benefit.length < 3 || benefit.length > 1000) throw new FormError("Describe the offer benefit in 3 to 1,000 characters.");
     if (fulfillment === "branch" && !postcode) throw new FormError("Enter a valid UK postcode for the redemption branch.");
     if (formData.get("accept_terms") !== "on") throw new FormError("Accept the offer and cancellation conditions.");
-    const dailyCapacity = Number(formData.get("daily_capacity"));
-    const maxClaims = getMaximumOfferClaims(validFrom, validUntil, dailyCapacity);
-    if (fulfillment === "branch" && maxClaims < 1) {
-      throw new FormError("Choose valid offer dates and a daily quantity from 1 to 1,000.");
+    const maxClaims = Number(formData.get("max_claims"));
+    const maxPerCustomer = Number(formData.get("max_per_customer"));
+    if (fulfillment === "branch" && !isValidOfferQuantity(maxClaims)) throw new FormError("Total vouchers must be a whole number from 1 to 1,000.");
+    if (fulfillment === "branch" && kind === "discount" && !isValidCustomerOfferLimit(maxPerCustomer, maxClaims)) {
+      throw new FormError("The per-customer limit must be a whole number between 1 and the total voucher count.");
     }
     const { supabase } = await getSellerAccount();
     const parameters = {
@@ -43,8 +44,9 @@ export async function publishProductOffer(_state: FormState, formData: FormData)
         discount_percent: kind === "discount" ? String(formData.get("discount_percent") ?? "") : null,
         starts_at: fulfillment === "branch" ? String(formData.get("starts_at") ?? "") : null,
         ends_at: fulfillment === "branch" ? String(formData.get("ends_at") ?? "") : null,
-        daily_capacity: fulfillment === "branch" ? dailyCapacity : null,
+        daily_capacity: fulfillment === "branch" ? maxClaims : null,
         max_claims: fulfillment === "branch" ? maxClaims : null,
+        max_per_customer: fulfillment === "branch" && kind === "discount" ? maxPerCustomer : null,
         external_code: fulfillment === "online" ? String(formData.get("external_code") ?? "").trim() : null,
         accept_terms: true,
       },

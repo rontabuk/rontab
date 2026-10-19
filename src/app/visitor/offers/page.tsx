@@ -96,7 +96,7 @@ export default async function VisitorOfferGalleryPage({
       {pageError === "location" && <p className="visitor-rewards-error" role="alert">Choose a supported city on your profile to reserve local offers.</p>}
       {pageError === "confirmation" && <p className="visitor-rewards-error" role="alert">Confirm the points cost and voucher conditions before reserving.</p>}
       {pageError === "priceChanged" && <p className="visitor-rewards-error" role="alert">The point cost changed before your reservation. No new points were charged. Check the updated cost and confirm again.</p>}
-      {pageError === "bookingLimit" && <p className="visitor-rewards-error" role="alert">You have reached the 3-reservation limit for this discount offer. Cancelled reservations do not count.</p>}
+      {pageError === "bookingLimit" && <p className="visitor-rewards-error" role="alert">You have reached this offer&apos;s per-customer reservation limit. Cancelled reservations do not count.</p>}
       {pageError === "freeCooldown" && <p className="visitor-rewards-error" role="alert">A free benefit for this product is available once every 7 days. No points were charged.</p>}
       {pageError === "verifyEmail" && <p className="visitor-rewards-error" role="alert">Confirm your email before reserving a voucher. <Link href="/notifications">Open notifications</Link>.</p>}
       {couponsUnavailable && <p className="visitor-rewards-error" role="status">Confirm your email and choose a supported country to access vouchers. <Link href="/visitor">Update your profile</Link>.</p>}
@@ -127,7 +127,7 @@ export default async function VisitorOfferGalleryPage({
           {cityId && displayOffers.length ? displayOffers.map((offer) => {
             const localLocations = (locationsByOffer.get(offer.id) ?? []).filter((location) => offer.target_all_uk || location.city_id === cityId);
             const usage = bookingLimits.get(offer.id);
-            const bookingBlock = getOfferBookingBlock(offer.offer_kind, usage?.reservations_used ?? 0, usage?.next_free_at ?? null, renderedAt);
+            const bookingBlock = getOfferBookingBlock(offer.offer_kind, usage?.reservations_used ?? 0, usage?.next_free_at ?? null, renderedAt, offer.max_per_customer);
             const slots = localLocations.flatMap((location) => (quotasByLocation.get(location.id) ?? [])
               .map((quota) => ({ ...quota, remaining: Math.min(quota.capacity - quota.reserved_count, dailyRemaining.get(`${offer.id}:${quota.offer_date}`) ?? Infinity) }))
               .filter((quota) => quota.offer_date >= offer.valid_from && quota.offer_date <= offer.valid_until && quota.remaining > 0
@@ -157,7 +157,7 @@ export default async function VisitorOfferGalleryPage({
                     <p>Purchases, delivery and returns are arranged with the seller. External code usage is not tracked by RonTab.</p>
                   </div> : <OfferCapacity offerId={offer.id} maximum={offer.max_claims} remaining={offer.remainingClaims} closesAt={`${offer.valid_until}T23:59:59`}><div className="seller-offer-slot-list">
                     <h3>Available times</h3>
-                    {offer.offer_kind === "discount" && <p>{usage?.reservations_used ?? 0} of 3 reservations used. Cancelled reservations do not count.</p>}
+                    {offer.offer_kind === "discount" && <p>{usage?.reservations_used ?? 0} of {formatNumber(offer.max_per_customer)} reservations used. Cancelled reservations do not count.</p>}
                     {slots.length ? slots.map(({ location, quota }) => {
                       const alreadyReservedToday = !["discount", "free_item", "meal"].includes(offer.offer_kind)
                         && coupons.some((coupon) => coupon.offer_id === offer.id && coupon.offer_date === quota.offer_date && coupon.status !== "cancelled");

@@ -13,6 +13,7 @@ type ProductOfferFields = {
   external_url: string | null;
   fulfillment: "branch" | "online";
   daily_claim_limit: number | null;
+  max_per_customer: number;
   target_all_uk: boolean;
   max_claims: number | null;
   product_id: string | null;

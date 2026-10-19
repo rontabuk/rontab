@@ -204,7 +204,7 @@ export async function reserveSellerOfferCoupon(formData: FormData) {
   });
   if (error) {
     if (error.code === "P0001" && error.message.includes("point cost has changed")) redirect("/visitor/offers?error=priceChanged");
-    if (error.code === "P0001" && error.message.includes("3-reservation limit")) redirect("/visitor/offers?error=bookingLimit");
+    if (error.code === "P0001" && error.message.includes("per-customer reservation limit")) redirect("/visitor/offers?error=bookingLimit");
     if (error.code === "P0001" && error.message.includes("every 7 days")) redirect("/visitor/offers?error=freeCooldown");
     const errorType = error.code === "23514" ? "points" : error.code === "42501" ? "location" : "unavailable";
     redirect(`/visitor/offers?error=${errorType}`);

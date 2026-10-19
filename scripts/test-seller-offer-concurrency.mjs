@@ -180,7 +180,7 @@ commit;
   const results = await Promise.all([reserve(ids.visitorOne), reserve(sameRequest || discountLimit || freeProduct ? ids.visitorOne : ids.visitorTwo,
     totalCapacity ? secondDate : offerDate, (multiCity && !sameRequest) || freeProduct ? ids.secondLocation : ids.location, freeProduct ? ids.secondOffer : ids.offer)]);
   const successes = results.filter((result) => result.code === 0);
-  const quotaRejections = results.filter((result) => result.code !== 0 && result.stderr.toLowerCase().includes(discountLimit ? "3-reservation limit" : freeProduct ? "every 7 days" : totalCapacity ? "total capacity" : "daily offer quota is full"));
+  const quotaRejections = results.filter((result) => result.code !== 0 && result.stderr.toLowerCase().includes(discountLimit ? "per-customer reservation limit" : freeProduct ? "every 7 days" : totalCapacity ? "total capacity" : "daily offer quota is full"));
   if (successes.length !== (sameRequest ? 2 : 1) || quotaRejections.length !== (sameRequest ? 0 : 1)) {
     fail(`Expected one reservation success and one full-quota rejection. Results: ${JSON.stringify(results)}`);
   }

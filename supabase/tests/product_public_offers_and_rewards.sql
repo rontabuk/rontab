@@ -61,7 +61,7 @@ begin
     values(product_id, seller_id || '/' || product_id || '/test.jpg', 'image');
   payload := jsonb_build_object('audience','reward','fulfillment','branch','offer_kind','discount','benefit_details','Exclusive 50 percent discount',
     'discount_percent',50,'city_id',city_id,'postcode','SW1A 1AA','valid_from',tomorrow,'valid_until',tomorrow + 1,
-    'starts_at','10:00','ends_at','15:00','daily_capacity',2,'max_claims',1,'accept_terms',true);
+    'starts_at','10:00','ends_at','15:00','daily_capacity',2,'max_claims',1,'max_per_customer',1,'accept_terms',true);
   perform set_config('request.jwt.claim.sub', seller_user::text, true);
   perform set_config('request.jwt.claims', jsonb_build_object('sub',seller_user,'role','authenticated')::text, true);
   begin
@@ -148,7 +148,7 @@ begin
     raise exception 'Public online offer did not preserve the product link.';
   end if;
   request_id := gen_random_uuid();
-  payload := payload || '{"daily_capacity":1,"max_claims":2}';
+  payload := payload || '{"daily_capacity":1,"max_claims":2,"max_per_customer":2}';
   offer_id := public.seller_publish_product_offer_in_cities(request_id, product_id, payload, array[city_id, second_city]);
   if public.seller_publish_product_offer_in_cities(request_id, product_id, payload, array[second_city, city_id, city_id]) <> offer_id
     or (select count(*) from public.seller_offer_locations location where location.offer_id = product_offer_test.offer_id) <> 2
@@ -227,7 +227,7 @@ begin
   perform set_config('request.jwt.claim.sub', seller_user::text, true);
   perform set_config('request.jwt.claims', '{}', true);
   request_id := gen_random_uuid();
-  payload := payload || '{"daily_capacity":20,"max_claims":20}';
+  payload := payload || '{"daily_capacity":20,"max_claims":20,"max_per_customer":4}';
   offer_id := public.seller_publish_product_offer_in_cities(request_id, product_id, payload, array[]::text[]);
   if not exists(select 1 from public.seller_offers offer where offer.id = product_offer_test.offer_id and audience = 'reward' and target_all_uk and points_cost = 75)
     or (select count(*) from public.seller_offer_locations location where location.offer_id = product_offer_test.offer_id) <> 1 then
@@ -289,6 +289,9 @@ begin
   end if;
   perform public.seller_cancel_product_offer(another_offer_id);
   offer_id := public.seller_publish_product_offer_in_cities(gen_random_uuid(), product_id, payload, array[]::text[]);
+  if (select max_per_customer from public.seller_offers where id = product_offer_test.offer_id) <> 4 then
+    raise exception 'The published discount did not retain its seller-selected per-customer limit.';
+  end if;
   select location.id into location_id from public.seller_offer_locations location where location.offer_id = product_offer_test.offer_id;
   for participant_index in 1..21 loop
     participant := gen_random_uuid();
@@ -325,28 +328,29 @@ begin
   update public.seller_offer_coupons set status = 'expired', expired_at = now() where id = (
     select claim.id from public.seller_offer_coupons claim where claim.offer_id = product_offer_test.offer_id and claim.id <> product_offer_test.coupon_id limit 1
   );
-  if (select reservations_used from public.get_my_seller_offer_booking_limits(array[offer_id])) <> 3
-    or (select points_balance from public.loyalty_accounts where visitor_id = visitor_user) <> 400 then
-    raise exception 'Three immediate discount reservations across dates did not count and charge exactly once each.';
+  perform public.reserve_seller_offer_coupon(offer_id, location_id, tomorrow + 1, '10:00', gen_random_uuid());
+  if (select reservations_used from public.get_my_seller_offer_booking_limits(array[offer_id])) <> 4
+    or (select points_balance from public.loyalty_accounts where visitor_id = visitor_user) <> 200 then
+    raise exception 'Four discount reservations above the former hard-coded limit were not charged correctly.';
   end if;
   begin
     perform public.reserve_seller_offer_coupon(offer_id, location_id, tomorrow + 1, '10:00', gen_random_uuid());
-    raise exception 'A fourth discount reservation was accepted.';
+    raise exception 'A fifth discount reservation exceeded the seller-selected customer limit.';
   exception when sqlstate 'P0001' then
-    if sqlerrm not like '%3-reservation limit%' then raise; end if;
+    if sqlerrm not like '%per-customer reservation limit%' then raise; end if;
   end;
   result := public.reserve_seller_offer_coupon(offer_id, location_id, tomorrow, '10:00', first_key);
-  if (result ->> 'id')::uuid <> coupon_id or (select points_balance from public.loyalty_accounts where visitor_id = visitor_user) <> 400 then
+  if (result ->> 'id')::uuid <> coupon_id or (select points_balance from public.loyalty_accounts where visitor_id = visitor_user) <> 200 then
     raise exception 'Limit rejection or an idempotent retry charged additional points.';
   end if;
   perform public.cancel_seller_offer_coupon(coupon_id);
-  if (select remaining_claims from public.get_public_seller_offer_availability(array[offer_id])) <> 18
-    or (select reservations_used from public.get_my_seller_offer_booking_limits(array[offer_id])) <> 2 then
+  if (select remaining_claims from public.get_public_seller_offer_availability(array[offer_id])) <> 17
+    or (select reservations_used from public.get_my_seller_offer_booking_limits(array[offer_id])) <> 3 then
     raise exception 'Cancellation did not restore capacity and one personal discount reservation.';
   end if;
   perform public.reserve_seller_offer_coupon(offer_id, location_id, tomorrow, '10:00', gen_random_uuid());
-  if (select reservations_used from public.get_my_seller_offer_booking_limits(array[offer_id])) <> 3
-    or (select points_balance from public.loyalty_accounts where visitor_id = visitor_user) <> 400 then
+  if (select reservations_used from public.get_my_seller_offer_booking_limits(array[offer_id])) <> 4
+    or (select points_balance from public.loyalty_accounts where visitor_id = visitor_user) <> 200 then
     raise exception 'Rebooking after cancellation failed or used the wrong refund amount.';
   end if;
   perform set_config('request.jwt.claim.sub', second_visitor::text, true);
@@ -354,6 +358,7 @@ begin
     raise exception 'Personal booking limits leaked another visitor history.';
   end if;
   perform set_config('request.jwt.claim.sub', seller_user::text, true);
+  update public.loyalty_accounts set points_balance = 400 where visitor_id = visitor_user;
   free_offer_id := public.seller_publish_product_offer_in_cities(gen_random_uuid(), product_id,
     payload || '{"audience":"general","offer_kind":"free_item","discount_percent":null}', array[]::text[]);
   another_offer_id := public.seller_publish_product_offer_in_cities(gen_random_uuid(), product_id,
@@ -395,7 +400,7 @@ begin
     or has_function_privilege('anon', 'public.seller_publish_product_offer_in_cities(uuid,uuid,jsonb,text[])', 'EXECUTE') then
     raise exception 'Offer RPC permissions are too broad.';
   end if;
-  raise notice 'PASS: 3 discount reservations, 7-day free-product cooldown across republishing, cancellation reopening, private eligibility, All UK, admin pricing, shared caps and idempotency.';
+  raise notice 'PASS: seller-configured discount limit above three, 7-day free-product cooldown across republishing, cancellation reopening, private eligibility, All UK, admin pricing, shared caps and idempotency.';
   raise exception using errcode = 'ZX001', message = 'Rollback test fixtures.';
   exception when sqlstate 'ZX001' then null;
   end;

@@ -42,7 +42,7 @@ export default async function SellerOfferRequestsPage({
     );
   }
   if (error) throw new Error(error.message);
-  const publishedResult = await supabase.from("seller_offers").select("id,title,status,audience,points_cost,valid_from,valid_until")
+  const publishedResult = await supabase.from("seller_offers").select("id,title,status,audience,points_cost,offer_kind,max_per_customer,valid_from,valid_until")
     .eq("seller_profile_id", seller.id).order("created_at", { ascending: false }).limit(30);
   if (publishedResult.error) throw new Error(publishedResult.error.message);
   const registrationCountsResult = seller.status === "active"
@@ -107,7 +107,7 @@ export default async function SellerOfferRequestsPage({
         <div className="seller-profile-section-heading"><h2>Published offers</h2><Link href="/seller/products"><Plus size={14} aria-hidden="true" />Create from a product</Link></div>
         {publishedResult.data.length ? <ol>{publishedResult.data.map((offer) => <li key={offer.id}>
           <div><strong>{offer.title}</strong><span>{offer.status}</span></div>
-          <p>{offer.valid_from} to {offer.valid_until} · {offer.audience === "reward" ? "Exclusive reward" : "Public offer"} · {offer.points_cost > 0 ? `${offer.points_cost.toLocaleString("en-GB")} points` : "No points"}</p>
+          <p>{offer.valid_from} to {offer.valid_until} · {offer.audience === "reward" ? "Exclusive reward" : "Public offer"} · {offer.points_cost > 0 ? `${offer.points_cost.toLocaleString("en-GB")} points` : "No points"}{offer.offer_kind === "discount" ? ` · ${offer.max_per_customer} per customer` : ""}</p>
           {["published", "paused"].includes(offer.status) && <details className="seller-offer-cancellation"><summary>Cancel offer</summary>
             <ActionForm action={cancelProductOffer}>
               <input type="hidden" name="offer_id" value={offer.id} />
