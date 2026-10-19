@@ -44,11 +44,11 @@
 .public-shop-products .product-visit-button-compact { display: flex; width: 100%; min-width: 0; min-height: 44px; align-items: center; justify-content: space-between; padding: 7px; border: 0; border-radius: 4px; background: #526b50; color: #fff; font-size: 11px; }
 .public-shop-products .product-visit-button-compact .product-visit-meta { margin: 0; padding: 0; border: 0; }
 .public-shop-products .product-visit-button-compact .product-click-count { color: inherit; }
-.public-shop-products .product-card-info-compact > .product-owner-actions { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr); gap: 6px; }
-.public-shop-products .product-card-info-compact .product-owner-action { display: flex; width: 100%; min-width: 0; height: 24px; min-height: 24px; align-items: center; justify-content: center; gap: 4px; padding: 2px 6px; background: #526b50; color: #fff; font-size: 9px; font-weight: 700; line-height: 1.1; text-align: center; }
-.public-shop-products .product-card-info-compact .product-owner-action svg { flex: 0 0 11px; width: 11px; height: 11px; }
-.public-shop-products .product-card-info-compact .product-owner-action span { min-width: 0; overflow-wrap: anywhere; }
-.public-shop-products .product-card-info-compact .product-owner-action:hover { background: #40573f; }
+.public-shop-products .product-card[data-compact] .product-owner-actions { display: grid; width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.public-shop-products .product-card[data-compact] .product-owner-action { box-sizing: border-box; display: flex; width: 100%; min-width: 0; height: 24px; min-height: 24px; align-items: center; justify-content: center; gap: 4px; padding: 2px 6px; background: #526b50; color: #fff; font-size: 9px; font-weight: 700; line-height: 1.1; text-align: center; }
+.public-shop-products .product-card[data-compact] .product-owner-action svg { flex: 0 0 11px; width: 11px; height: 11px; }
+.public-shop-products .product-card[data-compact] .product-owner-action span { min-width: 0; overflow-wrap: anywhere; }
+.public-shop-products .product-card[data-compact] .product-owner-action:hover { background: #40573f; }
 .public-shop-empty { padding: 38px 15px; border: 1px dashed #cfd7cb; color: #697268; font-size: 12px; text-align: center; }
 @media (max-width: 900px) { .public-shop-products { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; } }
 @media (max-width: 620px) {
