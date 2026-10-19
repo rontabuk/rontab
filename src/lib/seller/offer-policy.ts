@@ -13,6 +13,20 @@ export function getProductOfferPoints(fulfillment: OfferFulfillment, pointsCost 
   return fulfillment === "branch" ? pointsCost : 0;
 }
 
+export function getOfferDateCount(validFrom: string, validUntil: string): number {
+  const start = new Date(`${validFrom}T00:00:00.000Z`);
+  const end = new Date(`${validUntil}T00:00:00.000Z`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(validFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(validUntil)
+    || !Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())
+    || start.toISOString().slice(0, 10) !== validFrom || end.toISOString().slice(0, 10) !== validUntil || end < start) return 0;
+  return Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1;
+}
+
+export function getMaximumOfferClaims(validFrom: string, validUntil: string, dailyCapacity: number): number {
+  if (!Number.isSafeInteger(dailyCapacity) || dailyCapacity < 1 || dailyCapacity > 1000) return 0;
+  return Math.min(getOfferDateCount(validFrom, validUntil) * dailyCapacity, 1000);
+}
+
 export function isOfferCombinationSupported(audience: OfferAudience, fulfillment: OfferFulfillment): boolean {
   return audience !== "reward" || fulfillment === "branch";
 }

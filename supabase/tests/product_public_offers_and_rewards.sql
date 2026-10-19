@@ -64,6 +64,12 @@ begin
     'starts_at','10:00','ends_at','15:00','daily_capacity',2,'max_claims',1,'accept_terms',true);
   perform set_config('request.jwt.claim.sub', seller_user::text, true);
   perform set_config('request.jwt.claims', jsonb_build_object('sub',seller_user,'role','authenticated')::text, true);
+  begin
+    perform public.seller_publish_product_offer(gen_random_uuid(), product_id, payload || '{"max_claims":5}');
+    raise exception 'Total capacity exceeded the daily schedule.';
+  exception when sqlstate '22023' then
+    if sqlerrm not like '%inclusive offer dates%' then raise; end if;
+  end;
   offer_id := public.seller_publish_product_offer(request_id, product_id, payload);
   if public.seller_publish_product_offer(request_id, product_id, payload) <> offer_id then raise exception 'Publication retry created a duplicate.'; end if;
   if not exists(select 1 from public.seller_offers offer where offer.id = offer_id and audience = 'reward'
@@ -142,7 +148,7 @@ begin
     raise exception 'Public online offer did not preserve the product link.';
   end if;
   request_id := gen_random_uuid();
-  payload := payload || '{"daily_capacity":1,"max_claims":3}';
+  payload := payload || '{"daily_capacity":1,"max_claims":2}';
   offer_id := public.seller_publish_product_offer_in_cities(request_id, product_id, payload, array[city_id, second_city]);
   if public.seller_publish_product_offer_in_cities(request_id, product_id, payload, array[second_city, city_id, city_id]) <> offer_id
     or (select count(*) from public.seller_offer_locations location where location.offer_id = product_offer_test.offer_id) <> 2

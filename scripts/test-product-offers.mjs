@@ -84,6 +84,16 @@ test("branch vouchers use the configured points cost independently of audience a
   assert.equal(policy.isOfferCombinationSupported("general", "online"), true);
 });
 
+test("total voucher capacity follows inclusive offer dates and daily capacity", () => {
+  assert.equal(policy.getOfferDateCount("2026-10-19", "2026-10-19"), 1);
+  assert.equal(policy.getOfferDateCount("2026-10-19", "2026-10-20"), 2);
+  assert.equal(policy.getMaximumOfferClaims("2026-10-19", "2026-10-20", 10), 20);
+  assert.equal(policy.getMaximumOfferClaims("2026-10-19", "2026-10-19", 10), 10);
+  assert.equal(policy.getMaximumOfferClaims("2026-10-19", "2026-11-18", 100), 1000);
+  assert.equal(policy.getOfferDateCount("2026-10-20", "2026-10-19"), 0);
+  assert.equal(policy.getMaximumOfferClaims("2026-10-19", "2026-10-20", 0), 0);
+});
+
 test("selecting a reward switches an online offer back to branch redemption", () => {
   const fixture = formFixture();
   field(fixture.render(), "fulfillment", "online").props.onChange();
@@ -93,7 +103,8 @@ test("selecting a reward switches an online offer back to branch redemption", ()
   assert.equal(field(tree, "fulfillment", "online").props.disabled, true);
   assert.equal(field(tree, "fulfillment", "branch").props.checked, true);
   assert.equal(field(tree, "external_code"), undefined);
-  assert.ok(field(tree, "max_claims"));
+  assert.equal(field(tree, "max_claims"), undefined);
+  assert.equal(nodes(tree).find((node) => node.type === "output" && node.props?.["aria-label"] === "Maximum total vouchers").props.children, "10");
   assert.equal(field(tree, "points_cost"), undefined);
 });
 
@@ -261,19 +272,23 @@ test("admin point controls enforce a minimum of 50 and send default or per-offer
 });
 
 test("product offer form submits multiple audience cities and distinguishes hidden and unavailable counts", () => {
-  const picker = field(formFixture().render(), "city_ids");
+  const fixture = formFixture();
+  const picker = field(fixture.render(), "city_ids");
   assert.equal(picker.props.maxSelected, 10);
   assert.equal(picker.props.initialCityIds, undefined);
   assert.match(picker.props.emptySelectionLabel, /All UK/);
   assert.equal(picker.props.cityDetails["GB-test"], "Fewer than 5 eligible customers");
   assert.equal(picker.props.cityDetails["GB-second"], "12 eligible customers");
   assert.equal(picker.props.cityDetails["GB-third"], "Audience count unavailable");
+  field(fixture.render(), "valid_until").props.onChange({ target: { value: "2026-10-20" } });
+  assert.equal(nodes(fixture.render()).find((node) => node.type === "output" && node.props?.["aria-label"] === "Maximum total vouchers").props.children, "20");
 });
 
 test("publishing normalizes multiple cities and retains the original RPC for a single city", async () => {
   const fixture = publishFixture();
   await fixture.publish(["GB-test", "GB-second", "GB-test"]);
   assert.equal(fixture.calls[0].name, "seller_publish_product_offer_in_cities");
+  assert.equal(fixture.calls[0].parameters.p_payload.max_claims, 20);
   assert.deepEqual(Array.from(fixture.calls[0].parameters.p_city_ids), ["GB-second", "GB-test"]);
   await fixture.publish(["GB-test"]);
   assert.equal(fixture.calls[1].name, "seller_publish_product_offer");

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { FormError, runFormAction, type FormState } from "@/lib/form-state";
 import { getSellerAccount } from "@/lib/seller/access";
-import { isOfferCombinationSupported } from "@/lib/seller/offer-policy";
+import { getMaximumOfferClaims, isOfferCombinationSupported } from "@/lib/seller/offer-policy";
 import { isSellerOfferSchemaUnavailable } from "@/lib/seller/offer-schema";
 import { isCityId, isUuid, normalizeUkPostcode } from "@/lib/validation";
 
@@ -29,9 +29,9 @@ export async function publishProductOffer(_state: FormState, formData: FormData)
     if (fulfillment === "branch" && !postcode) throw new FormError("Enter a valid UK postcode for the redemption branch.");
     if (formData.get("accept_terms") !== "on") throw new FormError("Accept the offer and cancellation conditions.");
     const dailyCapacity = Number(formData.get("daily_capacity"));
-    const maxClaims = Number(formData.get("max_claims"));
-    if (fulfillment === "branch" && (![dailyCapacity, maxClaims].every((capacity) => Number.isInteger(capacity) && capacity >= 1 && capacity <= 1000))) {
-      throw new FormError("Daily and total quantities must be whole numbers from 1 to 1,000.");
+    const maxClaims = getMaximumOfferClaims(validFrom, validUntil, dailyCapacity);
+    if (fulfillment === "branch" && maxClaims < 1) {
+      throw new FormError("Choose valid offer dates and a daily quantity from 1 to 1,000.");
     }
     const { supabase } = await getSellerAccount();
     const parameters = {
