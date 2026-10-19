@@ -1,22 +1,10 @@
-"use client";
-
+import Link from "next/link";
 import { Pencil } from "lucide-react";
 
-export function SellerProfileEditButton({ targetId }: { targetId: string }) {
+export function SellerProfileEditButton() {
   return (
-    <button
-      className="seller-profile-edit-button"
-      type="button"
-      onClick={() => {
-        const editor = document.getElementById(targetId);
-        if (!(editor instanceof HTMLDetailsElement)) return;
-
-        editor.open = true;
-        editor.querySelector("summary")?.focus();
-        editor.scrollIntoView({ behavior: "smooth", block: "start" });
-      }}
-    >
+    <Link className="seller-profile-edit-button" href="/seller/profile/edit" aria-label="Edit shop profile">
       <Pencil size={14} aria-hidden="true" />Edit
-    </button>
+    </Link>
   );
 }

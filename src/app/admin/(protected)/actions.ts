@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/admin/access";
 import { FormError, runFormAction, type FormState } from "@/lib/form-state";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { isCityId, isHttpsUrl, isUuid } from "@/lib/validation";
+import { isValidProductRewardPoints } from "@/lib/seller/offer-policy";
 
 async function requireAdminClient() {
   const { supabase } = await requireAdmin();
@@ -590,7 +591,7 @@ export async function decideSellerOfferRequest(formData: FormData) {
     throw new FormError("Invalid offer review request.");
   }
   if (decision === "approve") {
-    if (!Number.isSafeInteger(pointsCost) || pointsCost < 1 || pointsCost > 1_000_000
+    if (!isValidProductRewardPoints(pointsCost)
       || finalTerms.length < 10 || finalTerms.length > 5000
       || scheduleCapacities.length < 1 || scheduleCapacities.length > 140
       || scheduleCapacities.some((schedule) => !isUuid(schedule.schedule_id)
@@ -620,11 +621,28 @@ export async function decideSellerOfferRequest(formData: FormData) {
   redirect("/admin/seller-offers?reviewed=1");
 }
 
+export async function updateSellerRewardPoints(formData: FormData) {
+  const pointsCost = Number(formData.get("points_cost"));
+  const offerId = String(formData.get("offer_id") ?? "");
+  if (!isValidProductRewardPoints(pointsCost) || (offerId && !isUuid(offerId))) {
+    throw new FormError("Set a whole-number reward cost from 50 to 1,000,000 points.");
+  }
+  const supabase = await requireAdminClient();
+  const { error } = await supabase.rpc("admin_set_seller_reward_points", { p_points_cost: pointsCost, ...(offerId ? { p_offer_id: offerId } : {}) });
+  if (error) throw new FormError(error.code === "PGRST202" ? "Apply the reward-point settings migration before saving." : error.message);
+  for (const path of ["/admin/seller-offers", "/seller/offers", "/visitor", "/visitor/offers", "/visitor/rewards"]) revalidatePath(path);
+  revalidatePath("/seller/products/[id]/offer", "page");
+  redirect("/admin/seller-offers?points=1");
+}
+
 export async function setSellerOfferStatus(formData: FormData) {
   const offerId = String(formData.get("offer_id") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!isUuid(offerId) || !["published", "paused", "ended"].includes(status)) {
     throw new FormError("Invalid seller offer status change.");
+  }
+  if (status === "ended" && formData.get("confirm_cancellation") !== "on") {
+    throw new FormError("Confirm cancellation of unused active vouchers and the points refund.");
   }
 
   const supabase = await requireAdminClient();
@@ -637,6 +655,9 @@ export async function setSellerOfferStatus(formData: FormData) {
 
   revalidatePath("/admin/seller-offers");
   revalidatePath("/visitor/offers");
+  revalidatePath("/visitor");
+  revalidatePath("/visitor/rewards");
+  revalidatePath("/seller/offers");
   redirect("/admin/seller-offers?changed=1");
 }
 

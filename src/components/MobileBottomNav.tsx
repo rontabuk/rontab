@@ -35,6 +35,7 @@ export async function MobileBottomNav() {
         notifications={feed}
         config={{
           label: "Account navigation",
+          account: { href: "/visitor", displayName: viewer.displayName, avatarUrl: viewer.avatarUrl, label: "My account" },
           items: [
             { href: "/products", label: "Home", icon: "home", exact: true },
             { href: "/visitor/offers", label: "Offers", icon: "ticket" },
@@ -68,6 +69,7 @@ export async function MobileBottomNav() {
         notifications={feed}
         config={{
           label: "Seller navigation",
+          account: { href: "/seller/profile", displayName: viewer.displayName, avatarUrl: viewer.avatarUrl, label: "Seller profile" },
           items: [
             { href: "/products", label: "Home", icon: "home", exact: true },
             { href: "/seller/advertising", label: "Ads", icon: "ads", dot: viewer.hasNewAdCreditGrants, ariaLabel: viewer.hasNewAdCreditGrants ? "Ads, new click-credit grant" : undefined },

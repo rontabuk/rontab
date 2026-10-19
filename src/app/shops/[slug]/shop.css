@@ -11,6 +11,20 @@
 .public-shop-meta a { display: inline-flex; align-items: center; gap: 6px; color: #405f45; font-size: 11px; font-weight: 700; overflow-wrap: anywhere; }
 .public-shop-meta > span { display: inline-flex; align-items: center; gap: 6px; color: #687267; font-size: 11px; }
 .public-shop-feedback { margin: 10px 0 0; color: #356b3b; font-size: 11px; }
+.public-shop-private-notice { margin: 16px 0; padding: 10px 0; border-block: 1px solid #dce1d7; color: #626c60; font-size: 12px; line-height: 1.6; }
+.public-shop-title-row > .seller-profile-edit-button { display: inline-flex; min-height: 36px; align-items: center; gap: 5px; margin-left: auto; padding: 0 8px; color: #405f45; font-size: 12px; }
+.public-shop-title-row > .seller-profile-edit-button:focus-visible { outline: 2px solid #405f45; outline-offset: 2px; }
+.public-shop-owner-contacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.public-shop-owner-contacts > a { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; border: 1px solid #dce1d7; border-radius: 50%; background: #f2f6f0; color: #405f45; }
+.public-shop-owner-contacts > a:hover { background: #e6eee2; }
+.public-shop-owner-contacts > a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.public-shop-owner-contacts [data-contact-kind="location"] { color: #087bc1; background: #edf7ff; }
+.public-shop-owner-contacts [data-contact-kind="email"] { color: #d13a44; background: #fff1f1; }
+.public-shop-owner-contacts [data-contact-kind="instagram"] { color: #cb287b; background: #fff0f7; }
+.public-shop-owner-contacts [data-contact-kind="facebook"] { color: #1769dc; background: #edf4ff; }
+.public-shop-owner-contacts [data-contact-kind="youtube"] { color: #d51623; background: #fff1f2; }
+.public-shop-owner-contacts [data-contact-kind="whatsapp"] { color: #14813c; background: #effaf0; }
+.public-shop-owner-contacts [data-contact-kind="x"], .public-shop-owner-contacts [data-contact-kind="tiktok"] { color: #202020; background: #f0f1f0; }
 .public-shop-follow-form { display: inline-block; margin: 0; }
 .public-shop-follow-form > button, .public-shop-follow-icon-link { display: grid; width: 34px; height: 34px; place-items: center; padding: 0; border: 1px solid #39754b; border-radius: 50%; background: #39754b; color: #fff; cursor: pointer; }
 .public-shop-follow-form > button:hover, .public-shop-follow-icon-link:hover { background: #2f643e; }
@@ -20,6 +34,21 @@
 .public-shop-section-heading h2 { margin: 0; color: #354137; font-family: var(--font-display), Georgia, serif; font-size: 26px; font-weight: 400; }
 .public-shop-section-heading span { color: #737c71; font-size: 11px; }
 .public-shop-products { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+.public-shop-products .product-card-footer-compact { border: 1px solid #e4e6eb; border-top: 0; background: #fff; color: #1c1e21; }
+.public-shop-products .product-card-info-compact { display: grid; align-content: start; gap: 8px; padding: 10px 9px; }
+.public-shop-products .product-card-compact-title { display: grid; min-width: 0; min-height: 32px; align-content: start; }
+.public-shop-products .product-card-compact-seller { display: flex; min-width: 0; align-items: start; justify-content: space-between; gap: 7px; }
+.public-shop-products .product-card-compact-seller > .product-description-name { min-width: 0; flex: 1 1 auto; color: #1c1e21; font-size: 12px; font-weight: 600; line-height: 1.4; }
+.public-shop-products .product-card-compact-price { flex: 0 0 auto; color: #526b50; font-size: 12px; font-weight: 700; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.public-shop-products .product-card-compact-description { display: -webkit-box; min-width: 0; min-height: 32px; max-height: 32px; margin: 0; overflow: hidden; color: #65676b; font-size: 11px; line-height: 16px; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.public-shop-products .product-visit-button-compact { display: flex; width: 100%; min-width: 0; min-height: 44px; align-items: center; justify-content: space-between; padding: 7px; border: 0; border-radius: 4px; background: #526b50; color: #fff; font-size: 11px; }
+.public-shop-products .product-visit-button-compact .product-visit-meta { margin: 0; padding: 0; border: 0; }
+.public-shop-products .product-visit-button-compact .product-click-count { color: inherit; }
+.public-shop-products .product-card-info-compact > .product-owner-actions { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.public-shop-products .product-card-info-compact .product-owner-action { display: flex; width: 100%; min-width: 0; height: 24px; min-height: 24px; align-items: center; justify-content: center; gap: 4px; padding: 2px 6px; background: #526b50; color: #fff; font-size: 9px; font-weight: 700; line-height: 1.1; text-align: center; }
+.public-shop-products .product-card-info-compact .product-owner-action svg { flex: 0 0 11px; width: 11px; height: 11px; }
+.public-shop-products .product-card-info-compact .product-owner-action span { min-width: 0; overflow-wrap: anywhere; }
+.public-shop-products .product-card-info-compact .product-owner-action:hover { background: #40573f; }
 .public-shop-empty { padding: 38px 15px; border: 1px dashed #cfd7cb; color: #697268; font-size: 12px; text-align: center; }
 @media (max-width: 900px) { .public-shop-products { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; } }
 @media (max-width: 620px) {
@@ -30,5 +59,8 @@
   .public-shop-hero h1 { font-size: 29px; }
   .public-shop-description { font-size: 12px; }
   .public-shop-products { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .public-shop-products .product-card-info:has(> .product-owner-actions) { flex-wrap: wrap; }
+  .public-shop-products .product-card-info > .product-owner-actions { flex: 1 0 100%; }
+  .public-shop-products .product-owner-actions > .product-visit-price { min-width: 0; flex: 1 1 0; margin-right: 0; overflow-wrap: anywhere; font-size: 12px; line-height: 1.25; }
   .public-shop-section-heading h2 { font-size: 23px; }
 }

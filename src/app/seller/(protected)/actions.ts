@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { FormError, runFormAction, type FormState } from "@/lib/form-state";
 import { getSellerAccount } from "@/lib/seller/access";
-import { getProfileImageProblem, isCityId, isHttpsUrl, isUuid } from "@/lib/validation";
+import { normalizeSellerSocialUrl, sellerSocialPlatforms } from "@/lib/seller/social-links";
+import { getProfileImageProblem, isCityId, isHttpsUrl, isUuid, normalizeUkPostcode } from "@/lib/validation";
 
 export async function saveSellerProfile(_state: FormState, formData: FormData) {
   return runFormAction(() => persistSellerProfile(formData));
@@ -25,7 +26,14 @@ async function persistSellerProfile(formData: FormData) {
   const phoneVisibility = String(formData.get("phone_visibility") ?? "collaborations");
   const websiteUrl = String(formData.get("website_url") ?? "").trim();
   const instagramUrl = String(formData.get("instagram_url") ?? "").trim();
+  const socialUrls = Object.fromEntries(sellerSocialPlatforms.map((platform) => {
+    const url = normalizeSellerSocialUrl(String(formData.get(platform.field) ?? ""), platform.hosts);
+    if (url === null) throw new FormError(`Enter a valid HTTPS ${platform.label} profile link.`);
+    return [platform.field, url || null];
+  }));
   const businessAddress = String(formData.get("business_address") ?? "").trim();
+  const businessPostcode = normalizeUkPostcode(String(formData.get("business_postcode") ?? ""));
+  if (businessPostcode === null) throw new FormError("Enter a valid UK postcode, such as DN1 1AA.");
   const requestedLogoUrl = String(formData.get("logo_url") ?? "").trim();
   const removeLogo = formData.get("remove_logo") === "on";
   const logoFileValue = formData.get("logo_image");
@@ -142,6 +150,19 @@ async function persistSellerProfile(formData: FormData) {
   }
   if (visibilityError) throw new Error(visibilityError.message);
 
+  const { error: socialError } = await supabase.rpc("seller_save_social_links", {
+    p_facebook_url: socialUrls.facebook_url,
+    p_twitter_url: socialUrls.twitter_url,
+    p_youtube_url: socialUrls.youtube_url,
+    p_tiktok_url: socialUrls.tiktok_url,
+  });
+  if (socialError) throw new Error(socialError.message);
+
+  const { error: postcodeError } = await supabase.rpc("seller_save_business_postcode", {
+    p_business_postcode: businessPostcode || null,
+  });
+  if (postcodeError) throw new Error(postcodeError.message);
+
   const oldLogoPrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/seller-logos/`;
   if (existingProfile.logo_url?.startsWith(oldLogoPrefix) && existingProfile.logo_url !== logoUrl) {
     const oldLogoPath = decodeURIComponent(existingProfile.logo_url.slice(oldLogoPrefix.length).split("?")[0]);
@@ -149,6 +170,7 @@ async function persistSellerProfile(formData: FormData) {
   }
 
   revalidatePath("/seller/profile");
+  revalidatePath("/seller/profile/edit");
   revalidatePath("/seller");
   revalidatePath("/seller/products");
   revalidatePath("/admin/sellers");
@@ -181,7 +203,7 @@ async function requestPhoneConfirmation() {
   });
   if (error) throw new Error(error.message);
 
-  redirect("/seller/profile?verificationSent=1");
+  redirect("/seller/profile/edit?verificationSent=1");
 }
 
 export async function saveSellerAdAllocations(formData: FormData) {
@@ -218,6 +240,7 @@ export async function markSellerAdCreditGrantsSeen() {
 export async function redeemSellerOfferCoupon(formData: FormData) {
   const code = String(formData.get("coupon_code") ?? "").trim().toUpperCase();
   if (!/^[A-F0-9]{20}$/.test(code)) redirect("/seller/offers?redeemError=code");
+  if (formData.get("confirm_handover") !== "on") redirect("/seller/offers?redeemError=confirmation");
 
   const { supabase, seller } = await getSellerAccount();
   if (seller.status !== "active") redirect("/seller/offers?redeemError=unavailable");

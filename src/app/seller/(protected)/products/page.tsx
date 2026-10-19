@@ -39,12 +39,11 @@ export default async function SellerProductsPage({
   }));
 
   return (
-    <main className="admin-overview seller-overview">
+    <main className="admin-overview seller-overview seller-products-page">
       <header className="admin-page-heading seller-products-page-heading">
         <div>
-          <p className="admin-eyebrow">SELLER WORKSPACE</p>
           <h1>Your products</h1>
-          <p>Track drafts, submissions, and review decisions for {seller.shop_name}.</p>
+          <p>{seller.shop_name}</p>
         </div>
         <Link className="seller-products-add-button" href="/seller"><Plus size={17} aria-hidden="true" />Add product</Link>
       </header>

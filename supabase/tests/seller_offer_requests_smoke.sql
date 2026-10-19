@@ -195,7 +195,7 @@ begin
 	where location.request_id = target_request_id;
 
 	begin
-		perform public.admin_decide_seller_offer_request(target_request_id, 'approve', null, 15, 'Final smoke test terms apply.', schedule_capacities);
+		perform public.admin_decide_seller_offer_request(target_request_id, 'approve', null, 50, 'Final smoke test terms apply.', schedule_capacities);
 		raise exception 'A seller must not review offer requests.';
 	exception when sqlstate '42501' then
 		null;
@@ -211,11 +211,11 @@ begin
 	from public.seller_offer_request_schedules schedule
 	join public.seller_offer_request_locations location on location.id = schedule.location_id
 	where location.request_id = target_request_id;
-	approved_offer_id := public.admin_decide_seller_offer_request(target_request_id, 'approve', null, 15, 'Final smoke test terms apply.', schedule_capacities);
+	approved_offer_id := public.admin_decide_seller_offer_request(target_request_id, 'approve', null, 50, 'Final smoke test terms apply.', schedule_capacities);
 	if approved_offer_id is null
 		or (select request.status from public.seller_offer_requests request where request.id = target_request_id) <> 'approved'
 		or (select offer.media_storage_path from public.seller_offers offer where offer.id = approved_offer_id) <> offer_media_path
-		or (select offer.points_cost from public.seller_offers offer where offer.id = approved_offer_id) <> 15
+		or (select offer.points_cost from public.seller_offers offer where offer.id = approved_offer_id) <> 50
 		or (select count(*) from public.seller_offer_schedules schedule join public.seller_offer_locations location on location.id = schedule.location_id where location.offer_id = approved_offer_id and ((schedule.starts_at = '10:00'::time and schedule.daily_capacity = 1) or (schedule.starts_at = '16:00'::time and schedule.daily_capacity = 4))) <> 2 then
 		raise exception 'Admin approval should preserve distinct final capacities for each schedule.';
 	end if;
@@ -240,13 +240,13 @@ begin
 	reservation_id := (result ->> 'id')::uuid;
 	first_coupon_code := result ->> 'code';
 	if reservation_id is null or first_coupon_code is null or result ->> 'status' <> 'reserved'
-		or (select account.points_balance from public.loyalty_accounts account where account.visitor_id = visitor_one_id) <> 35
+		or (select account.points_balance from public.loyalty_accounts account where account.visitor_id = visitor_one_id) <> 0
 		or (select quota.reserved_count from public.seller_offer_daily_quotas quota where quota.location_id = target_location_id and quota.offer_date = target_offer_date and quota.starts_at = target_start_time) <> 1 then
 		raise exception 'A successful voucher booking should charge points and reserve one daily seat atomically.';
 	end if;
 	result := public.reserve_seller_offer_coupon(approved_offer_id, target_location_id, target_offer_date, target_start_time, first_idempotency_key);
 	if result ->> 'code' <> first_coupon_code or not (result ->> 'alreadyReserved')::boolean
-		or (select account.points_balance from public.loyalty_accounts account where account.visitor_id = visitor_one_id) <> 35 then
+		or (select account.points_balance from public.loyalty_accounts account where account.visitor_id = visitor_one_id) <> 0 then
 		raise exception 'Retrying the same booking must return the same voucher without charging again.';
 	end if;
 
@@ -268,18 +268,17 @@ begin
 		or (select count(*) from public.seller_offer_point_transactions transaction where transaction.coupon_id = reservation_id) <> 2 then
 		raise exception 'An early cancellation must atomically refund points and release the seat exactly once.';
 	end if;
-	begin
-		perform public.reserve_seller_offer_coupon(approved_offer_id, target_location_id, target_offer_date, target_start_time, gen_random_uuid());
-		raise exception 'A visitor cannot make another reservation attempt for the same offer and day after cancellation.';
-	exception when sqlstate '55000' then
-		null;
-	end;
+	result := public.reserve_seller_offer_coupon(approved_offer_id, target_location_id, target_offer_date, target_start_time, first_idempotency_key);
+	if result ->> 'status' <> 'cancelled' or (result ->> 'id')::uuid <> reservation_id
+		or (select account.points_balance from public.loyalty_accounts account where account.visitor_id = visitor_one_id) <> 50 then
+		raise exception 'Retrying a cancelled reservation key must not issue a new voucher or charge points.';
+	end if;
 
 	perform set_config('request.jwt.claim.sub', visitor_two_id::text, true);
 	perform set_config('request.jwt.claims', jsonb_build_object('sub', visitor_two_id::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
 	result := public.reserve_seller_offer_coupon(approved_offer_id, target_location_id, target_offer_date, target_start_time, gen_random_uuid());
 	if result ->> 'status' <> 'reserved'
-		or (select account.points_balance from public.loyalty_accounts account where account.visitor_id = visitor_two_id) <> 35
+		or (select account.points_balance from public.loyalty_accounts account where account.visitor_id = visitor_two_id) <> 0
 		or (select quota.reserved_count from public.seller_offer_daily_quotas quota where quota.location_id = target_location_id and quota.offer_date = target_offer_date and quota.starts_at = target_start_time) <> 1 then
 		raise exception 'Early cancellation should release the quota for another visitor.';
 	end if;
@@ -327,10 +326,10 @@ begin
 	) then
 		raise exception 'Visitors should see their own voucher and its cancellation deadline.';
 	end if;
-	if (select summary.points_spent from public.get_visitor_loyalty_summary() summary) <> 15
+	if (select summary.points_spent from public.get_visitor_loyalty_summary() summary) <> 50
 		or not exists (
 			select 1 from public.get_visitor_loyalty_activity(10, 0) activity
-			where activity.transaction_type = 'seller_offer_spent' and activity.points_delta = -15
+			where activity.transaction_type = 'seller_offer_spent' and activity.points_delta = -50
 		) then
 		raise exception 'Seller voucher spending should appear in the shared points summary and activity.';
 	end if;
@@ -339,8 +338,12 @@ begin
 	perform set_config('request.jwt.claims', jsonb_build_object('sub', admin_user::text, 'role', 'authenticated', 'app_metadata', '{"role":"admin"}'::jsonb)::text, true);
 	begin
 		perform public.admin_set_seller_offer_status(approved_offer_id, 'ended');
-		raise exception 'An offer with an unredeemed, active voucher must not be ended.';
-	exception when sqlstate '55000' then
+		if (select account.points_balance from public.loyalty_accounts account where account.visitor_id = visitor_two_id) <> 50
+			or not exists(select 1 from public.seller_offer_coupons coupon where coupon.coupon_code = result ->> 'code' and coupon.status = 'cancelled') then
+			raise exception 'Ending an offer must cancel and refund its unused active vouchers.';
+		end if;
+		raise exception using errcode = 'ZX002', message = 'Rollback cancellation probe before testing redemption and support.';
+	exception when sqlstate 'ZX002' then
 		null;
 	end;
 	perform set_config('request.jwt.claim.sub', seller_user::text, true);
@@ -365,7 +368,7 @@ begin
 		'not_honored', 'The shop could not honor the confirmed voucher.'
 	);
 	if voucher_support_case_id is null or duplicate_voucher_support_case_id is distinct from voucher_support_case_id
-		or (select account.points_balance from public.loyalty_accounts account where account.visitor_id = visitor_two_id) <> 35 then
+		or (select account.points_balance from public.loyalty_accounts account where account.visitor_id = visitor_two_id) <> 0 then
 		raise exception 'A voucher report should be idempotent and must not change the visitor points balance.';
 	end if;
 	perform set_config('request.jwt.claim.sub', admin_user::text, true);

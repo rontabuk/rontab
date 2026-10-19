@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { UserRound, X } from "lucide-react";
+import { ImagePlus, Trash2, Undo2, UserRound, X } from "lucide-react";
 
 export function ProfileImageUpload({
   inputId,
@@ -13,6 +13,7 @@ export function ProfileImageUpload({
   currentUrl,
   alt,
   fallbackText,
+  compact = false,
   className = "",
 }: {
   inputId: string;
@@ -23,6 +24,7 @@ export function ProfileImageUpload({
   currentUrl: string | null;
   alt: string;
   fallbackText?: string;
+  compact?: boolean;
   className?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -50,10 +52,14 @@ export function ProfileImageUpload({
     if (inputRef.current) inputRef.current.value = "";
     setPreviewUrl(currentUrl);
     setHasSelection(false);
+    setRemoveImage(false);
   }
 
   function handleRemoveChange(event: ChangeEvent<HTMLInputElement>) {
-    const shouldRemove = event.currentTarget.checked;
+    toggleRemoval(event.currentTarget.checked);
+  }
+
+  function toggleRemoval(shouldRemove: boolean) {
     setRemoveImage(shouldRemove);
     if (shouldRemove) {
       clearSelection();
@@ -65,7 +71,7 @@ export function ProfileImageUpload({
   }
 
   return (
-    <div className={`profile-image-upload ${className}`.trim()}>
+    <div className={`profile-image-upload${compact ? " profile-image-upload-compact" : ""} ${className}`.trim()}>
       <label className="profile-image-upload-label" htmlFor={inputId}>{label}</label>
       <div className="profile-image-upload-preview">
         {previewUrl
@@ -74,10 +80,22 @@ export function ProfileImageUpload({
             ? <span>{fallbackText}</span>
             : <UserRound size={32} aria-hidden="true" />}
       </div>
-      <input ref={inputRef} id={inputId} name={name} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} />
-      <small>JPEG, PNG, or WebP. Maximum 5 MB.</small>
+      <input className={compact ? "visually-hidden" : undefined} ref={inputRef} id={inputId} name={name} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} />
+      {compact && (
+        <div className="profile-image-upload-actions">
+          <label className="profile-image-upload-select" htmlFor={inputId}><ImagePlus size={16} aria-hidden="true" />{previewUrl ? "Change logo" : "Upload logo"}</label>
+          {currentUrl && !hasSelection && (
+            <button className="profile-image-upload-remove-button" type="button" aria-pressed={removeImage} onClick={() => toggleRemoval(!removeImage)}>
+              {removeImage ? <Undo2 size={16} aria-hidden="true" /> : <Trash2 size={16} aria-hidden="true" />}
+              {removeImage ? "Restore logo" : removeLabel}
+            </button>
+          )}
+          {removeImage && <input type="hidden" name={removeName} value="on" />}
+        </div>
+      )}
+      <small>{compact ? "JPG, PNG, WebP / 5 MB" : "JPEG, PNG, or WebP. Maximum 5 MB."}</small>
       {hasSelection && <button className="profile-image-upload-clear" type="button" onClick={clearSelection}><X size={13} aria-hidden="true" />Clear selection</button>}
-      {currentUrl && !hasSelection && (
+      {!compact && currentUrl && !hasSelection && (
         <label className="profile-image-upload-remove">
           <input name={removeName} type="checkbox" checked={removeImage} onChange={handleRemoveChange} />
           {removeLabel}

@@ -17,6 +17,13 @@ export function isHttpsUrl(value: string) {
   }
 }
 
+export function normalizeUkPostcode(value: string): string | null {
+  const compact = value.replace(/\s/g, "").toUpperCase();
+  if (!compact) return "";
+  const postcode = `${compact.slice(0, -3)} ${compact.slice(-3)}`;
+  return /^(GIR 0AA|[A-PR-UWYZ](?:[0-9]{1,2}|[A-HK-Y][0-9]{1,2}|[0-9][A-HJKPSTUW]|[A-HK-Y][0-9][ABEHMNPRVWXY]) [0-9][ABD-HJLNP-UW-Z]{2})$/.test(postcode) ? postcode : null;
+}
+
 export const PROFILE_IMAGE_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",

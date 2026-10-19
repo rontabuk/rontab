@@ -9,12 +9,16 @@ export function MultiCityPicker({
   initialCityIds = [],
   maxSelected,
   disabled = false,
+  cityDetails,
+  emptySelectionLabel,
 }: {
   cities: SupportedCity[];
   name: string;
   initialCityIds?: string[];
   maxSelected: number;
   disabled?: boolean;
+  cityDetails?: Record<string, string>;
+  emptySelectionLabel?: string;
 }) {
   const [selectedIds, setSelectedIds] = useState(() => [...new Set(initialCityIds)].slice(0, maxSelected));
   const [query, setQuery] = useState("");
@@ -40,12 +44,12 @@ export function MultiCityPicker({
         <span>Find a city</span>
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by city or region" disabled={disabled} />
       </label>
-      <p className="multi-city-count">{selectedIds.length} of {maxSelected} selected</p>
+      <p className="multi-city-count" role="status">{selectedIds.length === 0 && emptySelectionLabel ? emptySelectionLabel : `${selectedIds.length} of ${maxSelected} selected`}</p>
       {selected.length > 0 && (
         <ul className="multi-city-selected" aria-label="Selected cities">
           {selected.map((city) => (
             <li key={city.city_id}>
-              <span>{city.city_name}{city.admin_name ? `, ${city.admin_name}` : ""}</span>
+              <span>{city.city_name}{city.admin_name ? `, ${city.admin_name}` : ""}{cityDetails?.[city.city_id] && <small className="multi-city-audience">{cityDetails[city.city_id]}</small>}</span>
               <button type="button" onClick={() => toggleCity(city.city_id)} aria-label={`Remove ${city.city_name}`} disabled={disabled}>Remove</button>
             </li>
           ))}
@@ -55,11 +59,11 @@ export function MultiCityPicker({
         <legend>Available cities</legend>
         {filteredCities.map((city) => {
           const checked = selectedIds.includes(city.city_id);
-          const disabled = !checked && selectedIds.length >= maxSelected;
+          const atLimit = !checked && selectedIds.length >= maxSelected;
           return (
             <label key={city.city_id}>
-              <input type="checkbox" checked={checked} disabled={disabled || (!checked && selectedIds.length >= maxSelected)} onChange={() => toggleCity(city.city_id)} />
-              <span>{city.city_name}{city.admin_name ? `, ${city.admin_name}` : ""}</span>
+              <input type="checkbox" checked={checked} disabled={disabled || atLimit} onChange={() => toggleCity(city.city_id)} />
+              <span>{city.city_name}{city.admin_name ? `, ${city.admin_name}` : ""}{cityDetails?.[city.city_id] && <small className="multi-city-audience">{cityDetails[city.city_id]}</small>}</span>
             </label>
           );
         })}

@@ -1,8 +1,127 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import vm from "node:vm";
 import { test } from "node:test";
 import ts from "typescript";
+
+const nodeRequire = createRequire(import.meta.url);
+
+function sellerCatalogueFixture({ canPromote = true, canDelete = true } = {}) {
+  const React = nodeRequire("react");
+  const state = [];
+  let cursor = 0;
+  const sourceModule = { exports: {} };
+  const dependencies = {
+    react: { useState(initial) { const index = cursor++; if (!(index in state)) state[index] = initial; return [state[index], (value) => { state[index] = value; }]; } },
+    "react/jsx-runtime": nodeRequire("react/jsx-runtime"),
+    "lucide-react": nodeRequire("lucide-react"),
+    "next/link": { default: ({ children, ...props }) => React.createElement("a", props, children) },
+    "next/image": { default: ({ fill, unoptimized, sizes, ...props }) => React.createElement("img", { ...props, "data-unoptimized": Boolean(unoptimized), "data-sizes": sizes, ...(fill ? { style: { position: "absolute", inset: 0 } } : {}) }) },
+    "@/components/DismissibleDetails": { DismissibleDetails: ({ children, className }) => React.createElement("details", { className }, children) },
+    "@/app/seller/(protected)/actions": { deleteSellerProduct() {} },
+    "@/lib/format": { formatCompactNumber: (value) => String(value), formatDate: (value) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value)), formatPrice: (value) => value === null ? "Price on request" : `£${value}` },
+  };
+  vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/components/seller/SellerProductList.tsx", import.meta.url), "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText, { module: sourceModule, exports: sourceModule.exports, require: (name) => {
+    if (Object.hasOwn(dependencies, name)) return dependencies[name];
+    throw new Error(`Unexpected catalogue import: ${name}`);
+  } });
+  const products = [
+    { id: "coffee", name: "Porcelain coffee cup", category_id: "tableware", categoryName: "Tableware", price: 25, click_count: 128, status: "approved", previewUrl: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=200" },
+    { id: "trainers", name: "Everyday running trainers", category_id: "footwear", categoryName: "Footwear", price: 85, click_count: 64, status: "approved", previewUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200" },
+    { id: "bag", name: "Lightweight everyday backpack", category_id: "accessories", categoryName: "Accessories", price: 45, click_count: 12, status: "pending", previewUrl: null },
+    { id: "missing", name: "Handcrafted ceramic collection with an exceptionally long product name", category_id: "tableware", categoryName: "Tableware", price: null, click_count: 0, status: "rejected", previewUrl: null },
+  ].map((product, index) => ({ slug: product.id, currency: "GBP", created_at: `2026-10-${19 - index}T12:00:00Z`, mediaTypes: product.previewUrl ? ["image"] : [], previewMediaType: "image", ...product }));
+  const nodes = (node) => !node || typeof node !== "object" ? [] : Array.isArray(node) ? node.flatMap(nodes) : [node, ...nodes(node.props?.children)];
+  return {
+    render() { cursor = 0; return sourceModule.exports.SellerProductList({ products, canPromote, canDelete }); },
+    nodes,
+    set(tree, label, value) { const control = nodes(tree).find((node) => node.props?.["aria-label"] === label || (label === "Search" && node.props?.type === "search")); assert.ok(control, `Missing ${label} control`); control.props.onChange({ target: { value } }); },
+    rows(tree) { return nodes(tree).filter((node) => node.props?.className === "seller-catalog-row").map((node) => node.key); },
+  };
+}
+
+test("seller catalogue combines search, category and status filters and can clear them", () => {
+  const fixture = sellerCatalogueFixture();
+  fixture.set(fixture.render(), "Search", "CERAMIC");
+  fixture.set(fixture.render(), "Category", "tableware");
+  fixture.set(fixture.render(), "Status", "rejected");
+  assert.equal(fixture.rows(fixture.render()).join(), "missing");
+  const reset = fixture.nodes(fixture.render()).find((node) => node.type === "button" && node.props?.onClick);
+  reset.props.onClick();
+  assert.equal(fixture.rows(fixture.render()).length, 4);
+});
+
+test("seller catalogue sorts prices with missing prices last and orders shop clicks", () => {
+  const fixture = sellerCatalogueFixture();
+  fixture.set(fixture.render(), "Sort products", "price-low");
+  assert.equal(fixture.rows(fixture.render()).join(), "coffee,bag,trainers,missing");
+  fixture.set(fixture.render(), "Sort products", "price-high");
+  assert.equal(fixture.rows(fixture.render()).join(), "trainers,bag,coffee,missing");
+  fixture.set(fixture.render(), "Sort products", "clicks");
+  assert.equal(fixture.rows(fixture.render())[0], "coffee");
+});
+
+test("catalogue promotion actions are limited to approved products and disappear for inactive sellers", () => {
+  const fixture = sellerCatalogueFixture();
+  const links = fixture.nodes(fixture.render()).filter((node) => node.props?.href?.endsWith("/offer"));
+  assert.equal(links.length, 2);
+  const inactive = sellerCatalogueFixture({ canPromote: false, canDelete: false });
+  const tree = inactive.render();
+  assert.equal(inactive.nodes(tree).filter((node) => node.props?.href?.endsWith("/offer")).length, 0);
+  assert.equal(inactive.nodes(tree).filter((node) => node.type === "button" && node.props?.children?.includes?.("Delete product")).length, 0);
+});
+
+if (process.argv.includes("--seller-preview") || process.argv.includes("--shop-preview")) {
+  const { createServer } = await import("node:http");
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const React = nodeRequire("react");
+  const cardModule = { exports: {} };
+  const cardDependencies = {
+    "next/link": { default: ({ children, ...props }) => React.createElement("a", props, children) },
+    "next/image": { default: ({ fill, unoptimized, priority, sizes, ...props }) => React.createElement("img", { ...props, "data-priority": Boolean(priority), "data-unoptimized": Boolean(unoptimized), "data-sizes": sizes, ...(fill ? { style: { position: "absolute", width: "100%", height: "100%", objectFit: "cover" } } : {}) }) },
+    "@/components/ShopFollowButton": { ShopFollowButton: () => null },
+    "@/components/ShopVisitLink": { ShopVisitLink: ({ children, slug, productName, ...props }) => React.createElement("a", { ...props, href: `/visit/${slug}`, "aria-label": `Visit shop for ${productName}` }, children) },
+    "@/components/seller/SellerVerificationBadge": { SellerVerificationBadge: () => null },
+    "@/lib/format": { formatCompactNumber: String, formatPrice: (price) => `GBP ${price}` },
+    "@/lib/preferences/client": { DEFAULT_CLIENT_PREFERENCES: { autoplayReels: false, reelSoundEnabled: false }, readClientPreferences() {}, subscribeToClientPreferences() {} },
+    "@/lib/supabase/client": { createSupabaseBrowserClient: () => null },
+  };
+  vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/components/ProductCard.tsx", import.meta.url), "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText, { module: cardModule, exports: cardModule.exports, require: (name) => Object.hasOwn(cardDependencies, name) ? cardDependencies[name] : nodeRequire(name) });
+  createServer((request, response) => {
+    const fixture = sellerCatalogueFixture();
+    const query = new URL(request.url, "http://127.0.0.1:3002").searchParams;
+    if (process.argv.includes("--shop-preview")) {
+      const owner = query.get("owner") !== "0";
+      const product = { id: "10000000-0000-4000-8000-000000000001", slug: "trainers", name: "Everyday running trainers", maker: "Independent shop", description: "Lightweight running trainers for everyday use.", price: 85, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500", imageAlt: "Red running trainers", mediaType: "image", overlayTone: "glass", shopSlug: "independent-shop" };
+      const css = ["src/app/globals.css", "src/app/shops/[slug]/shop.css"].map((path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8")).join("\n");
+      const icons = nodeRequire("lucide-react");
+      const content = React.createElement("main", { className: "public-shop-page" },
+        React.createElement("a", { className: "public-shop-back", href: owner ? "/seller/products" : "/products" }, owner ? "Shop workspace" : "Browse products"),
+        React.createElement("header", { className: "public-shop-hero" },
+          React.createElement("span", { className: "public-shop-logo public-shop-logo-fallback" }, "S"),
+          React.createElement("div", {},
+            React.createElement("div", { className: "public-shop-title-row" }, React.createElement("h1", { className: "public-shop-name" }, "Independent shop"), owner && React.createElement("a", { className: "seller-profile-edit-button", href: "/seller/profile/edit", "aria-label": "Edit shop profile" }, React.createElement(icons.Pencil, { size: 14 }), "Edit")),
+            React.createElement("p", { className: "public-shop-description" }, "Everyday products from an independent local shop."),
+            React.createElement("div", { className: "public-shop-meta" }, React.createElement("span", {}, "London"), React.createElement("span", {}, "2 followers")),
+            owner && React.createElement("nav", { className: "public-shop-owner-contacts", "aria-label": "Your saved contact links" }, ...["MapPin", "Mail", "Store", "Globe2", "Phone", "Link2"].map((icon, index) => React.createElement("a", { key: icon, href: "#", title: icon, "aria-label": icon, "data-contact-kind": ["location", "email", "shop", "website", "phone", "other"][index] }, React.createElement(icons[icon], { size: 19 }))))
+          )),
+        React.createElement("div", { className: "public-shop-section-heading" }, React.createElement("h2", {}, "Products"), React.createElement("span", {}, "3")),
+        React.createElement("div", { className: "public-shop-products" }, ...Array.from({ length: 3 }, (_, index) => React.createElement(cardModule.exports.ProductCard, { product: { ...product, id: `${product.id.slice(0, -1)}${index}`, slug: `${product.slug}-${index}` }, showSellerOfferActions: owner, key: index }))));
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style></head><body>${renderToStaticMarkup(content)}</body></html>`);
+      return;
+    }
+    if (query.has("search")) fixture.set(fixture.render(), "Search", query.get("search"));
+    const css = ["src/app/globals.css", "src/app/admin/admin.css", "src/app/seller/seller.css"].map((path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8")).join("\n");
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;650;700&display=swap" rel="stylesheet"><style>:root{--font-body:'DM Sans';--font-display:'DM Sans'}${css}</style></head><body><div class="admin-shell admin-shell-hide-mobile-account"><aside class="admin-sidebar"><a class="admin-brand" href="#">RonTab</a><p class="admin-sidebar-label">Shop workspace</p><nav class="admin-nav"><a href="#">Profile</a><a href="#" aria-current="page">Your products</a><a href="#">Your offers</a></nav></aside><div class="admin-main"><main class="admin-overview seller-overview seller-products-page"><header class="admin-page-heading seller-products-page-heading"><div><h1>Your products</h1><p>Independent shop</p></div><a class="seller-products-add-button" href="#">+ Add product</a></header>${renderToStaticMarkup(fixture.render())}</main></div></div></body></html>`);
+  }).listen(3002, "127.0.0.1", () => console.log("Isolated seller catalogue preview: http://127.0.0.1:3002"));
+}
 
 const categoryModule = { exports: {} };
 vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/lib/categories.ts", import.meta.url), "utf8"), {
@@ -86,19 +205,135 @@ function reelFixture({ desktop = true, autoplay = true } = {}) {
     video, observers,
     unmount() { hooks.forEach((hook) => hook.cleanup?.()); },
     setAutoplay(value) { preferences = { ...preferences, autoplayReels: value }; preferenceListener(); },
-    render() {
+    render(options = {}) {
       hookIndex = 0;
       const tree = cardModule.exports.ProductCard({ product: {
-        slug: "reel", name: "Reel", maker: "Shop", description: "Description", image: "reel.mp4", imageAlt: "Reel", mediaType: "video", price: 10,
-      } });
+        id: "reel-id", slug: "reel", name: "Reel", maker: "Shop", description: "Description", image: "reel.mp4", imageAlt: "Reel", mediaType: "video", price: 10,
+      }, ...options });
       const elements = nodes(tree);
       const media = elements.find((node) => node.type === "video");
       media.props.ref.current = video;
       pendingEffects.splice(0).forEach((effect) => effect());
-      return { media, playButton: elements.find((node) => node.props["aria-label"] === "Play video with sound") };
+      return { tree, elements, media, playButton: elements.find((node) => node.props["aria-label"] === "Play video with sound") };
     },
   };
 }
+
+test("product card replaces the external visit only for seller offer controls and keeps the price", () => {
+  const fixture = reelFixture();
+  const original = fixture.render();
+  assert.equal(original.elements.filter((node) => node.type === "visit").length, 1);
+  assert.equal(original.elements.filter((node) => node.props.href?.startsWith("/seller/products/")).length, 0);
+  const owner = fixture.render({ showSellerOfferActions: true });
+  assert.equal(owner.elements.filter((node) => node.type === "visit").length, 0);
+  assert.deepEqual(owner.elements.filter((node) => node.props.href?.startsWith("/seller/products/")).map((node) => node.props.href), ["/seller/products/reel-id/offer", "/seller/products/reel-id/creator-opportunity"]);
+  assert.ok(owner.elements.some((node) => node.props.className === "product-visit-price" && node.props.children === "10"));
+  assert.ok(owner.elements.filter((node) => node.props.href?.startsWith("/seller/products/")).every((node) => node.props.title && node.props["aria-label"]));
+  const preview = fixture.render({ showSellerOfferActions: true, previewOnly: true });
+  assert.equal(preview.elements.filter((node) => node.props.href?.startsWith("/seller/products/")).length, 0);
+  const compact = fixture.render({ showSellerOfferActions: true, compact: true, hideSellerName: true, priceBesideMaker: true });
+  assert.equal(compact.elements.filter((node) => node.props.href?.startsWith("/seller/products/")).length, 2);
+  assert.equal(compact.elements.some((node) => node.props.className?.includes("advertiser-avatar")), false);
+  assert.equal(compact.elements.find((node) => node.props.className === "product-description-name-text").props.children, "Reel");
+});
+
+test("public shop contact icons use only the consent-filtered RPC, with a safe unmigrated fallback", async () => {
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  let missing = false;
+  const calls = [];
+  const dependencies = {
+    "server-only": {}, "react/jsx-runtime": nodeRequire("react/jsx-runtime"), "lucide-react": nodeRequire("lucide-react"),
+    "@icons-pack/react-simple-icons": nodeRequire("@icons-pack/react-simple-icons"),
+    "@/lib/seller/access": { getSellerAccount() { throw new Error("Public contacts must not read private seller account data."); } },
+    "@/lib/seller/social-links": { sellerSocialPlatforms: [] }, "@/lib/validation": {},
+    "@/lib/supabase/server": { createSupabasePublicClient: () => ({ rpc: async (name, parameters) => {
+      calls.push({ name, parameters });
+      return missing ? { data: null, error: { code: "PGRST202" } } : { data: [{ kind: "instagram", href: "https://www.instagram.com/shop" }, { kind: "phone", href: "tel:+447700900123" }], error: null };
+    } }) },
+  };
+  const target = { exports: {} };
+  vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/components/seller/SellerProfileContactLinks.tsx", import.meta.url), "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText, { module: target, exports: target.exports, URL, require: (name) => {
+    if (Object.hasOwn(dependencies, name)) return dependencies[name];
+    throw new Error(`Unexpected contact import: ${name}`);
+  } });
+  const props = { sellerProfileId: "shop-id", shopUrl: "https://shop.example.invalid", publicPhone: "+447700900123", isOwner: false };
+  const html = renderToStaticMarkup(await target.exports.SellerProfileContactLinks(props));
+  assert.match(html, /aria-label="Shop contact links"/);
+  assert.match(html, /href="https:\/\/www.instagram.com\/shop"/);
+  assert.match(html, /href="tel:\+447700900123"/);
+  assert.doesNotMatch(html, /mailto:/);
+  assert.equal(calls[0].name, "get_public_seller_contact_links");
+  assert.equal(calls[0].parameters.p_seller_profile_id, "shop-id");
+  missing = true;
+  const fallback = renderToStaticMarkup(await target.exports.SellerProfileContactLinks(props));
+  assert.match(fallback, /href="https:\/\/shop.example.invalid"/);
+  assert.match(fallback, /href="tel:\+447700900123"/);
+  assert.doesNotMatch(fallback, /instagram|mailto:/);
+});
+
+test("shop owner controls are server-verified and hidden from guests, visitors, admins and other sellers", async () => {
+  const nodes = (node) => !node || typeof node !== "object" ? [] : Array.isArray(node) ? node.flatMap(nodes) : [node, ...nodes(node.props?.children)];
+  for (const viewer of [{ role: "guest" }, { role: "visitor", userId: "visitor-user" }, { role: "admin", userId: "owner-user" }, { role: "seller", userId: "other-user" }, { role: "seller", userId: "owner-user" },
+    { role: "seller", userId: "owner-user", privateShop: true }, { role: "guest", privateShop: true }, { role: "seller", userId: "other-user", privateShop: true },
+    { role: "seller", userId: "owner-user", privateShop: true, inactiveShop: true }]) {
+    const ownershipQueries = [];
+    const seller = { id: "shop-id", slug: "test-shop", shop_name: "Test shop", status: viewer.inactiveShop ? "pending" : "active", is_public: !viewer.privateShop };
+    const sessionClient = { from(table) {
+      assert.equal(table, "seller_profiles");
+      const filters = {};
+      const query = { select: () => query, eq: (column, value) => { filters[column] = value; return query; }, maybeSingle: async () => {
+        ownershipQueries.push(filters);
+        return { data: filters.slug === seller.slug && filters.user_id === "owner-user" ? seller : null, error: null };
+      } };
+      return query;
+    }, rpc: async () => ({ data: false, error: null }) };
+    const publicClient = { from: () => {
+      const query = { select: () => query, eq: () => query, maybeSingle: async () => ({ data: viewer.privateShop ? null : seller, error: null }) };
+      return query;
+    }, rpc: async (name) => ({ data: name === "get_public_seller_verification_badges" ? [] : name === "get_public_seller_follower_count" ? 0 : null, error: null }) };
+    const dependencies = {
+      "react/jsx-runtime": nodeRequire("react/jsx-runtime"), "lucide-react": nodeRequire("lucide-react"),
+      "next/image": { default: "image" }, "next/link": { default: "link" }, "next/navigation": { notFound() { throw new Error("Not found"); } }, "next/server": { connection: async () => {} },
+      "@/components/ActionForm": { ActionForm: "form" }, "@/components/seller/SellerVerificationBadge": { SellerVerificationBadge: "badge" },
+      "@/components/seller/SellerProfileEditButton": { SellerProfileEditButton: "edit-profile" },
+      "@/components/seller/SellerProfileContactLinks": { SellerProfileContactLinks: "private-contacts" },
+      "@/components/ProductCard": { ProductCard: "card" }, "@/components/SiteChrome": { SiteHeader: "header" }, "@/app/visitor/shop-follow-actions": { followShop() {} },
+      "@/lib/auth/viewer": { getViewer: async () => viewer }, "@/lib/format": { formatNumber: String },
+      "@/lib/supabase/catalog": { getPublicCatalog: async () => ({ products: [{ id: "product-id", slug: "product", sellerProfileId: seller.id }] }) },
+      "@/lib/supabase/server": { createSupabasePublicClient: () => publicClient, createSupabaseServerClient: async () => sessionClient }, "./shop.css": {},
+    };
+    const target = { exports: {} };
+    vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/app/shops/[slug]/page.tsx", import.meta.url), "utf8"), {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+    }).outputText, { module: target, exports: target.exports, require: (name) => {
+      if (Object.hasOwn(dependencies, name)) return dependencies[name];
+      throw new Error(`Unexpected shop import: ${name}`);
+    } });
+    const render = () => target.exports.default({ params: Promise.resolve({ slug: seller.slug }), searchParams: Promise.resolve({ saved: "1" }) });
+    const isOwner = viewer.role === "seller" && viewer.userId === "owner-user";
+    if (viewer.privateShop && !isOwner) {
+      await assert.rejects(render(), /Not found/);
+      continue;
+    }
+    const tree = await render();
+    const card = nodes(tree).find((node) => node.type === "card");
+    assert.equal(card.props.compact, true);
+    assert.equal(card.props.hideSellerName, true);
+    assert.equal(card.props.priceBesideMaker, true);
+    assert.equal(card.props.showSellerOfferActions, isOwner && !viewer.inactiveShop, `${viewer.role}:${viewer.userId}`);
+    assert.equal(ownershipQueries.length, viewer.role === "seller" ? 1 : 0);
+    if (viewer.role === "seller") assert.deepEqual(ownershipQueries[0], { slug: seller.slug, user_id: viewer.userId });
+    assert.equal(nodes(tree).some((node) => node.type === "edit-profile"), viewer.role === "seller" && viewer.userId === "owner-user");
+    const contacts = nodes(tree).find((node) => node.type === "private-contacts");
+    assert.ok(contacts);
+    assert.equal(contacts.props.isOwner, isOwner);
+    assert.equal(contacts.props.sellerProfileId, seller.id);
+    assert.equal(nodes(tree).some((node) => node.props?.className === "public-shop-private-notice"), Boolean(isOwner && viewer.privateShop));
+    assert.equal(nodes(tree).some((node) => node.props?.children === "Shop profile saved successfully."), isOwner);
+  }
+});
 
 test("video metadata preview handles events and removes its listener on unmount", () => {
   const state = reelFixture();
@@ -563,9 +798,13 @@ function adminActionsFixture() {
   const paths = [];
   let rpcError = null;
   const validationModule = { exports: {} };
+  const offerPolicyModule = { exports: {} };
   vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/lib/validation.ts", import.meta.url), "utf8"), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText, { module: validationModule, exports: validationModule.exports, URL });
+  vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/lib/seller/offer-policy.ts", import.meta.url), "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText, { module: offerPolicyModule, exports: offerPolicyModule.exports });
   class FormError extends Error {}
   const dependencies = {
     "next/cache": { revalidatePath: (path) => paths.push(path), updateTag: (tag) => paths.push(tag) },
@@ -574,6 +813,7 @@ function adminActionsFixture() {
     "@/lib/form-state": { FormError, runFormAction: async (action) => { try { await action(); return { error: null }; } catch (error) { return { error: error instanceof FormError ? error.message : "Save failed" }; } } },
     "@/lib/supabase/server": {},
     "@/lib/validation": validationModule.exports,
+    "@/lib/seller/offer-policy": offerPolicyModule.exports,
   };
   const actionModule = { exports: {} };
   vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/app/admin/(protected)/actions.ts", import.meta.url), "utf8"), {
@@ -626,4 +866,21 @@ test("visibility saves only ID and visibility, and invalid IDs never reach the d
   assert.equal(state.calls[0].args.p_is_active, false);
   assert.ok((await state.actions.setCategoryVisibility("invalid", true)).error);
   assert.equal(state.calls.length, 1);
+});
+
+test("seller profile entry redirects to the canonical shop profile and preserves save feedback", async () => {
+  const target = { exports: {} };
+  const dependencies = {
+    "next/server": { connection: async () => {} },
+    "next/navigation": { redirect: (path) => { throw new Error(`REDIRECT:${path}`); } },
+    "@/lib/seller/access": { getSellerAccount: async () => ({ seller: { slug: "my-shop" } }) },
+  };
+  vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/app/seller/(protected)/profile/page.tsx", import.meta.url), "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText, { module: target, exports: target.exports, require: (name) => {
+    if (Object.hasOwn(dependencies, name)) return dependencies[name];
+    throw new Error(`Unexpected profile import: ${name}`);
+  } });
+  await assert.rejects(target.exports.default({ searchParams: Promise.resolve({}) }), /REDIRECT:\/shops\/my-shop$/);
+  await assert.rejects(target.exports.default({ searchParams: Promise.resolve({ saved: "1" }) }), /REDIRECT:\/shops\/my-shop\?saved=1$/);
 });

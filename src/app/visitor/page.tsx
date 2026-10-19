@@ -7,6 +7,8 @@ import { ActionForm } from "@/components/ActionForm";
 import { ProfileImageUpload } from "@/components/ProfileImageUpload";
 import { CityPicker } from "@/components/CityPicker";
 import { VisitorProfileEditDialog } from "@/components/VisitorProfileEditDialog";
+import { ProfileOffers } from "@/components/visitor/ProfileOffers";
+import { getAvailableSellerOffers } from "@/lib/seller/available-offers";
 import { formatNumber } from "@/lib/format";
 import { getSavedCity, getSupportedLocations } from "@/lib/locations";
 import { getVisitorAccount } from "@/lib/visitor/access";
@@ -47,11 +49,13 @@ export default async function VisitorAccountPage({
   const summary = summaryRows?.[0] ?? { points_balance: 0, points_earned: 0, points_spent: 0 };
   const followerCount = followerSummaryRows?.[0]?.follower_count ?? 0;
   const availableOffers = offers ?? [];
-  const nearestTarget = availableOffers
-    .map((offer) => Math.max(offer.minimum_points, offer.points_cost))
+  const sellerOffers = await getAvailableSellerOffers(supabase, profile.city_id);
+  const targets = [...availableOffers.map((offer) => Math.max(offer.minimum_points, offer.points_cost)),
+    ...sellerOffers.offers.filter((offer) => offer.points_cost > 0 && offer.remainingClaims !== 0).map((offer) => offer.points_cost)];
+  const nearestTarget = targets
     .filter((target) => target > summary.points_balance)
     .sort((first, second) => first - second)[0];
-  const pointsReady = availableOffers.length > 0 && !nearestTarget;
+  const pointsReady = targets.length > 0 && !nearestTarget;
   const pointsProgress = nearestTarget
     ? Math.min(100, summary.points_balance / nearestTarget * 100)
     : pointsReady ? 100 : 0;
@@ -159,6 +163,7 @@ export default async function VisitorAccountPage({
           </Link>
         </section>
       </section>
+      <ProfileOffers offers={sellerOffers.offers} cityId={profile.city_id} available={sellerOffers.available} />
     </main>
   );
 }

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { CalendarDays, Check, MapPin, Pause, Play, Ticket, X } from "lucide-react";
-import { decideSellerOfferRequest, setSellerOfferStatus } from "@/app/admin/(protected)/actions";
+import { CalendarDays, Check, MapPin, Pause, Play, Save, Ticket, X } from "lucide-react";
+import { decideSellerOfferRequest, setSellerOfferStatus, updateSellerRewardPoints } from "@/app/admin/(protected)/actions";
 import { requireAdmin } from "@/lib/admin/access";
 import { formatDate, formatNumber } from "@/lib/format";
 import { isSellerOfferSchemaUnavailable } from "@/lib/seller/offer-schema";
+import { PRODUCT_REWARD_POINTS, MIN_PRODUCT_REWARD_POINTS, MAX_PRODUCT_REWARD_POINTS } from "@/lib/seller/offer-policy";
 
 export const metadata: Metadata = { title: "Seller offer review", robots: { index: false, follow: false } };
 export const instant = false;
@@ -13,19 +14,20 @@ export const instant = false;
 export default async function AdminSellerOffersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ reviewed?: string; changed?: string; history?: string }>;
+  searchParams: Promise<{ reviewed?: string; changed?: string; history?: string; points?: string }>;
 }) {
   await connection();
-  const [{ reviewed, changed, history: requestedHistory }, { supabase }] = await Promise.all([searchParams, requireAdmin()]);
+  const [{ reviewed, changed, history: requestedHistory, points }, { supabase }] = await Promise.all([searchParams, requireAdmin()]);
   const history = requestedHistory === "ended" || requestedHistory === "all" ? requestedHistory : "current";
   const offerStatuses = history === "ended"
     ? ["ended"]
     : history === "all"
       ? ["approved", "published", "paused", "ended"]
       : ["approved", "published", "paused"];
-  const [requestsResult, offersResult] = await Promise.all([
+  const [requestsResult, offersResult, settingsResult] = await Promise.all([
     supabase.from("seller_offer_requests").select("*").eq("status", "submitted").order("submitted_at", { ascending: true }),
     supabase.from("seller_offers").select("*").in("status", offerStatuses).order("created_at", { ascending: false }),
+    supabase.from("seller_offer_settings").select("default_reward_points").eq("singleton", true).maybeSingle(),
   ]);
   if (isSellerOfferSchemaUnavailable(requestsResult.error) || isSellerOfferSchemaUnavailable(offersResult.error)) {
     return (
@@ -37,6 +39,9 @@ export default async function AdminSellerOffersPage({
   }
   if (requestsResult.error) throw new Error(requestsResult.error.message);
   if (offersResult.error) throw new Error(offersResult.error.message);
+  if (settingsResult.error && !isSellerOfferSchemaUnavailable(settingsResult.error)) throw new Error(settingsResult.error.message);
+  const pricingAvailable = !settingsResult.error && Boolean(settingsResult.data);
+  const defaultRewardPoints = settingsResult.data?.default_reward_points ?? PRODUCT_REWARD_POINTS;
   const requests = requestsResult.data;
   const offers = offersResult.data;
   const requestMediaUrls = new Map<string, string>();
@@ -102,10 +107,21 @@ export default async function AdminSellerOffersPage({
       <header className="admin-page-heading">
         <p className="admin-eyebrow">SELLER PROMOTIONS</p>
         <h1>Offer review</h1>
-        <p>Set final points, terms, and daily capacity before approving and publishing a promotion.</p>
+        <p>Review special requests and manage published product offers.</p>
       </header>
       {reviewed === "1" && <p className="admin-save-success" role="status">Offer review decision saved.</p>}
       {changed === "1" && <p className="admin-save-success" role="status">Offer status updated.</p>}
+      {points === "1" && <p className="admin-save-success" role="status">Reward points updated. Existing vouchers retain their original cost and refund amount.</p>}
+
+      <section className="admin-dashboard-section" aria-labelledby="seller-reward-points-title">
+        <h2 id="seller-reward-points-title">Default reward points</h2>
+        <p>Applies to new exclusive rewards only. Public offers remain free. Existing offers can be adjusted individually below.</p>
+        {!pricingAvailable && <p role="status">The reward-point settings migration must be applied before changes can be saved.</p>}
+        <form action={updateSellerRewardPoints} className="admin-seller-offer-approval-form">
+          <label>Customer points per new reward<input name="points_cost" type="number" min={MIN_PRODUCT_REWARD_POINTS} max={MAX_PRODUCT_REWARD_POINTS} step="1" defaultValue={defaultRewardPoints} required disabled={!pricingAvailable} /></label>
+          <button type="submit" disabled={!pricingAvailable}><Save size={14} aria-hidden="true" />Save default</button>
+        </form>
+      </section>
 
       <section aria-labelledby="seller-offer-queue-title">
         <div className="admin-loyalty-list-heading"><div><p className="admin-eyebrow">REVIEW QUEUE</p><h2 id="seller-offer-queue-title">Submitted offers</h2></div><span>{requests.length} awaiting review</span></div>
@@ -137,7 +153,7 @@ export default async function AdminSellerOffersPage({
                     <form action={decideSellerOfferRequest} className="admin-seller-offer-approval-form">
                       <input type="hidden" name="request_id" value={request.id} />
                       <input type="hidden" name="decision" value="approve" />
-                      <label>Final points cost<input name="points_cost" type="number" min="1" max="1000000" defaultValue="10" required /></label>
+                      <label>Final points cost<input name="points_cost" type="number" min={MIN_PRODUCT_REWARD_POINTS} max={MAX_PRODUCT_REWARD_POINTS} step="1" defaultValue={defaultRewardPoints} required /></label>
                       {requestedSchedules.map((schedule) => {
                         const location = requestLocationsById.get(schedule.location_id);
                         return <label key={schedule.id}>
@@ -196,11 +212,13 @@ export default async function AdminSellerOffersPage({
               return (
                 <article className="admin-loyalty-offer-item" key={offer.id}>
                   <div className="admin-loyalty-offer-main">
-                    <div className="admin-loyalty-offer-tags"><span className={`admin-loyalty-status is-${offer.status}`}>{offer.status}</span><span className="admin-loyalty-kind">{sellersById.get(offer.seller_profile_id) ?? "Seller"}</span></div>
+                    <div className="admin-loyalty-offer-tags"><span className={`admin-loyalty-status is-${offer.status}`}>{offer.status}</span><span className="admin-loyalty-kind">{sellersById.get(offer.seller_profile_id) ?? "Seller"}</span>{offer.auto_published && <span className="admin-loyalty-kind">Product offer · automatic</span>}</div>
                     <h3>{offer.title}</h3>
                     <p>{offer.benefit_details}</p>
                     <div className="admin-loyalty-offer-details">
-                      <span><Ticket size={13} aria-hidden="true" />{formatNumber(offer.points_cost)} points</span>
+                      <span><Ticket size={13} aria-hidden="true" />{offer.points_cost > 0 ? `${formatNumber(offer.points_cost)} points` : "Public offer · no points"}</span>
+                      {offer.target_all_uk && <span><MapPin size={13} aria-hidden="true" />All UK</span>}
+                      {offer.max_claims !== null && <span>{formatNumber(offer.max_claims)} vouchers maximum across all dates</span>}
                       <span><CalendarDays size={13} aria-hidden="true" />{formatDate(offer.valid_from)} – {formatDate(offer.valid_until)}</span>
                       {locations.map((location) => {
                         const quotas = quotasByLocation.get(location.id) ?? [];
@@ -209,7 +227,7 @@ export default async function AdminSellerOffersPage({
                         const city = citiesById.get(location.city_id) ?? location.city_id;
                         return <span className="admin-seller-offer-location-capacity" key={location.id}>
                           <MapPin size={13} aria-hidden="true" />
-                          <span><strong>{location.branch_name}</strong> · {city}<small>{formatNumber(capacity)} total capacity across scheduled dates</small>
+                          <span><strong>{location.branch_name}</strong> · {city}<small>{offer.fulfillment === "online" ? "External public offer · usage not tracked" : `${formatNumber(capacity)} scheduled places${offer.max_claims ? `, subject to the ${formatNumber(offer.max_claims)}-voucher offer limit` : ""}`}</small>
                             <small>{voucherStatusMetricsUnavailable ? "Voucher status metrics unavailable" : `${formatNumber(voucherMetrics?.reserved_count ?? 0)} reserved · ${formatNumber(voucherMetrics?.redeemed_count ?? 0)} redeemed · ${formatNumber(voucherMetrics?.cancelled_count ?? 0)} cancelled · ${formatNumber(voucherMetrics?.expired_count ?? 0)} expired`}</small>
                           </span>
                         </span>;
@@ -217,6 +235,11 @@ export default async function AdminSellerOffersPage({
                     </div>
                   </div>
                   <div className="admin-loyalty-offer-actions">
+                    {offer.points_cost > 0 && offer.fulfillment === "branch" && offer.status !== "ended" && <form action={updateSellerRewardPoints} className="admin-seller-offer-approval-form">
+                      <input type="hidden" name="offer_id" value={offer.id} />
+                      <label>Customer points · new reservations<input name="points_cost" type="number" min={MIN_PRODUCT_REWARD_POINTS} max={MAX_PRODUCT_REWARD_POINTS} step="1" defaultValue={offer.points_cost} required disabled={!pricingAvailable} /></label>
+                      <button type="submit" disabled={!pricingAvailable}><Save size={13} aria-hidden="true" />Save points</button>
+                    </form>}
                     {(offer.status === "approved" || offer.status === "paused") && <form action={setSellerOfferStatus}>
                       <input type="hidden" name="offer_id" value={offer.id} /><input type="hidden" name="status" value="published" />
                       <button type="submit"><Play size={13} aria-hidden="true" />Publish</button>
@@ -227,7 +250,8 @@ export default async function AdminSellerOffersPage({
                     </form>}
                     {offer.status !== "ended" && <form action={setSellerOfferStatus}>
                       <input type="hidden" name="offer_id" value={offer.id} /><input type="hidden" name="status" value="ended" />
-                      <button className="is-secondary" type="submit">End offer</button>
+                      <label><input type="checkbox" name="confirm_cancellation" required />Cancel unused active vouchers and return any points charged</label>
+                      <button className="is-secondary" type="submit"><X size={13} aria-hidden="true" />End offer</button>
                     </form>}
                   </div>
                 </article>

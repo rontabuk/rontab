@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Eye, Image as ImageIcon, Pause, Play } from "lucide-react";
+import { ArrowUpRight, Eye, Image as ImageIcon, Pause, Play, Tag, UsersRound } from "lucide-react";
 import type { Product } from "@/data/products";
 import { ShopFollowButton } from "@/components/ShopFollowButton";
 import { ShopVisitLink } from "@/components/ShopVisitLink";
@@ -21,6 +21,8 @@ export function ProductCard({
   isShopFollowed = false,
   muteAutoplay = false,
   priceBesideMaker = false,
+  hideSellerName = false,
+  showSellerOfferActions = false,
   priority = false,
 }: {
   product: Product;
@@ -31,6 +33,8 @@ export function ProductCard({
   isShopFollowed?: boolean;
   muteAutoplay?: boolean;
   priceBesideMaker?: boolean;
+  hideSellerName?: boolean;
+  showSellerOfferActions?: boolean;
   priority?: boolean;
 }) {
   const [descriptionOpen, setDescriptionOpen] = useState(false);
@@ -294,6 +298,14 @@ export function ProductCard({
     <Image src={product.image} alt={product.imageAlt} fill unoptimized={previewOnly} priority={priority} sizes={`(max-width: 760px) ${compact ? "46vw" : "100vw"}, (max-width: 1000px) 30vw, 22vw`} />
   );
 
+  const sellerOfferActions = showSellerOfferActions && !previewOnly && product.id ? (
+    <div className="product-owner-actions" role="group" aria-label={`Offer actions for ${product.name}`}>
+      {!compact && <span className="product-visit-price">{product.price === null ? "On request" : formatPrice(product.price)}</span>}
+      <Link className="product-owner-action" href={`/seller/products/${product.id}/offer`} aria-label={`Offer ${product.name} to the public`} title="Offer to the public"><Tag size={17} aria-hidden="true" />{compact && <span>Public offer</span>}</Link>
+      <Link className="product-owner-action" href={`/seller/products/${product.id}/creator-opportunity`} aria-label={`Offer ${product.name} to a creator`} title="Offer to a creator"><UsersRound size={18} aria-hidden="true" />{compact && <span>Creator offer</span>}</Link>
+    </div>
+  ) : null;
+
   const visitLabel = (
     <>
       <span className="product-visit-price">{product.price === null ? "On request" : formatPrice(product.price)}</span>
@@ -316,10 +328,10 @@ export function ProductCard({
 
   const productTitleContent = (
     <>
-      <span className="product-description-name">
+      {!hideSellerName && <span className="product-description-name">
         <span className="product-description-name-text">{product.maker}</span>
         {product.sellerBadge && <SellerVerificationBadge isBlue={product.sellerBadge === "blue"} />}
-      </span>
+      </span>}
       <span className="product-description-maker">
         <span className="product-description-maker-name">{product.name}</span>
       </span>
@@ -410,27 +422,27 @@ export function ProductCard({
               <div className="product-card-compact-title">
                 <div className="product-card-compact-seller">
                   <span className="product-description-name">
-                    <span className="product-description-name-text">{product.maker}</span>
-                    {product.sellerBadge && <SellerVerificationBadge isBlue={product.sellerBadge === "blue"} />}
+                    <span className="product-description-name-text">{hideSellerName ? product.name : product.maker}</span>
+                    {!hideSellerName && product.sellerBadge && <SellerVerificationBadge isBlue={product.sellerBadge === "blue"} />}
                   </span>
                   <span className="product-card-compact-price">{product.price === null ? "On request" : formatPrice(product.price)}</span>
                 </div>
-                <span className="product-description-maker"><span className="product-description-maker-name">{product.name}</span></span>
+                {!hideSellerName && <span className="product-description-maker"><span className="product-description-maker-name">{product.name}</span></span>}
               </div>
             ) : (
               <>
                 <span className="product-card-compact-price">{product.price === null ? "On request" : formatPrice(product.price)}</span>
                 <div className="product-card-compact-title">
-                  <span className="product-description-name">
+                  {!hideSellerName && <span className="product-description-name">
                     <span className="product-description-name-text">{product.maker}</span>
                     {product.sellerBadge && <SellerVerificationBadge isBlue={product.sellerBadge === "blue"} />}
-                  </span>
+                  </span>}
                   <span className="product-description-maker"><span className="product-description-maker-name">{product.name}</span></span>
                 </div>
               </>
             )}
             <p className="product-card-compact-description" title={product.description}>{product.description}</p>
-            {previewOnly ? (
+            {sellerOfferActions ?? (previewOnly ? (
               <span className="product-visit-button product-visit-button-compact">{compactVisitLabel}</span>
             ) : (
               <ShopVisitLink
@@ -440,7 +452,7 @@ export function ProductCard({
               >
                 {compactVisitLabel}
               </ShopVisitLink>
-            )}
+            ))}
           </div>
         ) : (
           <div className="product-card-info">
@@ -458,7 +470,7 @@ export function ProductCard({
             {productTitleButton}
             <div className="product-card-desktop-identity">{productTitleContent}</div>
             <p className="product-card-desktop-description">{product.description}</p>
-            {previewOnly ? (
+            {sellerOfferActions ?? (previewOnly ? (
               <span className="product-visit-button">{visitLabel}</span>
             ) : (
               <ShopVisitLink
@@ -468,7 +480,7 @@ export function ProductCard({
               >
                 {visitLabel}
               </ShopVisitLink>
-            )}
+            ))}
           </div>
         )}
         {!compact && descriptionPanel}

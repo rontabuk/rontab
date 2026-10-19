@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(nextUrl);
   }
 
-  const profileUrl = new URL("/seller/profile", request.nextUrl.origin);
+  const profileUrl = new URL("/seller/profile/edit", request.nextUrl.origin);
   const tokenHash = request.nextUrl.searchParams.get("token_hash");
 
   if ((!code && !tokenHash) || flow !== "contact-phone") {
@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
   }
 
   revalidatePath("/seller/profile");
+  revalidatePath("/seller/profile/edit");
   revalidatePath("/admin/sellers");
   profileUrl.searchParams.set("phoneConfirmed", "1");
   return NextResponse.redirect(profileUrl);

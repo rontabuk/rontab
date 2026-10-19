@@ -3,9 +3,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { ArrowLeft, ArrowUpRight, Check, Phone, MapPin, Plus, UsersRound } from "lucide-react";
+import { ArrowLeft, Check, MapPin, Plus, UsersRound } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
 import { SellerVerificationBadge } from "@/components/seller/SellerVerificationBadge";
+import { SellerProfileEditButton } from "@/components/seller/SellerProfileEditButton";
+import { SellerProfileContactLinks } from "@/components/seller/SellerProfileContactLinks";
 import { ProductCard } from "@/components/ProductCard";
 import { SiteHeader } from "@/components/SiteChrome";
 import { followShop } from "@/app/visitor/shop-follow-actions";
@@ -27,7 +29,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     .maybeSingle();
   return data
     ? { title: `${data.shop_name} | Shops`, description: data.description?.slice(0, 160) ?? `Discover products from ${data.shop_name}.` }
-    : { title: "Shop not found" };
+    : { title: "Shop profile", robots: { index: false, follow: false } };
 }
 
 export default async function PublicShopPage({
@@ -35,12 +37,12 @@ export default async function PublicShopPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ followed?: string; unfollowed?: string }>;
+  searchParams: Promise<{ followed?: string; unfollowed?: string; saved?: string }>;
 }) {
   await connection();
-  const [{ slug }, { followed, unfollowed }, viewer] = await Promise.all([params, searchParams, getViewer()]);
+  const [{ slug }, { followed, unfollowed, saved }, viewer] = await Promise.all([params, searchParams, getViewer()]);
   const supabase = createSupabasePublicClient();
-  const [{ data: seller, error: sellerError }, catalog] = await Promise.all([
+  const [publicSellerResult, catalog, ownershipResult] = await Promise.all([
     supabase.from("seller_profiles")
       .select("id,slug,shop_name,description,logo_url,shop_url,shop_city_id,status,is_public")
       .eq("slug", slug)
@@ -48,22 +50,32 @@ export default async function PublicShopPage({
       .eq("is_public", true)
       .maybeSingle(),
     getPublicCatalog(),
+    viewer.role === "seller"
+      ? createSupabaseServerClient().then((sessionClient) => sessionClient.from("seller_profiles")
+        .select("id,slug,shop_name,description,logo_url,shop_url,shop_city_id,status,is_public").eq("slug", slug).eq("user_id", viewer.userId).maybeSingle())
+      : Promise.resolve({ data: null, error: null }),
   ]);
-  if (sellerError) throw new Error(sellerError.message);
+  if (publicSellerResult.error) throw new Error(publicSellerResult.error.message);
+  if (ownershipResult.error) throw new Error(ownershipResult.error.message);
+  const seller = ownershipResult.data ?? publicSellerResult.data;
   if (!seller) notFound();
 
+  const isOwner = ownershipResult.data?.id === seller.id;
   const [{ data: city, error: cityError }, { data: phone, error: phoneError }, { data: badges, error: badgesError }, { data: followerCount, error: followerCountError }] = await Promise.all([
     seller.shop_city_id
       ? supabase.from("supported_cities").select("city_name").eq("city_id", seller.shop_city_id).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     supabase.rpc("get_public_seller_contact_phone", { p_seller_profile_id: seller.id }),
     supabase.rpc("get_public_seller_verification_badges", { p_seller_profile_ids: [seller.id] }),
-    supabase.rpc("get_public_seller_follower_count", { p_seller_profile_id: seller.id }),
+    isOwner
+      ? createSupabaseServerClient().then((sessionClient) => sessionClient.rpc("seller_get_shop_follower_count"))
+      : supabase.rpc("get_public_seller_follower_count", { p_seller_profile_id: seller.id }),
   ]);
   if (cityError) throw new Error(cityError.message);
   if (phoneError) throw new Error(phoneError.message);
   if (badgesError) throw new Error(badgesError.message);
   if (followerCountError) throw new Error(followerCountError.message);
+  const showSellerOfferActions = isOwner && seller.status === "active";
   const sellerBadge = badges?.find((badge) => badge.is_verified);
   const followers = followerCount ?? 0;
   const products = catalog.products.filter((product) => product.sellerProfileId === seller.id);
@@ -79,7 +91,9 @@ export default async function PublicShopPage({
     <>
       <SiteHeader />
       <main className="public-shop-page">
-        <Link className="public-shop-back" href="/products"><ArrowLeft size={14} aria-hidden="true" />Browse products</Link>
+        <Link className="public-shop-back" href={isOwner ? "/seller/products" : "/products"}><ArrowLeft size={14} aria-hidden="true" />{isOwner ? "Shop workspace" : "Browse products"}</Link>
+        {isOwner && saved === "1" && <p className="public-shop-feedback" role="status">Shop profile saved successfully.</p>}
+        {isOwner && (!seller.is_public || seller.status !== "active") && <p className="public-shop-private-notice" role="status">Your shop is not visible to the public. Only you can view this profile.</p>}
         <header className="public-shop-hero">
           {seller.logo_url
             ? <Image className="public-shop-logo" src={seller.logo_url} alt={`${seller.shop_name} logo`} width={104} height={104} unoptimized />
@@ -87,6 +101,7 @@ export default async function PublicShopPage({
           <div>
             <div className="public-shop-title-row">
               <h1 className="public-shop-name">{seller.shop_name}{sellerBadge && <SellerVerificationBadge isBlue={sellerBadge.is_blue} />}</h1>
+              {isOwner && <SellerProfileEditButton />}
               {viewer.role === "visitor" ? (
                 isFollowing ? (
                   <span className="public-shop-follow-status" role="img" aria-label={`Following ${seller.shop_name}`} title={`Following ${seller.shop_name}`}>
@@ -109,9 +124,8 @@ export default async function PublicShopPage({
             <div className="public-shop-meta">
               {city && <span><MapPin size={14} aria-hidden="true" />{city.city_name}</span>}
               <span><UsersRound size={14} aria-hidden="true" />{formatNumber(followers)} {followers === 1 ? "follower" : "followers"}</span>
-              {seller.shop_url && <a href={seller.shop_url} target="_blank" rel="noreferrer">Shop website<ArrowUpRight size={13} aria-hidden="true" /></a>}
-              {phone && <a href={`tel:${phone}`}><Phone size={14} aria-hidden="true" />{phone}</a>}
             </div>
+            <SellerProfileContactLinks sellerProfileId={seller.id} shopUrl={seller.shop_url} publicPhone={phone} isOwner={isOwner} />
             {followed === "1" && <p className="public-shop-feedback" role="status">Shop added to your following list.</p>}
             {unfollowed === "1" && <p className="public-shop-feedback" role="status">Shop removed from your following list.</p>}
           </div>
@@ -122,7 +136,7 @@ export default async function PublicShopPage({
             <span>{formatNumber(products.length)}</span>
           </div>
           {products.length
-            ? <div className="public-shop-products">{products.map((product) => <ProductCard product={product} isShopFollowed={isFollowing} key={product.slug} />)}</div>
+            ? <div className="public-shop-products">{products.map((product) => <ProductCard product={product} compact muteAutoplay priceBesideMaker hideSellerName isShopFollowed={isFollowing} showSellerOfferActions={showSellerOfferActions} key={product.slug} />)}</div>
             : <p className="public-shop-empty">This shop has no published products right now.</p>}
         </section>
       </main>

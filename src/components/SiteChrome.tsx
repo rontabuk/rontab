@@ -5,6 +5,7 @@ import { CircleUserRound, Menu } from "lucide-react";
 import { DismissibleDetails } from "@/components/DismissibleDetails";
 import { NotificationBell } from "@/components/NotificationBell";
 import { HeaderSettings } from "@/components/HeaderSettings";
+import { MenuAccountLink } from "@/components/MenuAccountLink";
 import { informationPages } from "@/data/information";
 import { getViewer } from "@/lib/auth/viewer";
 import { formatNumber } from "@/lib/format";
@@ -47,7 +48,7 @@ async function AccountLinks() {
 
   if (viewer.role === "seller") {
     return (
-      <HeaderActions accountHref="/seller/profile" accountLabel="Seller profile" bell={bell}>
+      <HeaderActions accountHref="/seller/profile" accountLabel="Seller profile" accountName={viewer.displayName} accountImage={viewer.avatarUrl} bell={bell}>
         <Link href="/seller">Seller workspace</Link>
         <Link href="/seller/advertising">Advertising</Link>
         <Link href="/seller/offers">Offer requests</Link>
@@ -57,7 +58,7 @@ async function AccountLinks() {
 
   if (viewer.role === "visitor") {
     return (
-      <HeaderActions accountHref="/visitor" accountLabel="My account" accountImage={viewer.avatarUrl} points={viewer.points} bell={bell}>
+      <HeaderActions accountHref="/visitor" accountLabel="My account" accountName={viewer.displayName} accountImage={viewer.avatarUrl} points={viewer.points} bell={bell}>
         <Link href="/visitor/creator">{getCreatorWorkspaceLabel(viewer.creatorProfileStatus, viewer.creatorProfileIsPublic)}</Link>
         <Link href="/visitor/offers">Offer gallery</Link>
         <Link href="/visitor/rewards">Points & rewards</Link>
@@ -72,6 +73,7 @@ async function AccountLinks() {
 function HeaderActions({
   accountHref,
   accountLabel,
+  accountName,
   accountImage,
   points = null,
   bell,
@@ -79,6 +81,7 @@ function HeaderActions({
 }: {
   accountHref: string;
   accountLabel: string;
+  accountName?: string;
   accountImage?: string | null;
   points?: number | null;
   bell: React.ReactNode;
@@ -94,7 +97,11 @@ function HeaderActions({
           </summary>
           <div className="site-menu-panel">
             <div className="site-menu-extras">
-              <Link className="site-menu-account" href={accountHref}>{accountLabel}</Link>
+              {accountName ? (
+                <MenuAccountLink href={accountHref} displayName={accountName} avatarUrl={accountImage ?? null} label={accountLabel} />
+              ) : (
+                <Link className="site-menu-account" href={accountHref}>{accountLabel}</Link>
+              )}
             </div>
             <div className="site-menu-extras">
               {points !== null && (

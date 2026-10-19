@@ -178,11 +178,12 @@ export async function reserveSellerOfferCoupon(formData: FormData) {
   const startsAt = String(formData.get("starts_at") ?? "");
   const idempotencyKey = String(formData.get("idempotency_key") ?? "");
   const confirmed = formData.get("confirm_reservation") === "on";
+  const expectedPointsCost = Number(formData.get("expected_points_cost") ?? NaN);
   if (!isUuid(offerId) || !isUuid(locationId) || !isUuid(idempotencyKey)
     || !/^\d{4}-\d{2}-\d{2}$/.test(offerDate) || !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(startsAt)) {
     redirect("/visitor/offers?error=unavailable");
   }
-  if (!confirmed) redirect("/visitor/offers?error=confirmation");
+  if (!confirmed || !Number.isSafeInteger(expectedPointsCost) || expectedPointsCost < 0 || expectedPointsCost > 1_000_000) redirect("/visitor/offers?error=confirmation");
 
   const { supabase, user } = await getVisitorAccount();
   const { data: profile, error: profileError } = await supabase
@@ -193,14 +194,18 @@ export async function reserveSellerOfferCoupon(formData: FormData) {
   if (profileError) throw new Error(profileError.message);
   if (!profile?.email_verified_at) redirect("/visitor/offers?error=verifyEmail");
 
-  const { data, error } = await supabase.rpc("reserve_seller_offer_coupon", {
+  const { data, error } = await supabase.rpc("reserve_seller_offer_coupon_at_cost", {
     p_offer_id: offerId,
     p_location_id: locationId,
     p_offer_date: offerDate,
     p_starts_at: startsAt,
     p_idempotency_key: idempotencyKey,
+    p_expected_points_cost: expectedPointsCost,
   });
   if (error) {
+    if (error.code === "P0001" && error.message.includes("point cost has changed")) redirect("/visitor/offers?error=priceChanged");
+    if (error.code === "P0001" && error.message.includes("3-reservation limit")) redirect("/visitor/offers?error=bookingLimit");
+    if (error.code === "P0001" && error.message.includes("every 7 days")) redirect("/visitor/offers?error=freeCooldown");
     const errorType = error.code === "23514" ? "points" : error.code === "42501" ? "location" : "unavailable";
     redirect(`/visitor/offers?error=${errorType}`);
   }

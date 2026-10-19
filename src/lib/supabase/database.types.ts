@@ -6,6 +6,18 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+type ProductOfferFields = {
+  auto_published: boolean;
+  external_code: string | null;
+  external_url: string | null;
+  fulfillment: "branch" | "online";
+  daily_claim_limit: number | null;
+  target_all_uk: boolean;
+  max_claims: number | null;
+  product_id: string | null;
+  product_media_path: string | null;
+};
+
 type Relation = {
   foreignKeyName: string;
   columns: string[];
@@ -68,8 +80,10 @@ export type Database = {
         { created_at?: string; description?: string | null; id?: string; is_public?: boolean; logo_url?: string | null; shop_city_id?: string | null; shop_name: string; shop_url?: string | null; slug: string; status?: Database["public"]["Enums"]["seller_status"]; updated_at?: string; user_id: string; verification_badge_mode?: "automatic" | "granted" | "hidden" }
       >;
       seller_contact_details: Table<
-        { business_address: string | null; contact_name: string | null; instagram_url: string | null; phone: string | null; phone_contact_confirmed_at: string | null; phone_visibility: "collaborations" | "public"; registered_email: string; registered_email_confirmed_at: string | null; seller_profile_id: string; updated_at: string; website_url: string | null },
-        { business_address?: string | null; contact_name?: string | null; instagram_url?: string | null; phone?: string | null; phone_contact_confirmed_at?: string | null; phone_visibility?: "collaborations" | "public"; registered_email: string; registered_email_confirmed_at?: string | null; seller_profile_id: string; updated_at?: string; website_url?: string | null }
+        { business_postcode: string | null } &
+        { business_address: string | null; contact_name: string | null; facebook_url: string | null; twitter_url: string | null; youtube_url: string | null; tiktok_url: string | null; instagram_url: string | null; phone: string | null; phone_contact_confirmed_at: string | null; phone_visibility: "collaborations" | "public"; registered_email: string; registered_email_confirmed_at: string | null; seller_profile_id: string; updated_at: string; website_url: string | null },
+        { business_postcode?: string | null } &
+        { business_address?: string | null; contact_name?: string | null; facebook_url?: string | null; twitter_url?: string | null; youtube_url?: string | null; tiktok_url?: string | null; instagram_url?: string | null; phone?: string | null; phone_contact_confirmed_at?: string | null; phone_visibility?: "collaborations" | "public"; registered_email: string; registered_email_confirmed_at?: string | null; seller_profile_id: string; updated_at?: string; website_url?: string | null }
       >;
       creator_contact_details: Table<
         { creator_profile_id: string; phone: string | null; phone_visibility: "collaborations" | "public"; updated_at: string },
@@ -158,9 +172,13 @@ export type Database = {
         { ends_at: string; id?: string; location_id: string; requested_daily_capacity: number; starts_at: string; weekday: number },
         [{ foreignKeyName: "seller_offer_request_schedules_location_id_fkey"; columns: ["location_id"]; isOneToOne: false; referencedRelation: "seller_offer_request_locations"; referencedColumns: ["id"] }]
       >;
+      seller_offer_settings: Table<
+        { singleton: boolean; default_reward_points: number },
+        never
+      >;
       seller_offers: Table<
-        { approved_at: string; approved_by: string; benefit_details: string; created_at: string; description: string; discount_percent: number | null; id: string; media_storage_path: string | null; media_type: string; media_url: string | null; offer_kind: string; points_cost: number; published_at: string | null; request_id: string; seller_profile_id: string; status: string; terms: string; title: string; updated_at: string; valid_from: string; valid_until: string },
-        { approved_at?: string; approved_by: string; benefit_details: string; created_at?: string; description: string; discount_percent?: number | null; id?: string; media_storage_path?: string | null; media_type: string; media_url?: string | null; offer_kind: string; points_cost: number; published_at?: string | null; request_id: string; seller_profile_id: string; status?: string; terms: string; title: string; updated_at?: string; valid_from: string; valid_until: string },
+        ProductOfferFields & { approved_at: string; approved_by: string | null; benefit_details: string; created_at: string; description: string; discount_percent: number | null; id: string; media_storage_path: string | null; media_type: string; media_url: string | null; offer_kind: string; points_cost: number; published_at: string | null; request_id: string; seller_profile_id: string; status: string; terms: string; title: string; updated_at: string; valid_from: string; valid_until: string },
+        Partial<ProductOfferFields> & { approved_at?: string; approved_by: string | null; benefit_details: string; created_at?: string; description: string; discount_percent?: number | null; id?: string; media_storage_path?: string | null; media_type: string; media_url?: string | null; offer_kind: string; points_cost: number; published_at?: string | null; request_id: string; seller_profile_id: string; status?: string; terms: string; title: string; updated_at?: string; valid_from: string; valid_until: string },
         [
           { foreignKeyName: "seller_offers_request_id_fkey"; columns: ["request_id"]; isOneToOne: true; referencedRelation: "seller_offer_requests"; referencedColumns: ["id"] },
           { foreignKeyName: "seller_offers_seller_profile_id_fkey"; columns: ["seller_profile_id"]; isOneToOne: false; referencedRelation: "seller_profiles"; referencedColumns: ["id"] }
@@ -331,6 +349,8 @@ export type Database = {
       record_product_shop_click: { Args: { p_product_id: string; p_visitor_id: string }; Returns: boolean };
       seller_set_product_click_allocations: { Args: { p_allocations: Json }; Returns: undefined };
       seller_save_contact_details: { Args: { p_business_address: string | null; p_contact_name: string | null; p_instagram_url: string | null; p_phone: string | null; p_website_url: string | null }; Returns: undefined };
+      seller_save_social_links: { Args: { p_facebook_url: string | null; p_twitter_url: string | null; p_youtube_url: string | null; p_tiktok_url: string | null }; Returns: undefined };
+      seller_save_business_postcode: { Args: { p_business_postcode: string | null }; Returns: undefined };
       seller_confirm_contact_email: { Args: Record<PropertyKey, never>; Returns: undefined };
       visitor_mark_email_verified: { Args: Record<PropertyKey, never>; Returns: boolean };
       mark_notifications_seen: { Args: Record<PropertyKey, never>; Returns: undefined };
@@ -364,10 +384,20 @@ export type Database = {
       seller_mark_ad_credit_grants_seen: { Args: Record<PropertyKey, never>; Returns: undefined };
       seller_save_offer_request: { Args: { p_payload: Json; p_request_id: string; p_submit: boolean }; Returns: Json };
       seller_get_offer_audience_estimates: { Args: Record<PropertyKey, never>; Returns: { city_id: string; city_name: string; country_code: string; is_withheld: boolean; registered_audience: number | null; request_id: string }[] };
+      seller_get_product_offer_audience: { Args: Record<PropertyKey, never>; Returns: { city_id: string; eligible_count: number | null; is_withheld: boolean }[] };
+      admin_set_seller_reward_points: { Args: { p_points_cost: number; p_offer_id?: string }; Returns: undefined };
+      seller_publish_product_offer: { Args: { p_request_id: string; p_product_id: string; p_payload: Json }; Returns: string };
+      seller_publish_product_offer_in_cities: { Args: { p_request_id: string; p_product_id: string; p_payload: Json; p_city_ids: string[] }; Returns: string };
+      get_public_seller_offer_daily_availability: { Args: { p_offer_ids: string[] }; Returns: { offer_id: string; offer_date: string; remaining_claims: number }[] };
+      get_my_seller_offer_booking_limits: { Args: { p_offer_ids: string[] }; Returns: { offer_id: string; reservations_used: number; next_free_at: string | null }[] };
+      seller_cancel_product_offer: { Args: { p_offer_id: string }; Returns: undefined };
+      get_public_seller_offer_availability: { Args: { p_offer_ids: string[] }; Returns: { offer_id: string; remaining_claims: number }[] };
       seller_get_location_registration_counts: { Args: Record<PropertyKey, never>; Returns: { city_id: string | null; country_code: string; registered_count: number }[] };
       reserve_seller_offer_coupon: { Args: { p_idempotency_key: string; p_location_id: string; p_offer_date: string; p_offer_id: string; p_starts_at: string }; Returns: Json };
+      reserve_seller_offer_coupon_at_cost: { Args: { p_idempotency_key: string; p_location_id: string; p_offer_date: string; p_offer_id: string; p_starts_at: string; p_expected_points_cost: number }; Returns: Json };
       cancel_seller_offer_coupon: { Args: { p_coupon_id: string }; Returns: Json };
       seller_redeem_offer_coupon: { Args: { p_coupon_code: string }; Returns: Json };
+      seller_inspect_offer_coupon: { Args: { p_coupon_code: string }; Returns: Json };
       admin_get_seller_offer_voucher_status_metrics: { Args: Record<PropertyKey, never>; Returns: { cancelled_count: number; expired_count: number; location_id: string; offer_id: string; redeemed_count: number; reserved_count: number }[] };
       visitor_report_seller_voucher_issue: { Args: { p_coupon_id: string; p_description: string; p_issue_type: string }; Returns: string };
       admin_get_seller_voucher_support_cases: { Args: { p_limit: number; p_offset: number }; Returns: { case_id: string; coupon_id: string; created_at: string; description: string; issue_type: string; offer_id: string; offer_title: string; resolution_note: string | null; seller_profile_id: string; shop_name: string; status: string; total_case_count: number; updated_at: string; visitor_email: string | null; visitor_id: string }[] };
@@ -397,6 +427,7 @@ export type Database = {
       seller_get_shop_follower_count: { Args: Record<PropertyKey, never>; Returns: number };
       seller_set_phone_visibility: { Args: { p_phone_visibility: string }; Returns: undefined };
       get_public_seller_contact_phone: { Args: { p_seller_profile_id: string }; Returns: string | null };
+      get_public_seller_contact_links: { Args: { p_seller_profile_id: string }; Returns: { kind: string; href: string }[] };
       get_public_seller_contact_phones: { Args: { p_seller_profile_ids: string[] }; Returns: { phone: string; seller_profile_id: string }[] };
       save_creator_application_with_audience_cities: { Args: { p_audience_city_ids: string[]; p_bio: string; p_display_name: string; p_platform_accounts: Json; p_portfolio_items: Json; p_public_profile_consent: boolean; p_specialties: string[] }; Returns: string };
       creator_can_view_product_opportunity: { Args: { p_opportunity_id: string }; Returns: boolean };

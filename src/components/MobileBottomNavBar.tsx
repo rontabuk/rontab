@@ -28,6 +28,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { DismissibleDetails } from "@/components/DismissibleDetails";
+import { MenuAccountLink } from "@/components/MenuAccountLink";
 import {
   DEFAULT_CLIENT_PREFERENCES,
   readClientPreferences,
@@ -71,6 +72,7 @@ type NavItem = {
 
 export type MobileNavConfig = {
   label: string;
+  account?: { href: string; displayName: string; avatarUrl: string | null; label: string };
   items: NavItem[];
   menuLinks: { href: string; label: string }[];
   signOutTo?: SignOutDestination;
@@ -167,6 +169,7 @@ export function MobileBottomNavBar({ config, notifications }: { config: MobileNa
             </section>
           ) : (
             <div className="mobile-nav-menu-links">
+              {config.account && <MenuAccountLink {...config.account} />}
               {config.menuLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}
               <Link href="/information">Site information</Link>
               <button className="mobile-nav-settings-button" type="button" onClick={() => setSettingsOpen(true)}>Settings</button>

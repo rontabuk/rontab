@@ -1,0 +1,40 @@
+export const PRODUCT_REWARD_POINTS = 100;
+export const MIN_PRODUCT_REWARD_POINTS = 50;
+export const MAX_PRODUCT_REWARD_POINTS = 1_000_000;
+
+export type OfferAudience = "general" | "reward";
+export type OfferFulfillment = "branch" | "online";
+
+export function getOfferAudience(pointsCost: number): OfferAudience {
+  return pointsCost > 0 ? "reward" : "general";
+}
+
+export function isValidProductRewardPoints(points: number): boolean {
+  return Number.isSafeInteger(points) && points >= MIN_PRODUCT_REWARD_POINTS && points <= MAX_PRODUCT_REWARD_POINTS;
+}
+
+export function getProductOfferPoints(audience: OfferAudience, rewardPoints = PRODUCT_REWARD_POINTS): number {
+  return audience === "reward" ? rewardPoints : 0;
+}
+
+export function isOfferCombinationSupported(audience: OfferAudience, fulfillment: OfferFulfillment): boolean {
+  return audience !== "reward" || fulfillment === "branch";
+}
+
+export function getOfferBookingBlock(kind: string, reservationsUsed: number, nextFreeAt: string | null, now: number): string | null {
+  if (kind === "discount" && reservationsUsed >= 3) return "You have reached the 3-reservation limit for this discount offer.";
+  if ((kind === "free_item" || kind === "meal") && nextFreeAt && new Date(nextFreeAt).getTime() > now) {
+    return `Available again ${new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", dateStyle: "medium", timeStyle: "short" }).format(new Date(nextFreeAt))} UK time`;
+  }
+  return null;
+}
+
+export function getOfferAvailabilityVersion(
+  totals: { offer_id: string; remaining_claims: number }[],
+  daily: { offer_id: string; offer_date: string; remaining_claims: number }[],
+) {
+  return JSON.stringify([
+    totals.map((entry) => [entry.offer_id, entry.remaining_claims]).sort((first, second) => String(first[0]).localeCompare(String(second[0]))),
+    daily.map((entry) => [entry.offer_id, entry.offer_date, entry.remaining_claims]).sort((first, second) => `${first[0]}:${first[1]}`.localeCompare(`${second[0]}:${second[1]}`)),
+  ]);
+}

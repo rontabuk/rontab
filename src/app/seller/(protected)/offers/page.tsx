@@ -1,23 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { TicketCheck } from "lucide-react";
-import { redeemSellerOfferCoupon } from "@/app/seller/(protected)/actions";
+import { Plus, X } from "lucide-react";
+import { cancelProductOffer } from "@/app/seller/(protected)/product-offer-actions";
+import { ActionForm } from "@/components/ActionForm";
+import { SellerVoucherRedeemer } from "@/components/seller/SellerVoucherRedeemer";
 import { SellerOfferRequestForm } from "@/components/seller/SellerOfferRequestForm";
 import { getSupportedLocations } from "@/lib/locations";
 import { isSellerOfferSchemaUnavailable } from "@/lib/seller/offer-schema";
 import { getSellerAccount } from "@/lib/seller/access";
 
-export const metadata: Metadata = { title: "Offer requests", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Your offers", robots: { index: false, follow: false } };
 export const instant = false;
 
 export default async function SellerOfferRequestsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ submitted?: string; redeemed?: string; redeemError?: string; edit?: string }>;
+  searchParams: Promise<{ submitted?: string; redeemed?: string; redeemError?: string; edit?: string; published?: string; cancelled?: string }>;
 }) {
   await connection();
-  const [{ submitted, redeemed, redeemError, edit }, { supabase, seller }, { countries, cities }] = await Promise.all([
+  const [{ submitted, redeemed, redeemError, edit, published, cancelled }, { supabase, seller }, { countries, cities }] = await Promise.all([
     searchParams,
     getSellerAccount(),
     getSupportedLocations(),
@@ -40,6 +42,9 @@ export default async function SellerOfferRequestsPage({
     );
   }
   if (error) throw new Error(error.message);
+  const publishedResult = await supabase.from("seller_offers").select("id,title,status,points_cost,valid_from,valid_until")
+    .eq("seller_profile_id", seller.id).order("created_at", { ascending: false }).limit(30);
+  if (publishedResult.error) throw new Error(publishedResult.error.message);
   const registrationCountsResult = seller.status === "active"
     ? await supabase.rpc("seller_get_location_registration_counts")
     : { data: [], error: null };
@@ -89,14 +94,29 @@ export default async function SellerOfferRequestsPage({
     <main className="admin-overview seller-overview">
       <header className="admin-page-heading">
         <p className="admin-eyebrow">SELLER WORKSPACE</p>
-        <h1>Offer requests</h1>
-        <p>Propose a local promotion for review. Nothing is published until the team approves its final terms.</p>
+        <h1>Your offers</h1>
       </header>
+      {published === "1" && <p className="admin-save-success" role="status">Your product offer is published.</p>}
+      {cancelled === "1" && <p className="admin-save-success" role="status">Offer ended. Unused active vouchers were cancelled and any points charged were returned.</p>}
       {submitted === "1" && <p className="admin-save-success" role="status">Your offer request was sent for review.</p>}
       {redeemed === "1" && <p className="admin-save-success" role="status">Voucher verified and marked as used.</p>}
       {redeemed === "already" && <p className="admin-save-success" role="status">This voucher was already used.</p>}
       {redeemed === "expired" && <p className="seller-account-notice" role="status">This voucher has expired and was not redeemed.</p>}
-      {redeemError && <p className="visitor-rewards-error" role="alert">{redeemError === "code" ? "Enter the 20-character voucher code." : redeemError === "notFound" ? "This voucher is not valid for your shop." : redeemError === "window" ? "This voucher is not valid at the current time." : "Voucher verification is temporarily unavailable."}</p>}
+      {redeemError && <p className="visitor-rewards-error" role="alert">{redeemError === "code" ? "Enter the 20-character voucher code." : redeemError === "confirmation" ? "Confirm that you are handing over the advertised benefit." : redeemError === "notFound" ? "This voucher is not valid for your shop." : redeemError === "window" ? "This voucher is not valid at the current time." : "Voucher verification is temporarily unavailable."}</p>}
+      <section className="seller-offer-request-history" aria-label="Published offers">
+        <div className="seller-profile-section-heading"><h2>Published offers</h2><Link href="/seller/products"><Plus size={14} aria-hidden="true" />Create from a product</Link></div>
+        {publishedResult.data.length ? <ol>{publishedResult.data.map((offer) => <li key={offer.id}>
+          <div><strong>{offer.title}</strong><span>{offer.status}</span></div>
+          <p>{offer.valid_from} to {offer.valid_until} · {offer.points_cost > 0 ? `${offer.points_cost.toLocaleString("en-GB")} points` : "Public offer · no points"}</p>
+          {["published", "paused"].includes(offer.status) && <details className="seller-offer-cancellation"><summary>Cancel offer</summary>
+            <ActionForm action={cancelProductOffer}>
+              <input type="hidden" name="offer_id" value={offer.id} />
+              <label><input type="checkbox" name="confirm_cancellation" required /><span>End this offer and cancel its unused active vouchers. Any points charged will be returned.</span></label>
+              <button type="submit"><X size={14} aria-hidden="true" />Confirm cancellation</button>
+            </ActionForm>
+          </details>}
+        </li>)}</ol> : <p>No published offers yet.</p>}
+      </section>
       {seller.status !== "active" ? (
         <section className="seller-account-notice" role="status">
           <strong>Offer submissions are unavailable.</strong>
@@ -105,7 +125,9 @@ export default async function SellerOfferRequestsPage({
       ) : (
         <>
           {editableRequest && <p className="seller-account-notice" role="status">Update the requested details and resubmit this offer for review.</p>}
-          <SellerOfferRequestForm key={editableRequest?.id ?? "new-offer"} requestId={editableRequest?.id ?? crypto.randomUUID()} sellerId={seller.id} initialRequest={initialRequest} countries={countries} cities={cities} registrationCounts={registrationCountsResult.data ?? []} tomorrow={tomorrow} endDate={endDate} />
+          <details className="seller-offer-manual-review" open={Boolean(editableRequest)}><summary>Request a reviewed offer · special cases</summary>
+            <SellerOfferRequestForm key={editableRequest?.id ?? "new-offer"} requestId={editableRequest?.id ?? crypto.randomUUID()} sellerId={seller.id} initialRequest={initialRequest} countries={countries} cities={cities} registrationCounts={registrationCountsResult.data ?? []} tomorrow={tomorrow} endDate={endDate} />
+          </details>
           <section className="seller-offer-request-history" aria-labelledby="seller-offer-history-title">
             <div className="seller-profile-section-heading"><h2 id="seller-offer-history-title">Your requests</h2></div>
             {requests.length ? (
@@ -136,13 +158,9 @@ export default async function SellerOfferRequestsPage({
         <section className="seller-offer-redeem" aria-labelledby="seller-offer-redeem-title">
           <div className="seller-profile-section-heading">
             <h2 id="seller-offer-redeem-title">Verify a customer voucher</h2>
-            <p>Enter the code shown on the customer’s voucher. Each code can be redeemed once.</p>
+            <p>Check the voucher, then confirm use when handing over the advertised benefit. No additional points are charged.</p>
           </div>
-          <form action={redeemSellerOfferCoupon}>
-            <label htmlFor="seller-offer-coupon-code">Voucher code</label>
-            <input id="seller-offer-coupon-code" name="coupon_code" autoComplete="off" spellCheck={false} minLength={20} maxLength={20} pattern="[A-Fa-f0-9]{20}" required />
-            <button className="admin-primary-button" type="submit"><TicketCheck size={15} aria-hidden="true" />Verify and redeem</button>
-          </form>
+          <SellerVoucherRedeemer />
         </section>
       )}
     </main>
