@@ -10,13 +10,14 @@ export type WorkspaceLink = {
   indicator?: string;
 };
 
-export function WorkspaceNavigation({ label, links }: { label: string; links: readonly WorkspaceLink[] }) {
+export function WorkspaceNavigation({ label, links, activeHref }: { label: string; links: readonly WorkspaceLink[]; activeHref?: string }) {
   const pathname = usePathname();
+  const currentPathname = activeHref ?? pathname;
 
   return (
     <nav className="admin-navigation" aria-label={label}>
       {links.map(({ href, label: linkLabel, exact, indicator }) => {
-        const isActive = exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+        const isActive = exact ? currentPathname === href : currentPathname === href || currentPathname.startsWith(`${href}/`);
 
         return (
           <Link

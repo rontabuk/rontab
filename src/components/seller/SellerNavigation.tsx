@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { markSellerAdCreditGrantsSeen } from "@/app/seller/(protected)/actions";
 import { WorkspaceNavigation } from "@/components/WorkspaceNavigation";
 
-export function SellerNavigation({ hasNewAdCreditGrants }: { hasNewAdCreditGrants: boolean }) {
+export function SellerNavigation({ hasNewAdCreditGrants, activeHref }: { hasNewAdCreditGrants: boolean; activeHref?: string }) {
   const pathname = usePathname();
 
   useEffect(() => {
@@ -17,6 +17,7 @@ export function SellerNavigation({ hasNewAdCreditGrants }: { hasNewAdCreditGrant
   return (
     <WorkspaceNavigation
       label="Seller navigation"
+      activeHref={activeHref}
       links={[
         { href: "/seller/profile", label: "Profile" },
         { href: "/seller", label: "Add products", exact: true },

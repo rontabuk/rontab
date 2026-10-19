@@ -299,6 +299,8 @@ test("shop owner controls are server-verified and hidden from guests, visitors, 
       "@/components/ActionForm": { ActionForm: "form" }, "@/components/seller/SellerVerificationBadge": { SellerVerificationBadge: "badge" },
       "@/components/seller/SellerProfileEditButton": { SellerProfileEditButton: "edit-profile" },
       "@/components/seller/SellerProfileContactLinks": { SellerProfileContactLinks: "private-contacts" },
+      "@/components/seller/SellerNavigation": { SellerNavigation: "seller-navigation" },
+      "@/components/WorkspaceShell": { WorkspaceShell: "workspace-shell" },
       "@/components/ProductCard": { ProductCard: "card" }, "@/components/SiteChrome": { SiteHeader: "header" }, "@/app/visitor/shop-follow-actions": { followShop() {} },
       "@/lib/auth/viewer": { getViewer: async () => viewer }, "@/lib/format": { formatNumber: String },
       "@/lib/supabase/catalog": { getPublicCatalog: async () => ({ products: [{ id: "product-id", slug: "product", sellerProfileId: seller.id }] }) },
@@ -319,6 +321,13 @@ test("shop owner controls are server-verified and hidden from guests, visitors, 
     }
     const tree = await render();
     const card = nodes(tree).find((node) => node.type === "card");
+    const workspace = nodes(tree).find((node) => node.type === "workspace-shell");
+        assert.equal(Boolean(workspace), isOwner);
+        if (isOwner) {
+          assert.equal(workspace.props.navigation.type, "seller-navigation");
+          assert.equal(workspace.props.navigation.props.activeHref, "/seller/profile");
+          assert.equal(workspace.props.sectionLabel, "SHOP WORKSPACE");
+        }
     assert.equal(card.props.compact, true);
     assert.equal(card.props.hideSellerName, true);
     assert.equal(card.props.priceBesideMaker, true);

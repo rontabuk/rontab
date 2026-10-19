@@ -1,3 +1,5 @@
+import { SellerNavigation } from "@/components/seller/SellerNavigation";
+import { WorkspaceShell } from "@/components/WorkspaceShell";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -87,11 +89,9 @@ export default async function PublicShopPage({
     isFollowing = data;
   }
 
-  return (
-    <>
-      <SiteHeader />
+  const shopProfile = (
       <main className="public-shop-page">
-        <Link className="public-shop-back" href={isOwner ? "/seller/products" : "/products"}><ArrowLeft size={14} aria-hidden="true" />{isOwner ? "Shop workspace" : "Browse products"}</Link>
+        {!isOwner && <Link className="public-shop-back" href="/products"><ArrowLeft size={14} aria-hidden="true" />Browse products</Link>}
         {isOwner && saved === "1" && <p className="public-shop-feedback" role="status">Shop profile saved successfully.</p>}
         {isOwner && (!seller.is_public || seller.status !== "active") && <p className="public-shop-private-notice" role="status">Your shop is not visible to the public. Only you can view this profile.</p>}
         <header className="public-shop-hero">
@@ -140,6 +140,22 @@ export default async function PublicShopPage({
             : <p className="public-shop-empty">This shop has no published products right now.</p>}
         </section>
       </main>
-    </>
   );
+
+  if (isOwner && viewer.role === "seller") {
+    return <WorkspaceShell
+      area="SELLER"
+      sectionLabel="SHOP WORKSPACE"
+      navigation={<SellerNavigation hasNewAdCreditGrants={viewer.hasNewAdCreditGrants} activeHref="/seller/profile" />}
+      accountLabel={`${seller.shop_name} · ${seller.status}`}
+      signOutTo="/seller/login"
+      brandBackHref="/products"
+      hideMobileAccountDetails
+    >
+      <SiteHeader />
+      {shopProfile}
+    </WorkspaceShell>;
+  }
+
+  return <><SiteHeader />{shopProfile}</>;
 }
