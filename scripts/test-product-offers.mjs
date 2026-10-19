@@ -20,8 +20,8 @@ function loadSource(path, dependencies = {}, globals = {}) {
 
 const policy = loadSource("lib/seller/offer-policy.ts");
 const cities = [{ city_id: "GB-test", city_name: "London", country_code: "GB" }, { city_id: "GB-second", city_name: "Coventry", country_code: "GB" }, { city_id: "GB-third", city_name: "Birmingham", country_code: "GB" }];
-const fixtureOffer = (pointsCost) => ({
-  id: pointsCost ? "reward-fixture" : "general-fixture", title: "Trainers", benefit_details: "Half price on the advertised product.",
+const fixtureOffer = (pointsCost, audience = pointsCost ? "reward" : "general") => ({
+  id: `${audience}-fixture`, audience, title: "Trainers", benefit_details: "Half price on the advertised product.",
   mediaDisplayUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400", media_type: "image", points_cost: pointsCost, remainingClaims: 5,
 });
 const Image = ({ fill, unoptimized, sizes, ...props }) => React.createElement("img", { ...props, ...(fill ? { style: { position: "absolute", width: "100%", height: "100%" } } : {}), "data-sizes": sizes, "data-unoptimized": Boolean(unoptimized) });
@@ -40,6 +40,7 @@ function formFixture(rewardPoints = 100) {
   const { ProductOfferForm } = loadSource("components/seller/ProductOfferForm.tsx", {
     react: { useState(initial) { const index = cursor++; if (!(index in hooks)) hooks[index] = initial; return [hooks[index], (value) => { hooks[index] = value; }]; } },
     "@/components/ActionForm": { ActionForm }, "@/components/CityPicker": cityModule, "@/components/MultiCityPicker": multiCityModule,
+    "@/lib/format": { formatNumber: (value) => value.toLocaleString("en-GB") },
     "@/app/seller/(protected)/product-offer-actions": { publishProductOffer() {} },
     "@/lib/seller/offer-policy": policy,
   });
@@ -73,14 +74,12 @@ function publishFixture(error = null) {
   } };
 }
 
-test("public offers are free, new rewards use platform cost, and legacy rewards retain their audience", () => {
-  assert.equal(policy.getProductOfferPoints("general"), 0);
-  assert.equal(policy.getProductOfferPoints("reward"), 100);
-  assert.equal(policy.getProductOfferPoints("reward", 75), 75);
-  assert.equal(policy.getProductOfferPoints("general", 75), 0);
+test("branch vouchers use the configured points cost independently of audience and online offers stay free", () => {
+  assert.equal(policy.getProductOfferPoints("branch"), 100);
+  assert.equal(policy.getProductOfferPoints("branch", 75), 75);
+  assert.equal(policy.getProductOfferPoints("online", 75), 0);
   for (const points of [0, 49, 50.5, NaN, 1_000_001]) assert.equal(policy.isValidProductRewardPoints(points), false);
   for (const points of [50, 75, 100, 1_000_000]) assert.equal(policy.isValidProductRewardPoints(points), true);
-  assert.equal(policy.getOfferAudience(500), "reward");
   assert.equal(policy.isOfferCombinationSupported("reward", "online"), false);
   assert.equal(policy.isOfferCombinationSupported("general", "online"), true);
 });
@@ -202,19 +201,19 @@ test("one visibility-aware poller refreshes changed slots and cleans up its list
   assert.equal(listeners.size, 0);
 });
 
-test("seller offer copy explains the audience without customer point charges or deductions", () => {
+test("seller offer copy explains audience-independent branch voucher costs", () => {
   const fixture = formFixture(75);
   const text = (node) => typeof node === "string" || typeof node === "number" ? String(node) : Array.isArray(node) ? node.map(text).join("") : text(node?.props?.children ?? "");
   assert.match(text(fixture.render()), /Available to all eligible customers/);
-  assert.doesNotMatch(text(fixture.render()), /points|deduct|refund/i);
+  assert.match(text(fixture.render()), /75 points to reserve.*public offers and exclusive rewards/);
   field(fixture.render(), "audience", "reward").props.onChange();
   const rewardText = text(fixture.render());
   assert.match(rewardText, /Exclusive to RonTab loyalty members/);
   assert.match(rewardText, /I will honor this offer/);
-  assert.doesNotMatch(rewardText, /points|deduct|refund/i);
+  assert.match(rewardText, /75 points to reserve/);
   field(fixture.render(), "audience", "general").props.onChange();
   field(fixture.render(), "fulfillment", "online").props.onChange();
-  assert.doesNotMatch(text(fixture.render()), /points|deduct|refund/i);
+  assert.match(text(fixture.render()), /Online offers are public and do not use points/);
 });
 
 test("multi-city picker keeps multiple selections, shows city counts and respects disabled state", () => {
@@ -299,8 +298,8 @@ test("an unmigrated database never silently publishes a multi-city offer to just
   assert.equal(fixture.calls[0].name, "seller_publish_product_offer_in_cities");
 });
 
-test("profile previews separate free offers and rewards, linking directly to the selected offer", () => {
-  const tree = profileModule.ProfileOffers({ offers: [fixtureOffer(0), fixtureOffer(100)], cityId: "GB-test", available: true });
+test("profile previews separate audiences independently of points cost", () => {
+  const tree = profileModule.ProfileOffers({ offers: [fixtureOffer(100, "general"), fixtureOffer(0, "reward")], cityId: "GB-test", available: true });
   const hrefs = nodes(tree).filter((node) => node.props?.href).map((node) => node.props.href);
   assert.ok(hrefs.includes("/visitor/offers?view=general#offer-general-fixture"));
   assert.ok(hrefs.includes("/visitor/offers?view=reward#offer-reward-fixture"));

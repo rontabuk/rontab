@@ -6,10 +6,11 @@ import { ActionForm } from "@/components/ActionForm";
 import type { SupportedCity, SupportedCountry } from "@/components/CityPicker";
 import { MultiCityPicker } from "@/components/MultiCityPicker";
 import { publishProductOffer } from "@/app/seller/(protected)/product-offer-actions";
-import type { OfferAudience, OfferFulfillment } from "@/lib/seller/offer-policy";
+import { formatNumber } from "@/lib/format";
+import { getProductOfferPoints, PRODUCT_REWARD_POINTS, type OfferAudience, type OfferFulfillment } from "@/lib/seller/offer-policy";
 import type { Database } from "@/lib/supabase/database.types";
 
-export function ProductOfferForm({ productId, requestId, countries, cities, postcode, today, audienceCounts, shopUrl }: {
+export function ProductOfferForm({ productId, requestId, countries, cities, postcode, today, audienceCounts, shopUrl, rewardPoints = PRODUCT_REWARD_POINTS }: {
   productId: string;
   requestId: string;
   countries: SupportedCountry[];
@@ -23,6 +24,7 @@ export function ProductOfferForm({ productId, requestId, countries, cities, post
   const [audience, setAudience] = useState<OfferAudience>("general");
   const [fulfillment, setFulfillment] = useState<OfferFulfillment>("branch");
   const [kind, setKind] = useState("discount");
+  const branchPointsCost = getProductOfferPoints("branch", rewardPoints);
   const countsByCity = new Map(audienceCounts.map((count) => [count.city_id, count]));
   const cityDetails = Object.fromEntries(cities.map((city) => {
     const estimate = countsByCity.get(city.city_id);
@@ -35,6 +37,7 @@ export function ProductOfferForm({ productId, requestId, countries, cities, post
       <label><input type="radio" name="audience" value="general" checked={audience === "general"} onChange={() => setAudience("general")} /><Tag size={16} aria-hidden="true" /><span>Public offer<small>Available to all eligible customers</small></span></label>
       <label><input type="radio" name="audience" value="reward" checked={audience === "reward"} onChange={() => { setAudience("reward"); setFulfillment("branch"); }} /><Gift size={16} aria-hidden="true" /><span>Exclusive reward<small>Exclusive to RonTab loyalty members</small></span></label>
     </fieldset>
+    <p className="seller-product-offer-note">{fulfillment === "branch" ? `Branch vouchers cost ${formatNumber(branchPointsCost)} points to reserve, for both public offers and exclusive rewards.` : "Online offers are public and do not use points."}</p>
     <div className="seller-product-offer-row">
       <label>Benefit<select name="offer_kind" value={kind} onChange={(event) => setKind(event.target.value)}><option value="discount">Percentage discount</option><option value="free_item">Free product</option><option value="meal">Free meal</option><option value="other">Special offer</option></select></label>
       {kind === "discount" && <label>Discount %<input name="discount_percent" type="number" min="0.01" max="100" step="0.01" required /></label>}

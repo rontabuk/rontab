@@ -111,14 +111,14 @@ export default async function AdminSellerOffersPage({
       </header>
       {reviewed === "1" && <p className="admin-save-success" role="status">Offer review decision saved.</p>}
       {changed === "1" && <p className="admin-save-success" role="status">Offer status updated.</p>}
-      {points === "1" && <p className="admin-save-success" role="status">Reward points updated. Existing vouchers retain their original cost and refund amount.</p>}
+      {points === "1" && <p className="admin-save-success" role="status">Voucher points updated. Existing vouchers retain their original cost and refund amount.</p>}
 
       <section className="admin-dashboard-section" aria-labelledby="seller-reward-points-title">
-        <h2 id="seller-reward-points-title">Default reward points</h2>
-        <p>Applies to new exclusive rewards only. Public offers remain free. Existing offers can be adjusted individually below.</p>
+        <h2 id="seller-reward-points-title">Default voucher points</h2>
+        <p>Applies to new branch vouchers, whether public or exclusive. Online offers remain free. Existing offers can be adjusted individually below.</p>
         {!pricingAvailable && <p role="status">The reward-point settings migration must be applied before changes can be saved.</p>}
         <form action={updateSellerRewardPoints} className="admin-seller-offer-approval-form">
-          <label>Customer points per new reward<input name="points_cost" type="number" min={MIN_PRODUCT_REWARD_POINTS} max={MAX_PRODUCT_REWARD_POINTS} step="1" defaultValue={defaultRewardPoints} required disabled={!pricingAvailable} /></label>
+          <label>Customer points per new branch voucher<input name="points_cost" type="number" min={MIN_PRODUCT_REWARD_POINTS} max={MAX_PRODUCT_REWARD_POINTS} step="1" defaultValue={defaultRewardPoints} required disabled={!pricingAvailable} /></label>
           <button type="submit" disabled={!pricingAvailable}><Save size={14} aria-hidden="true" />Save default</button>
         </form>
       </section>
@@ -216,7 +216,7 @@ export default async function AdminSellerOffersPage({
                     <h3>{offer.title}</h3>
                     <p>{offer.benefit_details}</p>
                     <div className="admin-loyalty-offer-details">
-                      <span><Ticket size={13} aria-hidden="true" />{offer.points_cost > 0 ? `${formatNumber(offer.points_cost)} points` : "Public offer · no points"}</span>
+                      <span><Ticket size={13} aria-hidden="true" />{offer.audience === "reward" ? "Exclusive reward" : "Public offer"} · {offer.points_cost > 0 ? `${formatNumber(offer.points_cost)} points` : "No points"}</span>
                       {offer.target_all_uk && <span><MapPin size={13} aria-hidden="true" />All UK</span>}
                       {offer.max_claims !== null && <span>{formatNumber(offer.max_claims)} vouchers maximum across all dates</span>}
                       <span><CalendarDays size={13} aria-hidden="true" />{formatDate(offer.valid_from)} – {formatDate(offer.valid_until)}</span>

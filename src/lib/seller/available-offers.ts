@@ -12,7 +12,7 @@ export function londonOfferDate() {
 export async function getAvailableSellerOffers(supabase: SupabaseClient<Database>, cityId: string | null) {
   if (!cityId) return { offers: [], available: true };
   let { data, error } = await supabase.from("seller_offers")
-    .select("id,title,offer_kind,description,benefit_details,discount_percent,media_url,media_storage_path,product_media_path,media_type,points_cost,terms,valid_from,valid_until,fulfillment,external_url,external_code,max_claims,target_all_uk,seller_offer_locations(id,offer_id,city_id,branch_name,branch_address),audience_locations:seller_offer_locations()")
+    .select("id,title,offer_kind,description,benefit_details,discount_percent,media_url,media_storage_path,product_media_path,media_type,points_cost,audience,terms,valid_from,valid_until,fulfillment,external_url,external_code,max_claims,target_all_uk,seller_offer_locations(id,offer_id,city_id,branch_name,branch_address),audience_locations:seller_offer_locations()")
     .eq("status", "published").eq("audience_locations.city_id", cityId)
     .or("target_all_uk.eq.true,audience_locations.not.is.null")
     .gte("valid_until", londonOfferDate()).order("valid_from").limit(60);
@@ -21,7 +21,12 @@ export async function getAvailableSellerOffers(supabase: SupabaseClient<Database
       .select("id,title,offer_kind,description,benefit_details,discount_percent,media_url,media_storage_path,product_media_path,media_type,points_cost,terms,valid_from,valid_until,fulfillment,external_url,external_code,max_claims,seller_offer_locations!inner(id,offer_id,city_id,branch_name,branch_address)")
       .eq("status", "published").eq("seller_offer_locations.city_id", cityId)
       .gte("valid_until", londonOfferDate()).order("valid_from").limit(60);
-    data = legacy.data?.map((offer) => ({ ...offer, target_all_uk: false, audience_locations: [] })) ?? null;
+    data = legacy.data?.map((offer) => ({
+      ...offer,
+      audience: offer.points_cost > 0 ? "reward" as const : "general" as const,
+      target_all_uk: false,
+      audience_locations: [],
+    })) ?? null;
     error = legacy.error;
   }
   if (isSellerOfferSchemaUnavailable(error) || error?.code === "42703") return { offers: [], available: false };

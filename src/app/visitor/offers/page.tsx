@@ -46,7 +46,7 @@ export default async function VisitorOfferGalleryPage({
   if (couponsResult.error && !couponsUnavailable) throw new Error(couponsResult.error.message);
   if (supportCasesResult.error) throw new Error(supportCasesResult.error.message);
 
-  const displayOffers = offersResult.offers.filter((offer) => (offer.points_cost > 0) === (view === "reward"));
+  const displayOffers = offersResult.offers.filter((offer) => offer.audience === view);
   const locations = displayOffers.flatMap((offer) => offer.locations);
   const locationIds = locations.map((location) => location.id);
   const cityIds = [...new Set(locations.map((location) => location.city_id))];
@@ -158,7 +158,6 @@ export default async function VisitorOfferGalleryPage({
                   </div> : <OfferCapacity offerId={offer.id} maximum={offer.max_claims} remaining={offer.remainingClaims} closesAt={`${offer.valid_until}T23:59:59`}><div className="seller-offer-slot-list">
                     <h3>Available times</h3>
                     {offer.offer_kind === "discount" && <p>{usage?.reservations_used ?? 0} of 3 reservations used. Cancelled reservations do not count.</p>}
-                    {(offer.offer_kind === "free_item" || offer.offer_kind === "meal") && <p>One free benefit for this product every 7 days.</p>}
                     {slots.length ? slots.map(({ location, quota }) => {
                       const alreadyReservedToday = !["discount", "free_item", "meal"].includes(offer.offer_kind)
                         && coupons.some((coupon) => coupon.offer_id === offer.id && coupon.offer_date === quota.offer_date && coupon.status !== "cancelled");

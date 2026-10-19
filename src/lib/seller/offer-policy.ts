@@ -5,16 +5,12 @@ export const MAX_PRODUCT_REWARD_POINTS = 1_000_000;
 export type OfferAudience = "general" | "reward";
 export type OfferFulfillment = "branch" | "online";
 
-export function getOfferAudience(pointsCost: number): OfferAudience {
-  return pointsCost > 0 ? "reward" : "general";
-}
-
 export function isValidProductRewardPoints(points: number): boolean {
   return Number.isSafeInteger(points) && points >= MIN_PRODUCT_REWARD_POINTS && points <= MAX_PRODUCT_REWARD_POINTS;
 }
 
-export function getProductOfferPoints(audience: OfferAudience, rewardPoints = PRODUCT_REWARD_POINTS): number {
-  return audience === "reward" ? rewardPoints : 0;
+export function getProductOfferPoints(fulfillment: OfferFulfillment, pointsCost = PRODUCT_REWARD_POINTS): number {
+  return fulfillment === "branch" ? pointsCost : 0;
 }
 
 export function isOfferCombinationSupported(audience: OfferAudience, fulfillment: OfferFulfillment): boolean {

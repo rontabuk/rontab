@@ -7,6 +7,7 @@ export type Json =
   | Json[];
 
 type ProductOfferFields = {
+  audience: "general" | "reward";
   auto_published: boolean;
   external_code: string | null;
   external_url: string | null;

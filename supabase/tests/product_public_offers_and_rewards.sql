@@ -66,8 +66,9 @@ begin
   perform set_config('request.jwt.claims', jsonb_build_object('sub',seller_user,'role','authenticated')::text, true);
   offer_id := public.seller_publish_product_offer(request_id, product_id, payload);
   if public.seller_publish_product_offer(request_id, product_id, payload) <> offer_id then raise exception 'Publication retry created a duplicate.'; end if;
-  if not exists(select 1 from public.seller_offers offer where offer.id = offer_id and points_cost = 100 and auto_published and approved_by is null and status = 'published') then
-    raise exception 'Reward must use platform cost and honest automated approval attribution.';
+  if not exists(select 1 from public.seller_offers offer where offer.id = offer_id and audience = 'reward'
+    and points_cost = 100 and auto_published and approved_by is null and status = 'published') then
+    raise exception 'Reward must store its audience, use platform cost, and retain honest automated approval attribution.';
   end if;
   begin
     perform public.seller_publish_product_offer(request_id, product_id, payload || '{"benefit_details":"Changed benefit"}');
@@ -84,6 +85,9 @@ begin
   exception when sqlstate '42501' then null; end;
   perform set_config('request.jwt.claim.sub', seller_user::text, true);
   free_offer_id := public.seller_publish_product_offer(gen_random_uuid(), product_id, payload || '{"audience":"general"}');
+  if not exists(select 1 from public.seller_offers offer where offer.id = free_offer_id and audience = 'general' and points_cost = 100) then
+    raise exception 'Public branch voucher did not retain its audience and use the configured points cost.';
+  end if;
   perform public.seller_get_product_offer_audience();
   select location.id into location_id from public.seller_offer_locations location where location.offer_id = product_offer_test.offer_id;
   perform set_config('request.jwt.claim.sub', visitor_user::text, true);
@@ -118,13 +122,18 @@ begin
   end if;
   select location.id into location_id from public.seller_offer_locations location where location.offer_id = free_offer_id;
   perform set_config('request.jwt.claim.sub', visitor_user::text, true);
-  update public.loyalty_accounts set points_balance = 0 where visitor_id = visitor_user;
+  update public.loyalty_accounts set points_balance = 250 where visitor_id = visitor_user;
   result := public.reserve_seller_offer_coupon(free_offer_id, location_id, tomorrow, '10:00', gen_random_uuid());
   coupon_id := (result ->> 'id')::uuid;
+  if (select points_balance from public.loyalty_accounts where visitor_id = visitor_user) <> 150
+    or (select points_cost from public.seller_offer_coupons where id = product_offer_test.coupon_id) <> 100 then
+    raise exception 'Public offer reservation did not deduct its configured points cost.';
+  end if;
   perform public.cancel_seller_offer_coupon(coupon_id);
-  if exists(select 1 from public.seller_offer_point_transactions transaction where transaction.coupon_id = product_offer_test.coupon_id)
-    or (select points_balance from public.loyalty_accounts where visitor_id = visitor_user) <> 0 then
-    raise exception 'Free offer changed the points ledger or balance.';
+  if (select points_balance from public.loyalty_accounts where visitor_id = visitor_user) <> 250
+    or not exists(select 1 from public.seller_offer_point_transactions transaction where transaction.coupon_id = product_offer_test.coupon_id and transaction.transaction_type = 'spent' and transaction.points_delta = -100)
+    or not exists(select 1 from public.seller_offer_point_transactions transaction where transaction.coupon_id = product_offer_test.coupon_id and transaction.transaction_type = 'refund' and transaction.points_delta = 100) then
+    raise exception 'Public offer cancellation did not refund its points exactly once.';
   end if;
   perform set_config('request.jwt.claim.sub', seller_user::text, true);
   offer_id := public.seller_publish_product_offer(gen_random_uuid(), product_id, payload || '{"audience":"general","fulfillment":"online","external_code":"PUBLIC50"}');
@@ -214,7 +223,7 @@ begin
   request_id := gen_random_uuid();
   payload := payload || '{"daily_capacity":20,"max_claims":20}';
   offer_id := public.seller_publish_product_offer_in_cities(request_id, product_id, payload, array[]::text[]);
-  if not exists(select 1 from public.seller_offers offer where offer.id = product_offer_test.offer_id and target_all_uk and points_cost = 75)
+  if not exists(select 1 from public.seller_offers offer where offer.id = product_offer_test.offer_id and audience = 'reward' and target_all_uk and points_cost = 75)
     or (select count(*) from public.seller_offer_locations location where location.offer_id = product_offer_test.offer_id) <> 1 then
     raise exception 'All UK did not use the administrator default or created duplicated quotas.';
   end if;
@@ -370,8 +379,8 @@ begin
     raise exception 'Cancelled free reservations still imposed a cooldown.';
   end if;
   perform public.reserve_seller_offer_coupon(free_offer_id, location_id, tomorrow, '10:00', gen_random_uuid());
-  if (select points_balance from public.loyalty_accounts where visitor_id = visitor_user) <> 400 then
-    raise exception 'Free-product reservations or cooldown rejection changed points.';
+  if (select points_balance from public.loyalty_accounts where visitor_id = visitor_user) <> 200 then
+    raise exception 'Public free-product reservations did not charge and refund the configured points cost correctly.';
   end if;
   if has_function_privilege('authenticated', 'public.reserve_seller_offer_coupon_legacy(uuid,uuid,date,time,uuid)', 'EXECUTE')
     or has_function_privilege('authenticated', 'public.seller_publish_product_offer_initial(uuid,uuid,jsonb)', 'EXECUTE')
