@@ -42,6 +42,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#eef2f3",
+  // Without "cover", iOS reports env(safe-area-inset-*) as 0 and the home indicator overlaps the bottom nav.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
