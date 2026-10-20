@@ -308,3 +308,6 @@ a.seller-offer-card-seller:hover strong { text-decoration: underline; }
 .become-creator-cancel { border: 1px solid #d8dfd3; background: transparent; color: #405745; }
 .become-creator-cancel:hover { background: #f5f8f2; }
 @media (max-width: 480px) { .become-creator-actions { grid-template-columns: 1fr; } }
+
+/* On phones the bottom nav and menu already provide these links. */
+@media (max-width: 760px) { .become-creator-button, .visitor-account-back { display: none; } }
