@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getVisitorAccount } from "@/lib/visitor/access";
 import { getSafeVisitorPath } from "@/lib/visitor/paths";
 import { FormError, runFormAction, type FormState } from "@/lib/form-state";
-import { getProfileImageProblem, isCityId, isHttpsUrl, isUuid, PROFILE_IMAGE_TYPES } from "@/lib/validation";
+import { getProfileImageProblem, isCityId, isHttpsUrl, isUuid, normalizeUkPostcode, PROFILE_IMAGE_TYPES } from "@/lib/validation";
 
 export async function saveVisitorProfile(_state: FormState, formData: FormData) {
   return runFormAction(() => persistVisitorProfile(formData));
@@ -17,6 +17,11 @@ async function persistVisitorProfile(formData: FormData) {
   const requestedCountryCode = String(formData.get("city_id_country_code") ?? "").trim().toUpperCase() || null;
   const contactPhone = String(formData.get("contact_phone") ?? "").trim();
   const contactVisibility = String(formData.get("contact_visibility") ?? "private");
+  const postcodeInput = String(formData.get("postcode") ?? "").trim();
+  const postcode = postcodeInput ? normalizeUkPostcode(postcodeInput) : null;
+  const postcodeVisibility = String(formData.get("postcode_visibility") ?? "private");
+  if (postcodeInput && !postcode) throw new FormError("Enter a valid UK postcode, for example DN1 1AA.");
+  if (!["private", "sellers", "creators", "public"].includes(postcodeVisibility)) throw new FormError("Choose who can see your postcode.");
   const locationSubmitted = formData.has("city_id");
   const removeAvatar = formData.get("remove_avatar") === "on";
   const avatarFileValue = formData.get("avatar_image");
@@ -108,6 +113,8 @@ async function persistVisitorProfile(formData: FormData) {
     p_phone: contactPhone || null,
     p_contact_visibility: contactVisibility,
     p_social_links: socialLinks,
+    p_postcode: postcode,
+    p_postcode_visibility: postcodeVisibility,
   });
   if (contactError?.code === "22023" || contactError?.code === "42501") throw new FormError(contactError.message);
   if (contactError) throw new Error(contactError.message);

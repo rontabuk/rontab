@@ -67,11 +67,12 @@ export default async function MemberProfilePage({
         {unfollowed === "1" && <p className="member-profile-feedback" role="status">You no longer follow this member.</p>}
         {followError === "1" && <p className="member-profile-feedback is-error" role="alert">You cannot follow your own profile.</p>}
         {followUnavailable === "1" && <p className="member-profile-feedback is-error" role="alert">This profile is not available to your account.</p>}
-        {(profile.phone || profile.contact_email || socialLinks.length > 0) ? (
+        {(profile.phone || profile.contact_email || profile.postcode || socialLinks.length > 0) ? (
           <section className="member-profile-contact" aria-labelledby="member-profile-contact-title">
             <h2 id="member-profile-contact-title">Contact details</h2>
             {profile.phone && <a href={`tel:${profile.phone}`}><Phone size={15} aria-hidden="true" />{profile.phone}</a>}
             {profile.contact_email && <a href={`mailto:${profile.contact_email}`}><Mail size={15} aria-hidden="true" />{profile.contact_email}</a>}
+            {profile.postcode && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(profile.postcode)}`} target="_blank" rel="noreferrer"><MapPin size={15} aria-hidden="true" />{profile.postcode}</a>}
             {socialLinks.map((item) => (
               <a href={item.url} target="_blank" rel="noreferrer" key={item.platform}>
                 <ArrowUpRight size={15} aria-hidden="true" />{socialPlatformLabel(item.platform)}

@@ -32,7 +32,7 @@ export default async function VisitorAccountPage({
     supabase.rpc("visitor_get_my_followed_shops"),
     supabase.rpc("creator_get_my_follows"),
     supabase.rpc("get_member_profile_follower_summary", { p_member_user_id: user.id }),
-    supabase.from("member_contact_preferences").select("phone,contact_visibility").eq("user_id", user.id).maybeSingle(),
+    supabase.from("member_contact_preferences").select("phone,contact_visibility,postcode,postcode_visibility").eq("user_id", user.id).maybeSingle(),
     supabase.from("member_social_links").select("position,platform,profile_url").eq("user_id", user.id).order("position"),
     getSupportedLocations(),
   ]);
@@ -116,6 +116,14 @@ export default async function VisitorAccountPage({
                     </select>
                     <small>This setting applies to your confirmed email, phone number and social links. It is private by default.</small>
                   </label>
+                  <div className="visitor-postcode-row">
+                    <label>Postcode <small>(optional)</small><input name="postcode" defaultValue={contactPreferences?.postcode ?? ""} autoComplete="postal-code" autoCapitalize="characters" maxLength={8} placeholder="DN1 1AA" /></label>
+                    <label>Who can see your postcode?
+                      <select name="postcode_visibility" defaultValue={contactPreferences?.postcode_visibility ?? "private"}>
+                        <option value="private">Only me</option><option value="sellers">Sellers</option><option value="creators">Creators</option><option value="public">Everyone</option>
+                      </select>
+                    </label>
+                  </div>
                   <fieldset className="visitor-social-links">
                     <legend>Social profiles <small>Optional. Add up to three.</small></legend>
                     {[1, 2, 3].map((position) => {

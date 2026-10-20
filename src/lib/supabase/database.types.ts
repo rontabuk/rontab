@@ -70,7 +70,7 @@ export type Database = {
         { avatar_url?: string | null; city?: string | null; city_id?: string | null; country_code?: string | null; created_at?: string; display_name?: string | null; id: string; updated_at?: string }
       >;
       member_contact_preferences: Table<
-        { contact_visibility: "private" | "sellers" | "creators" | "public"; phone: string | null; updated_at: string; user_id: string },
+        { contact_visibility: "private" | "sellers" | "creators" | "public"; phone: string | null; postcode: string | null; postcode_visibility: "private" | "sellers" | "creators" | "public"; updated_at: string; user_id: string },
         never
       >;
       member_social_links: Table<
@@ -362,8 +362,8 @@ export type Database = {
       admin_set_seller_status: { Args: { p_is_public: boolean; p_next_status: Database["public"]["Enums"]["seller_status"]; p_seller_id: string }; Returns: undefined };
       get_public_seller_verification_badges: { Args: { p_seller_profile_ids: string[] }; Returns: { is_blue: boolean; is_verified: boolean; seller_profile_id: string }[] };
       get_public_seller_follower_count: { Args: { p_seller_profile_id: string }; Returns: number };
-      save_my_member_contact_profile: { Args: { p_contact_visibility: string; p_phone: string | null; p_social_links: Json }; Returns: undefined };
-      get_member_contact_profile: { Args: { p_member_user_id: string }; Returns: { city_name: string | null; contact_email: string | null; contact_visibility: string; country_code: string | null; display_name: string | null; phone: string | null; profile_user_id: string; social_platform: string | null; social_profile_url: string | null }[] };
+      save_my_member_contact_profile: { Args: { p_contact_visibility: string; p_phone: string | null; p_social_links: Json; p_postcode?: string | null; p_postcode_visibility?: string }; Returns: undefined };
+      get_member_contact_profile: { Args: { p_member_user_id: string }; Returns: { city_name: string | null; contact_email: string | null; contact_visibility: string; country_code: string | null; display_name: string | null; phone: string | null; postcode: string | null; profile_user_id: string; social_platform: string | null; social_profile_url: string | null }[] };
       get_member_profile_follower_summary: { Args: { p_member_user_id: string }; Returns: { follower_count: number; is_following: boolean }[] };
       follow_member_profile: { Args: { p_member_user_id: string }; Returns: boolean };
       unfollow_member_profile: { Args: { p_member_user_id: string }; Returns: boolean };

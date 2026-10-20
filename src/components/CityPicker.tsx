@@ -69,7 +69,7 @@ export function CityPicker({
       <label className="city-picker-country">
         Country
         <span className={`city-picker-control${hasCounts ? " has-counts" : ""}`}>
-          <select value={countryCode} onChange={(event) => selectCountry(event.target.value)} disabled={disabled} required={required}>
+          <select value={countryCode} onChange={(event) => selectCountry(event.target.value)} disabled={disabled} required={required} autoComplete="off">
             <option value="">Choose a country</option>
             {countries.map((country) => {
               const count = countryCounts.get(country.country_code);
@@ -88,7 +88,7 @@ export function CityPicker({
       <label className="city-picker-city">
         City or town
         <span className={`city-picker-control${hasCounts ? " has-counts" : ""}`}>
-          <select value={selectedCity?.city_id ?? ""} onChange={(event) => selectCity(event.target.value)} disabled={disabled || !countryCode} required={required}>
+          <select value={selectedCity?.city_id ?? ""} onChange={(event) => selectCity(event.target.value)} disabled={disabled || !countryCode} required={required} autoComplete="off">
             <option value="">{countryCode ? "Choose a city" : "Choose a country first"}</option>
             {cityOptions.map((city) => {
               const count = cityCounts.get(city.city_id);
