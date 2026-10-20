@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
-import { ArrowUpRight, BadgeCheck, ExternalLink, UserRound } from "lucide-react";
+import { ArrowUpRight, BadgeCheck, Check, ExternalLink, UserRound } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
+import { EmailConfirmationWatcher } from "@/components/EmailConfirmationWatcher";
 import { CreatorApplicationFields } from "@/components/creator/CreatorApplicationFields";
 import { CreatorFanTools } from "@/components/creator/CreatorFanTools";
 import { CreatorInfluenceSummary } from "@/components/creator/CreatorInfluence";
@@ -23,6 +24,10 @@ const statusCopy: Record<string, string> = {
   suspended: "This profile is currently unavailable. Contact support if you need help.",
   withdrawn: "Your profile is offline. You can submit it again with public consent.",
 };
+
+function isWithinLastDay(timestamp: string | null | undefined) {
+  return Boolean(timestamp) && Date.now() - Date.parse(timestamp!) < 24 * 60 * 60 * 1000;
+}
 
 export default async function CreatorStudioPage({
   searchParams,
@@ -50,6 +55,7 @@ export default async function CreatorStudioPage({
     if (result.error) throw new Error(result.error.message);
   }
   const emailIsVerified = Boolean(accountProfileResult.data?.email_verified_at);
+  const emailRecentlyVerified = isWithinLastDay(accountProfileResult.data?.email_verified_at);
   const profile = profileResult.data;
   if (!profile) throw new Error("Creator profile is unavailable.");
   const accounts = accountsResult.data ?? [];
@@ -107,15 +113,15 @@ export default async function CreatorStudioPage({
       </section>
 
       {registered === "1" && <p className="admin-save-success" role="status">Your creator account is ready and your profile has been sent for review.</p>}
-      {emailVerified === "1" && <p className="admin-save-success" role="status">Your email address is confirmed.</p>}
-      {emailVerified === "0" && <p className="form-error" role="alert">That confirmation link has expired or was already used. Send a new one below.</p>}
-      {!emailIsVerified && (
+      {emailVerified === "0" && !emailIsVerified && <p className="form-error" role="alert">That confirmation link has expired or was already used. Send a new one below.</p>}
+      {!emailIsVerified ? (
         <section className="creator-email-verify" aria-labelledby="creator-email-verify-title">
+          <EmailConfirmationWatcher />
           <div>
             <h2 id="creator-email-verify-title">Confirm your email address</h2>
             <p>
               {verificationSent === "1"
-                ? `We sent a confirmation link to ${user.email}. Open it on this device to confirm your account.`
+                ? `We sent a confirmation link to ${user.email}. Open it on any phone or computer — this page updates once it is confirmed.`
                 : `Confirm ${user.email} so the review team can approve your profile and you can respond to seller opportunities.`}
             </p>
             {verificationError === "rate-limited" && <p className="form-error" role="alert">We just sent you an email. Please wait a minute before asking again.</p>}
@@ -124,6 +130,14 @@ export default async function CreatorStudioPage({
           <form action={resendCreatorEmailVerification}>
             <button type="submit" className="admin-primary-button">{verificationSent === "1" ? "Send again" : "Send confirmation link"}</button>
           </form>
+        </section>
+      ) : (emailVerified === "1" || emailRecentlyVerified) && (
+        <section className="creator-email-verify creator-email-verified" aria-labelledby="creator-email-verify-title">
+          <div>
+            <h2 id="creator-email-verify-title">Email confirmed</h2>
+            <p>{user.email} is confirmed. Your profile can now be approved by the review team.</p>
+          </div>
+          <button type="button" className="admin-primary-button" disabled><Check size={15} aria-hidden="true" /> Confirmed successfully</button>
         </section>
       )}
       {submitted === "1" && <p className="admin-save-success" role="status">Your creator profile has been submitted for review.</p>}

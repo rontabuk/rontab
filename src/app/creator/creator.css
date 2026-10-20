@@ -88,3 +88,5 @@
 .creator-email-verify p { margin: 0; font-size: 12px; line-height: 1.6; }
 .creator-email-verify .form-error { margin-top: 10px; }
 .creator-email-verify .admin-primary-button { margin: 0; padding-inline: 16px; }
+.creator-email-verified { border-left-color: #527852; background: #e8f0e5; color: #355b39; }
+.creator-email-verified .admin-primary-button { display: inline-flex; align-items: center; gap: 6px; background: #527852; cursor: default; opacity: 1; }
