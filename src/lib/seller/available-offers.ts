@@ -33,6 +33,21 @@ export async function getAvailableSellerOffers(supabase: SupabaseClient<Database
   if (isSellerOfferSchemaUnavailable(error) || error?.code === "42703") return { offers: [], available: false };
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Offer data is unavailable.");
+  const today = londonOfferDate();
+  const currentTime = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).format(new Date());
+  const branchLocationIds = data.filter((offer) => offer.fulfillment !== "online")
+    .flatMap((offer) => offer.seller_offer_locations.filter((location) => offer.target_all_uk || location.city_id === cityId).map((location) => location.id));
+  const { data: upcomingQuotas, error: quotasError } = branchLocationIds.length
+    ? await supabase.from("seller_offer_daily_quotas").select("location_id,offer_date,ends_at").in("location_id", branchLocationIds).gte("offer_date", today).limit(5000)
+    : { data: [], error: null };
+  if (quotasError) throw new Error(quotasError.message);
+  const scheduledOfferIds = new Set(data.flatMap((offer) => {
+    const locationIds = new Set(offer.seller_offer_locations.map((location) => location.id));
+    return (upcomingQuotas ?? []).some((quota) => locationIds.has(quota.location_id)
+      && quota.offer_date >= offer.valid_from && quota.offer_date <= offer.valid_until
+      && (quota.offer_date > today || quota.ends_at > currentTime)) ? [offer.id] : [];
+  }));
+  data = data.filter((offer) => offer.fulfillment === "online" || scheduledOfferIds.has(offer.id));
   const [productUrls, availability] = await Promise.all([
     createProductMediaUrls(supabase, data.flatMap((offer) => offer.product_media_path ? [offer.product_media_path] : [])),
     data.length ? supabase.rpc("get_public_seller_offer_availability", { p_offer_ids: data.map((offer) => offer.id) }) : { data: [], error: null },
@@ -51,3 +66,11 @@ export async function getAvailableSellerOffers(supabase: SupabaseClient<Database
 }
 
 export type AvailableSellerOffer = Awaited<ReturnType<typeof getAvailableSellerOffers>>["offers"][number];
+
+export function formatOfferPrice(offer: Pick<AvailableSellerOffer, "offer_kind" | "discount_percent" | "points_cost">) {
+  const benefit = offer.offer_kind === "free_item" ? "Free item"
+    : offer.offer_kind === "meal" ? "Free meal"
+    : offer.offer_kind === "discount" && offer.discount_percent ? `${offer.discount_percent}% off`
+    : "Special offer";
+  return offer.points_cost > 0 ? `${benefit} · ${offer.points_cost.toLocaleString("en-GB")} points` : `${benefit} · No points needed`;
+}

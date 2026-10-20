@@ -1,8 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Gift, Sparkles, Tag } from "lucide-react";
-import type { AvailableSellerOffer } from "@/lib/seller/available-offers";
-import { formatNumber } from "@/lib/format";
+import { formatOfferPrice, type AvailableSellerOffer } from "@/lib/seller/available-offers";
 
 export function ProfileOffers({ offers, cityId, available, platformOfferCount }: { offers: AvailableSellerOffer[]; cityId: string | null; available: boolean; platformOfferCount?: number }) {
   return <section className="visitor-profile-offers" aria-labelledby="profile-offers-title">
@@ -20,7 +19,7 @@ export function ProfileOffers({ offers, cityId, available, platformOfferCount }:
           <h3>{audience === "reward" ? <Gift size={15} aria-hidden="true" /> : <Tag size={15} aria-hidden="true" />}{audience === "reward" ? "Exclusive rewards" : "Public offers"}</h3>
           {items.length ? <div className="visitor-profile-offer-items">{items.map((offer) => <Link className="visitor-profile-offer" key={offer.id} href={`/visitor/offers?view=${audience}#offer-${offer.id}`}>
             <div className="visitor-profile-offer-media">{offer.mediaDisplayUrl && (offer.media_type === "video" ? <video src={offer.mediaDisplayUrl} muted playsInline preload="metadata" aria-label={offer.title} /> : <Image src={offer.mediaDisplayUrl} alt={offer.title} fill sizes="72px" unoptimized />)}</div>
-            <div><strong>{offer.title}</strong><span>{offer.benefit_details}</span><small>{offer.points_cost > 0 ? `${formatNumber(offer.points_cost)} points` : "No points needed"}</small></div>
+            <div><strong>{offer.title}</strong><span>{offer.benefit_details}</span><small>{formatOfferPrice(offer)}</small></div>
             <ArrowRight size={15} aria-hidden="true" />
           </Link>)}</div> : <p>No {audience === "reward" ? "exclusive rewards" : "public offers"} in your city yet.</p>}
         </div>;

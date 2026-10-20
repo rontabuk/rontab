@@ -7,7 +7,7 @@ import { cancelSellerOfferCoupon, reportSellerVoucherIssue, reserveSellerOfferCo
 import { getVisitorAccount } from "@/lib/visitor/access";
 import { formatNumber } from "@/lib/format";
 import { isSellerOfferSchemaUnavailable } from "@/lib/seller/offer-schema";
-import { getAvailableSellerOffers, londonOfferDate } from "@/lib/seller/available-offers";
+import { formatOfferPrice, getAvailableSellerOffers, londonOfferDate } from "@/lib/seller/available-offers";
 import { getOfferAvailabilityVersion, getOfferBookingBlock } from "@/lib/seller/offer-policy";
 import { OfferAvailabilityProvider, OfferCapacity } from "@/components/visitor/OfferAvailability";
 import { groupBy } from "@/lib/collections";
@@ -149,7 +149,7 @@ export default async function VisitorOfferGalleryPage({
                   <h2>{offer.title}</h2>
                   <p>{offer.benefit_details}</p>
                   <p className="seller-offer-card-description">{offer.description}</p>
-                  <div className="seller-offer-card-points"><Ticket size={14} aria-hidden="true" />{offer.points_cost > 0 ? `${formatNumber(offer.points_cost)} points per voucher` : "No points needed"}</div>
+                  <div className="seller-offer-card-points"><Ticket size={14} aria-hidden="true" />{formatOfferPrice(offer)}{offer.points_cost > 0 && " per voucher"}</div>
                   <p>{formatOfferDate(offer.valid_from)} to {formatOfferDate(offer.valid_until)}</p>
                   <details className="seller-offer-card-terms"><summary>Terms and cancellation</summary><p>{offer.terms}</p></details>
                   {offer.fulfillment === "online" ? <div className="seller-offer-online">
