@@ -109,14 +109,7 @@ export default async function AdminSupportPage({
                   <p>{supportCase.description}</p>
                   <small>Reported {formatDateTime(supportCase.created_at)}</small>
                 </div>
-                <form className="admin-loyalty-support-action" action={updateMarketplaceSupportCase}>
-                  <input type="hidden" name="case_id" value={supportCase.case_id} />
-                  <label>Case status<select name="status" defaultValue={supportCase.status}>
-                    <option value="open">Open</option><option value="in_review">In review</option><option value="resolved">Resolved</option>
-                  </select></label>
-                  <label>Resolution note<textarea name="resolution_note" minLength={5} maxLength={1000} rows={3} defaultValue={supportCase.resolution_note ?? ""} placeholder="Required when resolving" /></label>
-                  <button className="admin-approve-button" type="submit">Save case</button>
-                </form>
+                <SupportCaseForm action={updateMarketplaceSupportCase} supportCase={supportCase} />
               </article>
             ))}
           </div>
@@ -142,15 +135,7 @@ export default async function AdminSupportPage({
                   <p>{supportCase.description}</p>
                   <small>Reported {formatDateTime(supportCase.created_at)}</small>
                 </div>
-                <form className="admin-loyalty-support-action" action={updateLoyaltyClaimSupportCase}>
-                  <input type="hidden" name="case_id" value={supportCase.case_id} />
-                  <input type="hidden" name="return_to" value="support" />
-                  <label>Case status<select name="status" defaultValue={supportCase.status}>
-                    <option value="open">Open</option><option value="in_review">In review</option><option value="resolved">Resolved</option>
-                  </select></label>
-                  <label>Resolution note<textarea name="resolution_note" minLength={5} maxLength={1000} rows={3} defaultValue={supportCase.resolution_note ?? ""} placeholder="Required when resolving" /></label>
-                  <button className="admin-approve-button" type="submit">Save case</button>
-                </form>
+                <SupportCaseForm action={updateLoyaltyClaimSupportCase} supportCase={supportCase} returnToSupport />
               </article>
             ))}
           </div>
@@ -177,15 +162,7 @@ export default async function AdminSupportPage({
                   <p>{supportCase.description}</p>
                   <small>Reported {formatDateTime(supportCase.created_at)}</small>
                 </div>
-                <form className="admin-loyalty-support-action" action={updateSellerVoucherSupportCase}>
-                  <input type="hidden" name="case_id" value={supportCase.case_id} />
-                  <input type="hidden" name="return_to" value="support" />
-                  <label>Case status<select name="status" defaultValue={supportCase.status}>
-                    <option value="open">Open</option><option value="in_review">In review</option><option value="resolved">Resolved</option>
-                  </select></label>
-                  <label>Resolution note<textarea name="resolution_note" minLength={5} maxLength={1000} rows={3} defaultValue={supportCase.resolution_note ?? ""} placeholder="Required when resolving" /></label>
-                  <button className="admin-approve-button" type="submit">Save case</button>
-                </form>
+                <SupportCaseForm action={updateSellerVoucherSupportCase} supportCase={supportCase} returnToSupport />
               </article>
             ))}
           </div>
@@ -193,5 +170,23 @@ export default async function AdminSupportPage({
         {!voucherUnavailable && <AdminListPagination path="/admin/support" filters={voucherFilters} page={voucherPage} totalPages={voucherPages} totalCount={voucherCount} pageSize={ADMIN_LIST_PAGE_SIZE} label="Voucher case" pageParam="voucherPage" />}
       </section>
     </main>
+  );
+}
+
+function SupportCaseForm({ action, supportCase, returnToSupport = false }: {
+  action: (formData: FormData) => Promise<void>;
+  supportCase: { case_id: string; status: string; resolution_note: string | null };
+  returnToSupport?: boolean;
+}) {
+  return (
+    <form className="admin-loyalty-support-action" action={action}>
+      <input type="hidden" name="case_id" value={supportCase.case_id} />
+      {returnToSupport && <input type="hidden" name="return_to" value="support" />}
+      <label>Case status<select name="status" defaultValue={supportCase.status}>
+        <option value="open">Open</option><option value="in_review">In review</option><option value="resolved">Resolved</option>
+      </select></label>
+      <label>Resolution note<textarea name="resolution_note" minLength={5} maxLength={1000} rows={3} defaultValue={supportCase.resolution_note ?? ""} placeholder="Required when resolving" /></label>
+      <button className="admin-approve-button" type="submit">Save case</button>
+    </form>
   );
 }
