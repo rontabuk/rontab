@@ -38,7 +38,7 @@ export function CreatorInfluenceSummary({ influence, showProgress = false }: { i
       )}
       <details className="creator-influence-definition">
         <summary>Qualification & badge levels</summary>
-        <p>One influence point per first-referred visitor with a verified email, an enabled market, and an earned product-visit point after attribution. Suspended accounts, sellers, admins, and self-referrals are excluded. Influence points are not spendable and are separate from personal and admin-granted creator points. Code attribution does not prove an external-platform conversion or guarantee sales.</p>
+        <p>One influence point per first-referred visitor with a verified email, an enabled market, and an earned product-visit point after attribution. Suspended accounts, sellers, creators, admins, and self-referrals are excluded. Influence points are a reputation measure only and are not spendable. Code attribution does not prove an external-platform conversion or guarantee sales.</p>
         <p>Bronze star: 100. Silver star: 500. Gold star: 1,000. Silver shield: 5,000. Gold shield: 10,000.</p>
       </details>
     </section>

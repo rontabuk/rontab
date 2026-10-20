@@ -3,8 +3,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { WorkspaceNavigation } from "@/components/WorkspaceNavigation";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
-import { getViewer } from "@/lib/auth/viewer";
-import { getCreatorWorkspaceLabel } from "@/lib/creator/workspace";
+import { BecomeCreatorDialog } from "@/components/visitor/BecomeCreatorDialog";
 import { getVisitorAccount } from "@/lib/visitor/access";
 import "./visitor.css";
 
@@ -15,22 +14,22 @@ const visitorLinks = [
   { href: "/visitor/support", label: "My reports" },
   { href: "/visitor/rewards", label: "Points & rewards" },
   { href: "/products", label: "Discover products" },
-  { href: "/visitor/creator", label: "Introduce yourself" },
-  { href: "/visitor/creator/opportunities", label: "Creator opportunities" },
   { href: "/visitor/fans", label: "I'm a fan of" },
   { href: "/visitor/shops-following", label: "Shops I follow" },
 ];
 
 async function ProtectedVisitorShell({ children }: { children: ReactNode }) {
-  const [{ user }, viewer] = await Promise.all([getVisitorAccount(), getViewer()]);
-  if (viewer.role !== "visitor") throw new Error("Visitor navigation is unavailable for this account.");
-  const creatorLabel = getCreatorWorkspaceLabel(viewer.creatorProfileStatus, viewer.creatorProfileIsPublic);
-  const creatorLinks = visitorLinks.map((link) => link.href === "/visitor/creator" ? { ...link, label: creatorLabel } : link);
+  const { user } = await getVisitorAccount();
 
   return (
     <WorkspaceShell
       sectionLabel="YOUR ACCOUNT"
-      navigation={<WorkspaceNavigation label="Account navigation" links={creatorLinks} />}
+      navigation={(
+        <>
+          <WorkspaceNavigation label="Account navigation" links={visitorLinks} />
+          <BecomeCreatorDialog />
+        </>
+      )}
       accountLabel={user.email ?? ""}
       signOutTo="/"
       hideMobileAccountDetails

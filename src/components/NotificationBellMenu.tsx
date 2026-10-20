@@ -9,7 +9,7 @@ import { useNotificationReads } from "@/lib/notifications/read-state";
 import type { SiteNotification } from "@/lib/notifications/feed";
 import { getNotificationChannel, type NotificationChannel } from "@/lib/notifications/channels";
 
-const icons = { welcome: Mail, "verify-email": MailWarning, announcement: Megaphone, "new-product": Sparkles, "loyalty-offer": Gift, "reward-result": BadgeCheck, "support-case": LifeBuoy, "collaboration-request": MessageSquareText, "creator-programme": MessageSquareText };
+const icons = { welcome: Mail, "verify-email": MailWarning, announcement: Megaphone, "new-product": Sparkles, "loyalty-offer": Gift, "reward-result": BadgeCheck, "support-case": LifeBuoy, "creator-programme": MessageSquareText };
 const soundChangedEvent = "rontab:notification-sound-changed";
 const volatileSoundPreferences = new Set<string>();
 

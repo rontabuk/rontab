@@ -6,7 +6,6 @@ const channels: Record<SiteNotification["kind"], NotificationChannel> = {
   announcement: "messages",
   "verify-email": "messages",
   "support-case": "messages",
-  "collaboration-request": "messages",
   "creator-programme": "messages",
   "reward-result": "messages",
   "new-product": "ads",

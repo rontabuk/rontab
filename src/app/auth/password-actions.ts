@@ -12,7 +12,7 @@ export async function requestPasswordReset(_state: PasswordFormState, formData: 
     return { error: "Enter a valid email address.", success: false };
   }
   const requestedReturn = String(formData.get("returnTo") ?? "");
-  const returnTo = requestedReturn === "/seller/login" || requestedReturn === "/admin/login" ? requestedReturn : "/account";
+  const returnTo = requestedReturn === "/seller/login" || requestedReturn === "/admin/login" || requestedReturn === "/creator/login" ? requestedReturn : "/account";
   try {
     const origin = (await headers()).get("origin");
     if (!origin) return { error: "We couldn't send the reset link. Please try again.", success: false };

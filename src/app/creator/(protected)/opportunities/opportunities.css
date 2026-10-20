@@ -83,3 +83,4 @@
   .creator-opportunity-summary-info { padding-left: 74px; }
   .creator-opportunity-detail-heading h1 { font-size: 29px; }
 }
+.creator-opportunity-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }

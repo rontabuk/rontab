@@ -11,7 +11,7 @@ export const instant = false;
 export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ returnTo?: string }> }) {
   await connection();
   const { returnTo: requestedReturn } = await searchParams;
-  const returnTo = requestedReturn === "/seller/login" || requestedReturn === "/admin/login" ? requestedReturn : "/account";
+  const returnTo = requestedReturn === "/seller/login" || requestedReturn === "/admin/login" || requestedReturn === "/creator/login" ? requestedReturn : "/account";
   const supabase = await createSupabaseServerClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) redirect(`/auth/forgot-password?expired=1&returnTo=${encodeURIComponent(returnTo)}`);

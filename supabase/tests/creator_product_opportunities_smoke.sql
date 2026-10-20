@@ -29,6 +29,10 @@ declare
 	result_creator_id uuid;
 	follow_result jsonb;
 	followed_shop_count bigint;
+	invite_opportunity_id uuid;
+	reviewer_role text;
+	rating_average numeric;
+	rating_count bigint;
 begin
 	begin
 		select city.city_id into first_city_id
@@ -110,7 +114,7 @@ begin
 		from public.get_creator_collaboration_notifications() notification
 		where notification.title = 'New creator opportunity'
 			and notification.body like '%Opportunity smoke product%'
-			and notification.href = '/visitor/creator/opportunities'
+			and notification.href = '/creator/opportunities'
 		order by notification.created_at desc
 		limit 1;
 		if opportunity_notification_id is null then
@@ -261,6 +265,159 @@ begin
 		if third_opportunity_id = second_opportunity_id then
 			raise exception 'A product can open another campaign after the prior campaign is closed.';
 		end if;
+		begin
+			perform public.seller_create_creator_product_opportunity(
+				product_id, 19, array['food'], true, '{}'::text[],
+				'Create one short product video and publish it on an approved social platform.', false, null, array['email']
+			);
+			raise exception 'Budgets below the platform minimum must be rejected.';
+		exception when invalid_parameter_value then
+			null;
+		end;
+
+		-- Delivery, revision, completion and two-way ratings on the awarded campaign.
+		begin
+			perform public.submit_product_opportunity_review(first_opportunity_id, 5, null);
+			raise exception 'Ratings must wait until the collaboration is completed.';
+		exception when object_not_in_prerequisite_state then
+			null;
+		end;
+		perform set_config('request.jwt.claim.sub', creator_one_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', creator_one_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		begin
+			perform public.creator_mark_product_opportunity_delivered(first_opportunity_id, 'https://example.invalid/not-selected', null);
+			raise exception 'Only the selected creator may deliver a promotion.';
+		exception when insufficient_privilege then
+			null;
+		end;
+		perform set_config('request.jwt.claim.sub', creator_two_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', creator_two_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		if not exists (select 1 from public.get_creator_collaboration_notifications() where title = 'Your offer was selected') then
+			raise exception 'The selected creator should be notified.';
+		end if;
+		begin
+			perform public.creator_mark_product_opportunity_delivered(first_opportunity_id, 'http://example.invalid/insecure', null);
+			raise exception 'Delivery links must use https.';
+		exception when invalid_parameter_value then
+			null;
+		end;
+		perform public.creator_mark_product_opportunity_delivered(first_opportunity_id, 'https://example.invalid/video', 'Posted on TikTok.');
+		if (select status from public.creator_product_opportunities where id = first_opportunity_id) <> 'delivered' then
+			raise exception 'Delivering should move the campaign to delivered.';
+		end if;
+
+		perform set_config('request.jwt.claim.sub', seller_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', seller_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		if not exists (select 1 from public.get_creator_collaboration_notifications() where title = 'Creator delivered your promotion') then
+			raise exception 'The seller should be notified of a delivery.';
+		end if;
+		begin
+			perform public.seller_review_product_opportunity_delivery(first_opportunity_id, 'revise', 'short');
+			raise exception 'Change requests need a meaningful note.';
+		exception when invalid_parameter_value then
+			null;
+		end;
+		perform public.seller_review_product_opportunity_delivery(first_opportunity_id, 'revise', 'Please add the product link to the caption.');
+		if (select status from public.creator_product_opportunities where id = first_opportunity_id) <> 'awarded'
+			or (select revision_note from public.creator_product_opportunities where id = first_opportunity_id) <> 'Please add the product link to the caption.' then
+			raise exception 'Requesting changes should return the campaign to the creator with the note.';
+		end if;
+
+		perform set_config('request.jwt.claim.sub', creator_two_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', creator_two_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		if not exists (select 1 from public.get_creator_collaboration_notifications() where title = 'Seller requested changes') then
+			raise exception 'The creator should be notified of requested changes.';
+		end if;
+		perform public.creator_mark_product_opportunity_delivered(first_opportunity_id, 'https://example.invalid/video-v2', null);
+
+		perform set_config('request.jwt.claim.sub', seller_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', seller_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		perform public.seller_review_product_opportunity_delivery(first_opportunity_id, 'complete', null);
+		if (select status from public.creator_product_opportunities where id = first_opportunity_id) <> 'completed'
+			or (select completed_at from public.creator_product_opportunities where id = first_opportunity_id) is null then
+			raise exception 'Confirming should complete the campaign.';
+		end if;
+		reviewer_role := public.submit_product_opportunity_review(first_opportunity_id, 5, 'Great content and on time.');
+		if reviewer_role <> 'seller' then raise exception 'The seller review role should be inferred.'; end if;
+		begin
+			perform public.submit_product_opportunity_review(first_opportunity_id, 4, null);
+			raise exception 'Each side may rate a collaboration only once.';
+		exception when unique_violation then
+			null;
+		end;
+
+		perform set_config('request.jwt.claim.sub', creator_two_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', creator_two_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		if not exists (select 1 from public.get_creator_collaboration_notifications() where title = 'Promotion marked complete') then
+			raise exception 'The creator should be notified of completion.';
+		end if;
+		reviewer_role := public.submit_product_opportunity_review(first_opportunity_id, 4, null);
+		if reviewer_role <> 'creator' then raise exception 'The creator review role should be inferred.'; end if;
+		if (select count(*) from public.creator_product_opportunity_reviews where opportunity_id = first_opportunity_id) <> 2 then
+			raise exception 'Both participants should be able to read both ratings.';
+		end if;
+
+		perform set_config('request.jwt.claim.sub', creator_one_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', creator_one_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		begin
+			perform public.submit_product_opportunity_review(first_opportunity_id, 1, null);
+			raise exception 'Non-selected creators must not rate the collaboration.';
+		exception when insufficient_privilege then
+			null;
+		end;
+		select average_rating, review_count into rating_average, rating_count from public.get_creator_opportunity_ratings(array[creator_two_id]);
+		if rating_average <> 5 or rating_count <> 1 then raise exception 'Creator rating summary is incorrect.'; end if;
+		select average_rating, review_count into rating_average, rating_count from public.get_seller_opportunity_ratings(array[seller_id]);
+		if rating_average <> 4 or rating_count <> 1 then raise exception 'Seller rating summary is incorrect.'; end if;
+
+		-- Private fixed-price invitation to one creator.
+		perform set_config('request.jwt.claim.sub', seller_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', seller_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		invite_opportunity_id := public.seller_create_creator_product_opportunity(
+			product_id, 50, '{}'::text[], true, '{}'::text[],
+			'Create one travel-themed product video for your audience on Instagram.', false, null, array['email'], false, creator_other_id
+		);
+		if (select target_specialties from public.creator_product_opportunities where id = invite_opportunity_id) <> array['travel'] then
+			raise exception 'Invitations should inherit the invited creator specialties.';
+		end if;
+		begin
+			perform public.seller_create_creator_product_opportunity(
+				product_id, 60, '{}'::text[], true, '{}'::text[],
+				'Create one travel-themed product video for your audience on Instagram.', false, null, array['email'], true, creator_other_id
+			);
+			raise exception 'A creator must not have two open invitations for the same product.';
+		exception when unique_violation then
+			null;
+		end;
+		perform set_config('request.jwt.claim.sub', creator_one_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', creator_one_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		if public.creator_can_view_product_opportunity(invite_opportunity_id) then
+			raise exception 'Invitations must stay private to the invited creator.';
+		end if;
+		perform set_config('request.jwt.claim.sub', creator_other_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', creator_other_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+		if not public.creator_can_view_product_opportunity(invite_opportunity_id)
+			or not exists (
+				select 1 from public.get_creator_collaboration_notifications()
+				where title = 'You were invited to promote a product'
+					and href = '/creator/opportunities/' || invite_opportunity_id::text
+			) then
+			raise exception 'The invited creator should see and be notified of the invitation.';
+		end if;
+		begin
+			perform public.creator_submit_product_opportunity_proposal(
+				invite_opportunity_id, 45, 'One travel-themed product video published on Instagram.', true, false, null
+			);
+			raise exception 'Fixed-price invitations must reject counter-offers.';
+		exception when invalid_parameter_value then
+			null;
+		end;
+		perform public.creator_submit_product_opportunity_proposal(
+			invite_opportunity_id, 50, 'One travel-themed product video published on Instagram.', true, false, null
+		);
+		perform set_config('request.jwt.claim.sub', seller_user::text, true);
+		perform set_config('request.jwt.claims', jsonb_build_object('sub', seller_user::text, 'role', 'authenticated', 'app_metadata', '{}'::jsonb)::text, true);
+
 		if not has_function_privilege('authenticated', 'public.creator_submit_product_opportunity_proposal(uuid,numeric,text,boolean,boolean,text)', 'EXECUTE')
 			or has_function_privilege('anon', 'public.creator_submit_product_opportunity_proposal(uuid,numeric,text,boolean,boolean,text)', 'EXECUTE')
 			or has_table_privilege('authenticated', 'public.creator_product_opportunity_proposals', 'INSERT') then
@@ -274,6 +431,6 @@ begin
 end;
 $$;
 
-select pass('creator product opportunities match audience and specialties, compare offers, and reveal chosen contacts only after selection');
+select pass('creator product opportunities support fixed prices, private invitations, delivery review, completion and two-way ratings, and reveal chosen contacts only after selection');
 select * from finish();
 rollback;

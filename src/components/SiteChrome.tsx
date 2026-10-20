@@ -9,7 +9,6 @@ import { MenuAccountLink } from "@/components/MenuAccountLink";
 import { informationPages } from "@/data/information";
 import { getViewer } from "@/lib/auth/viewer";
 import { formatNumber } from "@/lib/format";
-import { getCreatorWorkspaceLabel } from "@/lib/creator/workspace";
 
 export function SiteHeader({ showSiteName = false }: { showSiteName?: boolean }) {
   return (
@@ -29,6 +28,7 @@ function AccountLinksFallback({ bell = null }: { bell?: React.ReactNode }) {
   return (
     <HeaderActions accountHref="/account?next=%2Fvisitor" accountLabel="Sign in" bell={bell}>
       <Link href="/account?mode=register&next=%2Fvisitor">Create an account</Link>
+      <Link href="/creator/login">For creators</Link>
       <Link href="/seller/register">For sellers</Link>
     </HeaderActions>
   );
@@ -56,12 +56,21 @@ async function AccountLinks() {
     );
   }
 
+  if (viewer.role === "creator") {
+    return (
+      <HeaderActions accountHref="/creator" accountLabel="Creator studio" accountName={viewer.displayName} accountImage={viewer.avatarUrl} bell={bell}>
+        <Link href="/creator/opportunities">Product opportunities</Link>
+        {viewer.isPublic && viewer.slug && <Link href={`/creators/${viewer.slug}`}>My public profile</Link>}
+      </HeaderActions>
+    );
+  }
+
   if (viewer.role === "visitor") {
     return (
       <HeaderActions accountHref="/visitor" accountLabel="My account" accountName={viewer.displayName} accountImage={viewer.avatarUrl} points={viewer.points} bell={bell}>
-        <Link href="/visitor/creator">{getCreatorWorkspaceLabel(viewer.creatorProfileStatus, viewer.creatorProfileIsPublic)}</Link>
         <Link href="/visitor/offers">Offer gallery</Link>
         <Link href="/visitor/rewards">Points & rewards</Link>
+        <Link href="/visitor?becomeCreator=1">Become a creator</Link>
         <Link href="/seller/register">For sellers</Link>
       </HeaderActions>
     );

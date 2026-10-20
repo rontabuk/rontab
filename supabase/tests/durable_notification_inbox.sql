@@ -1,3 +1,5 @@
+begin;
+
 insert into auth.users (id, email, aud, role, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, email_confirmed_at)
 values
   ('a1000000-0000-4000-8000-000000000001', 'inbox-existing@example.test', 'authenticated', 'authenticated', '{}', '{}', now() - interval '120 days', now(), now()),
@@ -59,7 +61,7 @@ $$;
 
 reset role;
 insert into public.creator_notification_events (id, recipient_id, event_type, title, body, href)
-values ('c1000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000001', 'collaboration_request_received', 'Private collaboration', 'Only for the existing member', '/creators');
+values ('c1000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000001', 'creator_profile_approved', 'Private creator update', 'Only for the existing member', '/creators');
 set local role authenticated;
 do $$ begin
   assert not exists (select 1 from public.notification_events where notification_id = 'creator-event-c1000000-0000-4000-8000-000000000001'), 'Private events must not leak to another account';
@@ -90,3 +92,5 @@ do $$ begin
   assert not exists (select 1 from public.notification_events where notification_id = 'product-d1000000-0000-4000-8000-000000000001'), 'Future events must not be delivered early';
 end; $$;
 reset role;
+
+rollback;

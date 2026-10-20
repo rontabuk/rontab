@@ -2,7 +2,7 @@ export const adminAreas = [
   { href: "/admin/products", label: "Product review", description: "Review submissions and feature approved products." },
   { href: "/admin/sellers", label: "Sellers", description: "Approve shops, control visibility, and grant click credits." },
   { href: "/admin/seller-offers", label: "Offer review", description: "Review seller promotions, set points and daily quotas, and publish approved offers." },
-  { href: "/admin/creators", label: "Creator applications", description: "Review creator profiles, manage public visibility, and grant creator points." },
+  { href: "/admin/creators", label: "Creator applications", description: "Review independent creator accounts and manage their public visibility." },
   { href: "/admin/support", label: "Support cases", description: "Review product, seller, reward, and voucher reports." },
   { href: "/admin/visitors", label: "Visitors", description: "Review registered visitors and suspend or restore access." },
   { href: "/admin/rewards", label: "Loyalty & rewards", description: "Create offers, run draws, and record gift fulfilment." },

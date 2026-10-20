@@ -9,7 +9,7 @@ import { getCreatorInfluence } from "@/lib/creator/influence-server";
 import { creatorSpecialties } from "@/lib/creator/catalog";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import { getVisitorAccount } from "@/lib/visitor/access";
-import { followCreatorByCode, unfollowCreator } from "@/app/visitor/creator-actions";
+import { followCreatorByCode, unfollowCreator } from "@/app/visitor/fan-actions";
 import type { Database } from "@/lib/supabase/database.types";
 
 export const metadata: Metadata = { title: "I'm a fan of", robots: { index: false, follow: false } };

@@ -11,7 +11,7 @@ const service = createClient(url, serviceKey);
 const publicClient = createClient(url, anonKey);
 const suffix = randomUUID();
 const password = `LocalTest-${suffix}-Aa1!`;
-const ids = { visitor: null, fan: null, secondOwner: null, sellerUser: null, sellerProfile: null, admin: null, creator: null, creatorMedia: [], secondCreator: null, request: null, requests: [] };
+const ids = { visitor: null, ordinaryVisitor: null, fan: null, secondOwner: null, sellerUser: null, sellerProfile: null, admin: null, creator: null, creatorMedia: [], secondCreator: null };
 let failure;
 
 function throwOnError(result) {
@@ -31,7 +31,21 @@ try {
   const cities = throwOnError(await service.from("supported_cities").select("city_id,country_code").eq("country_code", enabledCountries[0].country_code).eq("is_enabled", true).order("city_id").limit(2));
   assert.equal(cities.length, 2, "local Supabase needs two enabled audience cities");
 
-  ids.visitor = await createAccount(`creator-test-${suffix}@example.com`);
+  ids.ordinaryVisitor = await createAccount(`creator-ordinary-${suffix}@example.com`);
+  const ordinaryVisitor = createClient(url, anonKey);
+  throwOnError(await ordinaryVisitor.auth.signInWithPassword({ email: `creator-ordinary-${suffix}@example.com`, password }));
+  const visitorApplication = await ordinaryVisitor.rpc("save_creator_application", {
+    p_display_name: "Visitor applicant",
+    p_bio: "I create useful local food and home content for an engaged community.",
+    p_specialties: ["food"],
+    p_platform_accounts: [{ platform: "instagram", handle: `visitor_${suffix.slice(0, 8)}`, profile_url: `https://www.instagram.com/visitor_${suffix.slice(0, 8)}/`, follower_count: 12000 }],
+    p_audience_city_id: cities[0].city_id,
+    p_portfolio_items: [],
+    p_public_profile_consent: true,
+  });
+  assert.equal(visitorApplication.error?.code, "42501", "visitor accounts cannot turn into creators; creators register separately");
+
+  ids.visitor = await createAccount(`creator-test-${suffix}@example.com`, { account_type: "creator" });
   const visitor = createClient(url, anonKey);
   throwOnError(await visitor.auth.signInWithPassword({ email: `creator-test-${suffix}@example.com`, password }));
 
@@ -41,7 +55,16 @@ try {
 
   const profileName = `Local Creator ${suffix.slice(0, 8)}`;
   const firstPlatformHandle = `creator_${suffix.slice(0, 8)}`;
-  throwOnError(await service.from("loyalty_accounts").upsert({ visitor_id: ids.visitor, points_balance: 125 }));
+  const tooFewFollowers = await visitor.rpc("save_creator_application", {
+    p_display_name: profileName,
+    p_bio: "I create useful local food and home content for an engaged community.",
+    p_specialties: ["food"],
+    p_platform_accounts: [{ platform: "instagram", handle: firstPlatformHandle, profile_url: `https://www.instagram.com/${firstPlatformHandle}/`, follower_count: 2999 }],
+    p_audience_city_id: cities[0].city_id,
+    p_portfolio_items: [],
+    p_public_profile_consent: true,
+  });
+  assert.equal(tooFewFollowers.error?.code, "22023", "creator applications need at least 3,000 total followers");
   const initial = throwOnError(await visitor.rpc("save_creator_application_with_audience_cities", {
     p_display_name: profileName,
     p_bio: "I create useful local food and home content for an engaged community.",
@@ -79,14 +102,13 @@ try {
   assert.ok(adminDraftMediaUrl.signedUrl, "administrators can inspect creator media before approval");
 
   const creatorOwner = throwOnError(await service.from("creator_profiles").select("owner_id").eq("id", ids.creator).single());
-  assert.equal(creatorOwner.owner_id, ids.visitor, "the creator profile is linked to the existing visitor account");
-  const visitorLoyalty = throwOnError(await service.from("loyalty_accounts").select("points_balance").eq("visitor_id", ids.visitor).single());
-  assert.equal(visitorLoyalty.points_balance, 125, "applying as a creator preserves visitor loyalty points");
-  const signedInVisitor = throwOnError(await visitor.auth.getUser());
-  assert.equal(signedInVisitor.user.id, ids.visitor, "applying as a creator keeps the existing sign-in identity");
+  assert.equal(creatorOwner.owner_id, ids.visitor, "the creator profile belongs to the standalone creator account");
 
   const hiddenBeforeApproval = throwOnError(await publicClient.from("creator_profiles").select("id").eq("id", ids.creator));
   assert.equal(hiddenBeforeApproval.length, 0, "unapproved applications must stay private");
+  const unverifiedApproval = await admin.rpc("admin_review_creator_profile", { p_creator_profile_id: ids.creator, p_decision: "approve", p_review_note: null });
+  assert.equal(unverifiedApproval.error?.code, "55000", "creators must confirm their email before approval");
+  throwOnError(await service.from("profiles").update({ email_verified_at: new Date().toISOString() }).eq("id", ids.visitor));
   throwOnError(await admin.rpc("admin_review_creator_profile", { p_creator_profile_id: ids.creator, p_decision: "approve", p_review_note: null }));
 
   const firstPublic = throwOnError(await publicClient.from("creator_profiles")
@@ -250,9 +272,10 @@ try {
   assert.equal(duplicateFollow.already_following, true);
   assert.equal(duplicateFollow.first_referral, false);
 
-  ids.secondOwner = await createAccount(`creator-second-${suffix}@example.com`);
+  ids.secondOwner = await createAccount(`creator-second-${suffix}@example.com`, { account_type: "creator" });
   const secondOwner = createClient(url, anonKey);
   throwOnError(await secondOwner.auth.signInWithPassword({ email: `creator-second-${suffix}@example.com`, password }));
+  throwOnError(await service.from("profiles").update({ email_verified_at: new Date().toISOString() }).eq("id", ids.secondOwner));
   const secondCreatorName = `Second Creator ${suffix.slice(0, 8)}`;
   const secondPlatformHandle = `second_${suffix.slice(0, 8)}`;
   const secondCreatorApplication = throwOnError(await secondOwner.rpc("save_creator_application", {
@@ -282,7 +305,7 @@ try {
   assert.equal(creatorFanStats[0].fan_count, 1);
   assert.equal(creatorFanStats[0].first_referral_count, 1);
   const selfFollow = await visitor.rpc("creator_follow_by_code", { p_code: creatorCodeResult.referral_code });
-  assert.equal(selfFollow.error?.code, "55000", "a creator cannot count themselves as a fan");
+  assert.equal(selfFollow.error?.code, "42501", "creator accounts cannot follow creators as fans");
 
   throwOnError(await secondOwner.rpc("creator_withdraw_public_profile"));
   const withdrawnPublicProfile = throwOnError(await publicClient.from("creator_profiles")
@@ -317,90 +340,45 @@ try {
   assert.equal(publicSellerProfile.shop_name, `Local Test Shop ${suffix.slice(0, 8)}`, "anonymous visitors can read the public shop identity");
   const seller = createClient(url, anonKey);
   throwOnError(await seller.auth.signInWithPassword({ email: `creator-seller-${suffix}@example.com`, password }));
-  ids.request = throwOnError(await seller.rpc("seller_create_creator_collaboration_request", {
-    p_creator_profile_id: ids.creator,
-    p_seller_profile_id: ids.sellerProfile,
-    p_title: "Local collaboration test",
-    p_brief: "We would like to feature your work in a local Rontab campaign and discuss a suitable format.",
-    p_proposed_compensation: "Product sample and agreed fee",
-  }));
-  ids.requests.push(ids.request);
-  const requestNotifications = throwOnError(await visitor.rpc("get_creator_collaboration_notifications"));
-  const requestNotification = requestNotifications.find((notification) => notification.title === "New collaboration request");
-  assert.ok(requestNotification, "creator receives a notification for a new collaboration request");
-  assert.match(requestNotification.notification_id, /^creator-event-[0-9a-f-]{36}$/);
-  assert.equal(requestNotification.href, "/visitor/creator#creator-collaboration-title");
-  const readNotifications = throwOnError(await visitor.rpc("mark_notification_items_read", { p_notification_ids: [requestNotification.notification_id] }));
-  assert.ok(readNotifications.includes(requestNotification.notification_id));
-  const incomingRequest = throwOnError(await visitor.from("creator_collaboration_requests")
-    .select("status,title").eq("id", ids.request).single());
-  assert.equal(incomingRequest.status, "pending");
   throwOnError(await admin.rpc("admin_review_creator_profile", {
     p_creator_profile_id: ids.creator,
     p_decision: "suspend",
-    p_review_note: "Pause collaboration responses during a safety review.",
+    p_review_note: "Pause creator activity during a safety review.",
   }));
   const suspendedCreatorNotifications = throwOnError(await visitor.rpc("get_creator_collaboration_notifications"));
-  assert.ok(suspendedCreatorNotifications.some((notification) => notification.title === "Creator profile suspended"));
-  const unavailableSellerNotifications = throwOnError(await seller.rpc("get_creator_collaboration_notifications"));
-  assert.ok(unavailableSellerNotifications.some((notification) => notification.title === "Creator profile is temporarily unavailable"));
-  const suspendedResponse = await visitor.rpc("creator_decide_collaboration_request", {
-    p_request_id: ids.request,
-    p_decision: "accept",
-    p_response: "This response must be blocked while the profile is suspended.",
-  });
-  assert.equal(suspendedResponse.error?.code, "55000", "suspended creators cannot respond to pending collaboration requests");
+  const suspensionNotification = suspendedCreatorNotifications.find((notification) => notification.title === "Creator profile suspended");
+  assert.ok(suspensionNotification, "creator is notified when the profile is suspended");
+  assert.match(suspensionNotification.notification_id, /^creator-event-[0-9a-f-]{36}$/);
+  const readNotifications = throwOnError(await visitor.rpc("mark_notification_items_read", { p_notification_ids: [suspensionNotification.notification_id] }));
+  assert.ok(readNotifications.includes(suspensionNotification.notification_id));
+  const sellerNotifications = throwOnError(await seller.rpc("get_creator_collaboration_notifications"));
+  assert.equal(sellerNotifications.some((notification) => notification.title === "Creator profile suspended"), false, "sellers do not receive creator review notifications");
   throwOnError(await admin.rpc("admin_review_creator_profile", {
     p_creator_profile_id: ids.creator,
     p_decision: "reinstate",
     p_review_note: null,
   }));
-  const restoredSellerNotifications = throwOnError(await seller.rpc("get_creator_collaboration_notifications"));
-  assert.ok(restoredSellerNotifications.some((notification) => notification.title === "Creator profile is available again"));
-  throwOnError(await visitor.rpc("creator_decide_collaboration_request", {
-    p_request_id: ids.request,
-    p_decision: "accept",
-    p_response: "Happy to discuss the campaign dates.",
-  }));
-  const sellerRequest = throwOnError(await seller.from("creator_collaboration_requests")
-    .select("status,creator_response").eq("id", ids.request).single());
-  assert.equal(sellerRequest.status, "accepted");
-  assert.equal(sellerRequest.creator_response, "Happy to discuss the campaign dates.");
-  const responseNotifications = throwOnError(await seller.rpc("get_creator_collaboration_notifications"));
-  assert.ok(responseNotifications.some((notification) => notification.title === "Creator accepted your request"));
-  const creatorNotificationsAfterResponse = throwOnError(await visitor.rpc("get_creator_collaboration_notifications"));
-  assert.ok(creatorNotificationsAfterResponse.some((notification) => notification.notification_id === requestNotification.notification_id), "the original request event remains after its status changes");
-  assert.equal(creatorNotificationsAfterResponse.some((notification) => notification.title === "Creator accepted your request"), false, "creators do not receive their own seller response notification");
   const sellerCannotReadDraft = throwOnError(await seller.from("creator_profiles")
     .select("display_name").eq("id", ids.creator));
   assert.equal(sellerCannotReadDraft.length, 0, "signed-in sellers cannot read creator application fields");
-
-  const withdrawnRequestId = throwOnError(await seller.rpc("seller_create_creator_collaboration_request", {
+  const removedCollaborationRequests = await seller.rpc("seller_create_creator_collaboration_request", {
     p_creator_profile_id: ids.creator,
     p_seller_profile_id: ids.sellerProfile,
-    p_title: "Request to withdraw",
-    p_brief: "This pending request is created only to verify seller withdrawal controls locally.",
+    p_title: "Removed workflow",
+    p_brief: "The direct collaboration request workflow was replaced by product opportunities.",
     p_proposed_compensation: "",
-  }));
-  ids.requests.push(withdrawnRequestId);
-  throwOnError(await seller.rpc("seller_withdraw_creator_collaboration_request", { p_request_id: withdrawnRequestId }));
-  const withdrawnRequest = throwOnError(await seller.from("creator_collaboration_requests")
-    .select("status").eq("id", withdrawnRequestId).single());
-  assert.equal(withdrawnRequest.status, "withdrawn");
-  const sellerWithdrawalNotifications = throwOnError(await visitor.rpc("get_creator_collaboration_notifications"));
-  assert.ok(sellerWithdrawalNotifications.some((notification) => notification.title === "Seller withdrew a collaboration request"));
+  });
+  assert.ok(removedCollaborationRequests.error, "the retired direct collaboration request RPC is no longer available");
 
-  console.log("PASS: creator lifecycle, private draft media and approval publication, durable review/collaboration notifications, correct recipient routing, notification read tracking, and existing profile/fan/collaboration workflows.");
+  console.log("PASS: creator lifecycle, private draft media and approval publication, durable review notifications, correct recipient routing, notification read tracking, and existing profile/fan workflows.");
 } catch (error) {
   failure = error;
 } finally {
-  if (ids.requests.length) await service.from("creator_collaboration_requests").delete().in("id", ids.requests);
   if (ids.creatorMedia.length) await service.storage.from("creator-profile-media").remove(ids.creatorMedia);
   const creatorIds = [ids.creator, ids.secondCreator].filter(Boolean);
   if (creatorIds.length) {
     await service.from("creator_first_referrals").delete().in("creator_profile_id", creatorIds);
     await service.from("creator_fans").delete().in("creator_profile_id", creatorIds);
-    await service.from("creator_point_transactions").delete().in("creator_profile_id", creatorIds);
     await service.from("creator_profiles").delete().in("id", creatorIds);
   }
   if (ids.admin) {
@@ -412,6 +390,7 @@ try {
   if (ids.fan) await service.auth.admin.deleteUser(ids.fan);
   if (ids.secondOwner) await service.auth.admin.deleteUser(ids.secondOwner);
   if (ids.visitor) await service.auth.admin.deleteUser(ids.visitor);
+  if (ids.ordinaryVisitor) await service.auth.admin.deleteUser(ids.ordinaryVisitor);
 }
 
 if (failure) throw failure;

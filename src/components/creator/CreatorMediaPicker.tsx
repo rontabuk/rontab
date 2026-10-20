@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { UserRound } from "lucide-react";
 
-export function CreatorMediaPicker({ kind, initialUrl }: { kind: "profile" | "cover"; initialUrl: string | null }) {
+export function CreatorMediaPicker({ kind, initialUrl, required = false }: { kind: "profile" | "cover"; initialUrl: string | null; required?: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const objectUrlRef = useRef<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState(initialUrl);
@@ -54,7 +54,7 @@ export function CreatorMediaPicker({ kind, initialUrl }: { kind: "profile" | "co
         </div>
       )}
       <label htmlFor={inputId}>Choose {label.toLowerCase()}</label>
-      <input ref={inputRef} id={inputId} name={isProfile ? "profile_image" : "cover_image"} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} />
+      <input ref={inputRef} id={inputId} name={isProfile ? "profile_image" : "cover_image"} type="file" accept="image/jpeg,image/png,image/webp" required={required} onChange={handleFileChange} />
       <small>JPEG, PNG, or WebP. Maximum 5 MB.</small>
       {(previewUrl || removeImage) && (
         <label className="creator-profile-remove-image">

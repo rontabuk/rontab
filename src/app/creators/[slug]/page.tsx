@@ -9,10 +9,11 @@ import { CreatorFanTools } from "@/components/creator/CreatorFanTools";
 import { CreatorVerificationBadge } from "@/components/creator/CreatorVerificationBadge";
 import { CreatorInfluenceSummary } from "@/components/creator/CreatorInfluence";
 import { getCreatorInfluence } from "@/lib/creator/influence-server";
-import { sendCreatorCollaborationRequest } from "@/app/seller/(protected)/creator-actions";
+import { inviteCreatorToProductOpportunity } from "@/app/seller/(protected)/creator-opportunity-actions";
+import { RatingSummary, opportunityStatusLabels } from "@/components/creator-opportunities/Collaboration";
 import { getViewer } from "@/lib/auth/viewer";
-import { creatorSpecialties } from "@/lib/creator/catalog";
-import { formatDate, formatDateTime, formatNumber } from "@/lib/format";
+import { MIN_CREATOR_OPPORTUNITY_BUDGET, creatorSpecialties } from "@/lib/creator/catalog";
+import { formatDate, formatNumber, formatPrice } from "@/lib/format";
 import { createSupabasePublicClient, createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const instant = false;
@@ -31,10 +32,10 @@ export default async function CreatorProfilePage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ request?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   await connection();
-  const [{ slug }, { request: requestResult }, viewer] = await Promise.all([params, searchParams, getViewer()]);
+  const [{ slug }, , viewer] = await Promise.all([params, searchParams, getViewer()]);
   const supabase = createSupabasePublicClient();
   const { data: profile, error: profileError } = await supabase
     .from("creator_profiles")
@@ -64,12 +65,15 @@ export default async function CreatorProfilePage({
     .order("platform");
   if (accountsError) throw new Error(accountsError.message);
 
-  const [portfolioResult, audienceCitiesResult, influenceById, publicPhoneResult] = await Promise.all([
+  const [portfolioResult, audienceCitiesResult, influenceById, publicPhoneResult, ratingResult] = await Promise.all([
     supabase.from("creator_portfolio_items").select("id,title,url,position").eq("creator_profile_id", profile.id).eq("is_published", true).order("position"),
     supabase.from("creator_profile_audience_cities").select("city_id").eq("creator_profile_id", profile.id).eq("is_published", true),
     getCreatorInfluence(supabase, [profile.id]),
     supabase.rpc("get_public_creator_contact_phone", { p_creator_profile_id: profile.id }),
+    supabase.rpc("get_creator_opportunity_ratings", { p_creator_profile_ids: [profile.id] }),
   ]);
+  if (ratingResult.error) throw new Error(ratingResult.error.message);
+  const rating = ratingResult.data?.[0];
   if (portfolioResult.error) throw new Error(portfolioResult.error.message);
   if (audienceCitiesResult.error) throw new Error(audienceCitiesResult.error.message);
   const influence = influenceById.get(profile.id);
@@ -90,24 +94,30 @@ export default async function CreatorProfilePage({
   if (audienceCityNamesError) throw new Error(audienceCityNamesError.message);
 
   let sellerProfile: { id: string; status: string } | null = null;
-  let sellerRequest: { id: string; status: string; created_at: string } | null = null;
+  let sellerProducts: { id: string; name: string; currency: string }[] = [];
+  let sellerInvites: { id: string; product_id: string; budget: number; currency: string; status: string; created_at: string }[] = [];
+  let canShareEmail = false;
+  let canSharePhone = false;
   if (viewer.role === "seller") {
     const sessionClient = await createSupabaseServerClient();
     const { data, error } = await sessionClient.from("seller_profiles").select("id,status").eq("user_id", viewer.userId).maybeSingle();
     if (error) throw new Error(error.message);
     sellerProfile = data;
     if (sellerProfile) {
-      const { data: requests, error: requestError } = await sessionClient
-        .from("creator_collaboration_requests")
-        .select("id,status,created_at")
-        .eq("creator_profile_id", profile.id)
-        .eq("seller_profile_id", sellerProfile.id)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      if (requestError) throw new Error(requestError.message);
-      sellerRequest = requests?.[0] ?? null;
+      const [productsResult, invitesResult, contactResult] = await Promise.all([
+        sessionClient.from("products").select("id,name,currency").eq("seller_profile_id", sellerProfile.id).eq("status", "approved").order("name").limit(200),
+        sessionClient.from("creator_product_opportunities").select("id,product_id,budget,currency,status,created_at")
+          .eq("seller_profile_id", sellerProfile.id).eq("invited_creator_profile_id", profile.id).order("created_at", { ascending: false }).limit(10),
+        sessionClient.from("seller_contact_details").select("registered_email,registered_email_confirmed_at,phone,phone_contact_confirmed_at").eq("seller_profile_id", sellerProfile.id).maybeSingle(),
+      ]);
+      for (const result of [productsResult, invitesResult, contactResult]) if (result.error) throw new Error(result.error.message);
+      sellerProducts = productsResult.data ?? [];
+      sellerInvites = invitesResult.data ?? [];
+      canShareEmail = Boolean(contactResult.data?.registered_email && contactResult.data.registered_email_confirmed_at);
+      canSharePhone = Boolean(contactResult.data?.phone && contactResult.data.phone_contact_confirmed_at);
     }
   }
+  const productNames = new Map(sellerProducts.map((product) => [product.id, product.name]));
 
   return (
     <main className="creator-public-profile">
@@ -136,6 +146,7 @@ export default async function CreatorProfilePage({
         {audienceCities.length > 0 && <p className="creator-profile-audience"><MapPin size={14} aria-hidden="true" />Audience: {audienceCities.map((city) => city.city_name).join(", ")}</p>}
         {publicPhoneResult.data && <a className="creator-profile-phone" href={`tel:${publicPhoneResult.data}`}><Phone size={14} aria-hidden="true" />{publicPhoneResult.data}</a>}
         <p className="creator-approved-mark"><BadgeCheck size={15} aria-hidden="true" />Profile reviewed by the team</p>
+        <RatingSummary average={rating?.average_rating} count={rating?.review_count} label="collaboration rating" />
         <CreatorInfluenceSummary influence={influence} />
         {profile.referral_code && <CreatorFanTools
           displayName={profile.published_display_name ?? "Creator"}
@@ -169,26 +180,38 @@ export default async function CreatorProfilePage({
           <ul>{portfolioResult.data.map((item) => <li key={item.id}><a href={item.url} target="_blank" rel="noreferrer">{item.title}<ExternalLink size={14} aria-hidden="true" /></a></li>)}</ul>
         </section>
       )}
-      {requestResult === "sent" && <p className="creator-request-feedback" role="status">Your collaboration request was sent privately to this creator.</p>}
       {viewer.role === "seller" && sellerProfile?.status === "active" && (
-        <section className="creator-collaboration-form-section" aria-labelledby="creator-collaboration-form-title">
-          <div className="creator-public-section-heading"><div><p className="creator-directory-eyebrow">SELLER COLLABORATION</p><h2 id="creator-collaboration-form-title">Send a private request</h2></div></div>
-          {sellerRequest?.status === "pending" ? (
-            <p className="creator-request-feedback" role="status">You sent a request on {formatDateTime(sellerRequest.created_at)}. Its status is {sellerRequest.status}.</p>
-          ) : (
-            <ActionForm className="creator-collaboration-form" action={sendCreatorCollaborationRequest}>
+        <section className="creator-collaboration-form-section" aria-labelledby="creator-invite-form-title">
+          <div className="creator-public-section-heading"><div><p className="creator-directory-eyebrow">SELLER COLLABORATION</p><h2 id="creator-invite-form-title">Invite this creator to promote a product</h2></div></div>
+          {sellerInvites.length > 0 && <ul className="creator-invite-history">{sellerInvites.map((invite) => (
+            <li key={invite.id}><Link href={`/seller/products/${invite.product_id}/creator-opportunity?opportunity=${invite.id}`}><strong>{productNames.get(invite.product_id) ?? "Product"}</strong><span>{formatPrice(invite.budget, invite.currency)}</span><span>{opportunityStatusLabels[invite.status] ?? invite.status}</span><small>{formatDate(invite.created_at)}</small></Link></li>
+          ))}</ul>}
+          {sellerProducts.length ? (
+            <ActionForm className="creator-collaboration-form" action={inviteCreatorToProductOpportunity}>
               <input type="hidden" name="creator_profile_id" value={profile.id} />
               <input type="hidden" name="creator_slug" value={profile.slug} />
-              <label>Request title<input name="title" minLength={3} maxLength={120} required /></label>
-              <label>Collaboration brief<textarea name="brief" minLength={30} maxLength={2000} rows={5} required /></label>
-              <label>Proposed compensation or product<input name="proposed_compensation" maxLength={500} /></label>
-              <small>Your shop contact details stay private unless you choose to share them in your message.</small>
-              <button className="creator-collaboration-submit" type="submit"><Send size={14} aria-hidden="true" />Send request</button>
+              <label>Product<select name="product_id" required defaultValue="">
+                <option value="" disabled>Choose an approved product</option>
+                {sellerProducts.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
+              </select></label>
+              <label>Promotion budget (GBP)<input name="budget" type="number" min={MIN_CREATOR_OPPORTUNITY_BUDGET} max="1000000" step="0.01" inputMode="decimal" required /><small>Minimum {formatPrice(MIN_CREATOR_OPPORTUNITY_BUDGET, "GBP")}. Payment is arranged directly with the creator.</small></label>
+              <label className="creator-collaboration-check"><input type="checkbox" name="allow_counter_offers" defaultChecked />Let the creator propose a different price</label>
+              <label>Campaign brief<textarea name="brief" minLength={30} maxLength={2000} rows={5} required placeholder="Describe the content, platform and key messages you want." /></label>
+              <label>Preferred completion date<input type="date" name="deadline" /></label>
+              <label className="creator-collaboration-check"><input type="checkbox" name="product_provided" />I will provide the product</label>
+              <fieldset className="creator-collaboration-contact">
+                <legend>Contact details shared only if you select their offer</legend>
+                <label className="creator-collaboration-check"><input type="checkbox" name="contact_method" value="email" defaultChecked={canShareEmail} disabled={!canShareEmail} />Email{!canShareEmail && " Â· verify your account email first"}</label>
+                <label className="creator-collaboration-check"><input type="checkbox" name="contact_method" value="phone" disabled={!canSharePhone} />Phone{!canSharePhone && " Â· verify your phone first"}</label>
+                {!canShareEmail && !canSharePhone && <Link href="/seller/profile">Add and verify your contact details</Link>}
+              </fieldset>
+              <small>Only this creator will see the invitation. They reply with an offer, and you choose whether to accept it.</small>
+              <button className="creator-collaboration-submit" type="submit"><Send size={14} aria-hidden="true" />Send invitation</button>
             </ActionForm>
-          )}
+          ) : <p className="creator-request-feedback">You need an approved live product before you can invite creators. <Link href="/seller/products">Manage products</Link></p>}
         </section>
       )}
-      {viewer.role !== "seller" && <p className="creator-directory-note creator-seller-invite">Sellers can <Link href="/seller/login">sign in</Link> to send a private collaboration request.</p>}
+      {viewer.role !== "seller" && <p className="creator-directory-note creator-seller-invite">Sellers can <Link href="/seller/login">sign in</Link> to invite this creator to promote a product.</p>}
       <p className="creator-directory-note">The team reviews creator applications. Social follower counts are supplied by creators and are not independently verified. Totals may include the same person on multiple platforms and exclude creator-code followers.</p>
     </main>
   );

@@ -4,10 +4,11 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { ArrowLeft, ArrowRight, ArrowUpRight, MapPin, Search } from "lucide-react";
 import { SellerVerificationBadge } from "@/components/seller/SellerVerificationBadge";
+import { opportunityStatusLabels } from "@/components/creator-opportunities/Collaboration";
 import { creatorSpecialties } from "@/lib/creator/catalog";
 import { formatNumber, formatPrice } from "@/lib/format";
 import { getSupportedLocations } from "@/lib/locations";
-import { getVisitorAccount } from "@/lib/visitor/access";
+import { getCreatorAccount } from "@/lib/creator/access";
 import { createProductMediaUrls } from "@/lib/supabase/storage";
 import "./opportunities.css";
 
@@ -20,16 +21,12 @@ export default async function CreatorOpportunitiesPage({
   searchParams: Promise<{ submitted?: string; withdrawn?: string; q?: string; specialty?: string; city?: string; sort?: string; page?: string }>;
 }) {
   await connection();
-  const [{ submitted, withdrawn, q: requestedQuery, specialty: requestedSpecialty, city: requestedCity, sort: requestedSort, page: requestedPage }, { supabase }, { cities }] = await Promise.all([
+  const [{ submitted, withdrawn, q: requestedQuery, specialty: requestedSpecialty, city: requestedCity, sort: requestedSort, page: requestedPage }, { supabase, creatorProfileId: profileId }, { cities }] = await Promise.all([
     searchParams,
-    getVisitorAccount("/visitor/creator/opportunities"),
+    getCreatorAccount(),
     getSupportedLocations(),
   ]);
-  const { data: profileId, error: profileIdError } = await supabase.rpc("get_my_creator_profile_id");
-  if (profileIdError) throw new Error(profileIdError.message);
-  const { data: creator, error: creatorError } = profileId
-    ? await supabase.from("creator_profiles").select("id,status,is_public").eq("id", profileId).maybeSingle()
-    : { data: null, error: null };
+  const { data: creator, error: creatorError } = await supabase.from("creator_profiles").select("id,status,is_public").eq("id", profileId).maybeSingle();
   if (creatorError) throw new Error(creatorError.message);
 
   let proposals: Awaited<ReturnType<typeof loadProposals>> = [];
@@ -98,7 +95,7 @@ export default async function CreatorOpportunitiesPage({
   }).sort((first, second) => {
     if (sort === "budget-high") return second.budget - first.budget || second.created_at.localeCompare(first.created_at);
     if (sort === "budget-low") return first.budget - second.budget || second.created_at.localeCompare(first.created_at);
-    return second.created_at.localeCompare(first.created_at);
+    return Number(Boolean(second.invited_creator_profile_id)) - Number(Boolean(first.invited_creator_profile_id)) || second.created_at.localeCompare(first.created_at);
   });
   const pageSize = 12;
   const pageCount = Math.max(1, Math.ceil(matchingOpportunities.length / pageSize));
@@ -110,11 +107,11 @@ export default async function CreatorOpportunitiesPage({
     if (query) params.set("q", query);
     if (specialty !== "all") params.set("specialty", specialty);
     if (city !== "all") params.set("city", city);
-    return `/visitor/creator/opportunities?${params}`;
+    return `/creator/opportunities?${params}`;
   }
 
   return (
-    <main className="admin-overview visitor-creator-page creator-opportunities-page">
+    <main className="admin-overview creator-studio-page creator-opportunities-page">
       <header className="admin-page-heading">
         <p className="admin-eyebrow">CREATOR PROGRAMME</p>
         <h1>Available product promotions</h1>
@@ -123,12 +120,12 @@ export default async function CreatorOpportunitiesPage({
       {submitted === "1" && <p className="admin-save-success" role="status">Your offer has been sent to the seller.</p>}
       {withdrawn === "1" && <p className="admin-save-success" role="status">Your pending offer was withdrawn.</p>}
       {!creator?.is_public || creator.status !== "approved" ? (
-        <div className="admin-empty-state"><h2>An approved creator profile is needed</h2><p>Publish your creator profile to see matching product promotions and send offers.</p><Link href="/visitor/creator">Manage creator profile<ArrowUpRight size={14} aria-hidden="true" /></Link></div>
+        <div className="admin-empty-state"><h2>An approved creator profile is needed</h2><p>Publish your creator profile to see matching product promotions and send offers.</p><Link href="/creator">Manage creator profile<ArrowUpRight size={14} aria-hidden="true" /></Link></div>
       ) : (
         <>
           <section className="creator-opportunity-discovery" aria-label="Promotion search and filters">
             <span role="status">{formatNumber(matchingOpportunities.length)} matching promotions</span>
-            <form className="creator-opportunity-search-filters" action="/visitor/creator/opportunities" method="get">
+            <form className="creator-opportunity-search-filters" action="/creator/opportunities" method="get">
               <label>Search<input name="q" type="search" maxLength={100} defaultValue={query} placeholder="Product or shop" /></label>
               <label>Specialty<select name="specialty" defaultValue={specialty}>
                 <option value="all">All specialties</option>
@@ -144,7 +141,7 @@ export default async function CreatorOpportunitiesPage({
                 <option value="budget-low">Lowest budget</option>
               </select></label>
               <button type="submit"><Search size={14} aria-hidden="true" />Apply</button>
-              {hasFilters && <Link href="/visitor/creator/opportunities">Clear</Link>}
+              {hasFilters && <Link href="/creator/opportunities">Clear</Link>}
             </form>
           </section>
           {pageOpportunities.length ? (
@@ -161,22 +158,24 @@ export default async function CreatorOpportunitiesPage({
                   <div>
                     <p className="creator-opportunity-category">{categoryNames.get(product.category_id) ?? "Product"}</p>
                     {seller && <Link className="creator-opportunity-seller-link" href={`/shops/${seller.slug}`}>{seller.shop_name}{sellerBadges.has(seller.id) && <SellerVerificationBadge isBlue={sellerBadges.get(seller.id)?.is_blue} />}<ArrowUpRight size={13} aria-hidden="true" /></Link>}
-                    <h2><Link href={`/visitor/creator/opportunities/${opportunity.id}`}>{product.name}</Link></h2>
+                    <h2><Link href={`/creator/opportunities/${opportunity.id}`}>{product.name}</Link></h2>
                     <p>{formatPrice(product.price, product.currency)}</p>
                   </div>
                 </div>
                 <div className="creator-opportunity-summary-info">
                   <p className="creator-opportunity-budget-line"><strong>{formatPrice(opportunity.budget, opportunity.currency)}</strong><span>Promotion budget</span></p>
-                  <p className="creator-opportunity-target-line"><MapPin size={14} aria-hidden="true" />{opportunity.is_nationwide ? "United Kingdom" : opportunity.target_city_ids.map((cityId) => cityNames.get(cityId)).filter(Boolean).join(", ")}</p>
+                  <p className="creator-opportunity-badges">{opportunity.invited_creator_profile_id && <span className="collaboration-badge">Private invitation</span>}<span className={`collaboration-badge${opportunity.allow_counter_offers ? "" : " is-fixed"}`}>{opportunity.allow_counter_offers ? "Open to your price" : "Fixed price"}</span></p>
+                  {!opportunity.invited_creator_profile_id && <p className="creator-opportunity-target-line"><MapPin size={14} aria-hidden="true" />{opportunity.is_nationwide ? "United Kingdom" : opportunity.target_city_ids.map((cityId) => cityNames.get(cityId)).filter(Boolean).join(", ")}</p>}
                   {proposal && <span className={`creator-opportunity-proposal-status is-${proposal.status}`}>{proposal.status.replaceAll("_", " ")}</span>}
-                  <Link className="creator-opportunity-detail-link" href={`/visitor/creator/opportunities/${opportunity.id}`}>View details<ArrowUpRight size={14} aria-hidden="true" /></Link>
+                  {proposal?.status === "selected" && <span className="creator-opportunity-target-line">{opportunityStatusLabels[opportunity.status] ?? opportunity.status}</span>}
+                  <Link className="creator-opportunity-detail-link" href={`/creator/opportunities/${opportunity.id}`}>View details<ArrowUpRight size={14} aria-hidden="true" /></Link>
                 </div>
               </article>
             );
           })}
             </div>
           ) : (
-            <div className="admin-empty-state"><h2>{hasFilters ? "No promotions match these filters" : "No matching promotions right now"}</h2><p>New opportunities appear when a seller&apos;s campaign matches your audience and specialties.</p>{hasFilters && <Link href="/visitor/creator/opportunities">Clear filters</Link>}</div>
+            <div className="admin-empty-state"><h2>{hasFilters ? "No promotions match these filters" : "No matching promotions right now"}</h2><p>New opportunities appear when a seller&apos;s campaign matches your audience and specialties.</p>{hasFilters && <Link href="/creator/opportunities">Clear filters</Link>}</div>
           )}
           {pageCount > 1 && <nav className="creator-opportunity-pagination" aria-label="Promotion pages">
             {page > 1 ? <Link href={pageHref(page - 1)}><ArrowLeft size={14} aria-hidden="true" />Previous</Link> : <span />}
@@ -190,7 +189,7 @@ export default async function CreatorOpportunitiesPage({
   );
 }
 
-async function loadProposals(supabase: Awaited<ReturnType<typeof getVisitorAccount>>["supabase"], creatorProfileId: string) {
+async function loadProposals(supabase: Awaited<ReturnType<typeof getCreatorAccount>>["supabase"], creatorProfileId: string) {
   const { data, error } = await supabase.from("creator_product_opportunity_proposals")
     .select("id,opportunity_id,amount,offer_details,status,share_email,share_phone,created_at")
     .eq("creator_profile_id", creatorProfileId).order("created_at", { ascending: false });
@@ -198,17 +197,17 @@ async function loadProposals(supabase: Awaited<ReturnType<typeof getVisitorAccou
   return data ?? [];
 }
 
-async function loadOpenOpportunities(supabase: Awaited<ReturnType<typeof getVisitorAccount>>["supabase"]) {
+async function loadOpenOpportunities(supabase: Awaited<ReturnType<typeof getCreatorAccount>>["supabase"]) {
   const { data, error } = await supabase.from("creator_product_opportunities")
-    .select("id,product_id,seller_profile_id,budget,currency,target_specialties,is_nationwide,target_city_ids,brief,product_provided,deadline,contact_methods,status,created_at")
+    .select("id,product_id,seller_profile_id,budget,currency,target_specialties,is_nationwide,target_city_ids,brief,product_provided,deadline,contact_methods,status,created_at,allow_counter_offers,invited_creator_profile_id")
     .eq("status", "open").order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data ?? [];
 }
 
-async function loadOpportunitiesById(supabase: Awaited<ReturnType<typeof getVisitorAccount>>["supabase"], opportunityIds: string[]) {
+async function loadOpportunitiesById(supabase: Awaited<ReturnType<typeof getCreatorAccount>>["supabase"], opportunityIds: string[]) {
   const { data, error } = await supabase.from("creator_product_opportunities")
-    .select("id,product_id,seller_profile_id,budget,currency,target_specialties,is_nationwide,target_city_ids,brief,product_provided,deadline,contact_methods,status,created_at")
+    .select("id,product_id,seller_profile_id,budget,currency,target_specialties,is_nationwide,target_city_ids,brief,product_provided,deadline,contact_methods,status,created_at,allow_counter_offers,invited_creator_profile_id")
     .in("id", opportunityIds);
   if (error) throw new Error(error.message);
   return data ?? [];

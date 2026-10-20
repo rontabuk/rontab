@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { connection } from "next/server";
-import { BadgeCheck, Coins, ExternalLink } from "lucide-react";
+import { BadgeCheck, ExternalLink } from "lucide-react";
 import { CreatorVerificationBadge } from "@/components/creator/CreatorVerificationBadge";
 import { CreatorInfluenceSummary } from "@/components/creator/CreatorInfluence";
 import { getCreatorInfluence } from "@/lib/creator/influence-server";
-import { grantCreatorPoints, reviewCreatorProfile } from "@/app/admin/(protected)/creator-actions";
+import { reviewCreatorProfile } from "@/app/admin/(protected)/creator-actions";
 import { requireAdmin } from "@/lib/admin/access";
 import { creatorSpecialties } from "@/lib/creator/catalog";
 import { formatDateTime, formatNumber } from "@/lib/format";
@@ -17,12 +17,12 @@ export const instant = false;
 export default async function AdminCreatorsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ reviewed?: string; granted?: string; duplicate?: string }>;
+  searchParams: Promise<{ reviewed?: string }>;
 }) {
   await connection();
-  const [{ reviewed, granted, duplicate }, { supabase }] = await Promise.all([searchParams, requireAdmin()]);
+  const [{ reviewed }, { supabase }] = await Promise.all([searchParams, requireAdmin()]);
   const [submittedResult, approvedResult, suspendedResult] = await Promise.all([
-    supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,published_display_name,published_bio,published_specialties,published_audience_city_id,profile_image_path,cover_image_path,published_profile_image_path,published_cover_image_path,created_at,updated_at").eq("status", "submitted").order("submitted_at", { ascending: true }),
+    supabase.from("creator_profiles").select("id,owner_id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,published_display_name,published_bio,published_specialties,published_audience_city_id,profile_image_path,cover_image_path,published_profile_image_path,published_cover_image_path,created_at,updated_at").eq("status", "submitted").order("submitted_at", { ascending: true }),
     supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,published_display_name,published_bio,published_specialties,published_audience_city_id,profile_image_path,cover_image_path,published_profile_image_path,published_cover_image_path,created_at,updated_at").eq("is_public", true).order("updated_at", { ascending: false }).limit(100),
     supabase.from("creator_profiles").select("id,display_name").eq("status", "suspended").order("updated_at", { ascending: false }),
   ]);
@@ -40,7 +40,7 @@ export default async function AdminCreatorsPage({
     profile.published_cover_image_path,
   ]).filter((path): path is string => Boolean(path)))];
   const cityIds = [...new Set([...submitted.map((profile) => profile.audience_city_id), ...approved.map((profile) => profile.published_audience_city_id)].filter((cityId): cityId is string => Boolean(cityId)))];
-  const [accountsResult, portfolioResult, citiesResult, reviewsResult, pointsResult] = await Promise.all([
+  const [accountsResult, portfolioResult, citiesResult, reviewsResult, ownerProfilesResult] = await Promise.all([
     allProfileIds.length
       ? supabase.from("creator_platform_accounts").select("id,creator_profile_id,platform,handle,profile_url,follower_count,followers_updated_at,is_published").in("creator_profile_id", allProfileIds).order("platform")
       : Promise.resolve({ data: [], error: null }),
@@ -53,13 +53,14 @@ export default async function AdminCreatorsPage({
     submitted.length
       ? supabase.from("creator_profile_reviews").select("creator_profile_id,review_note,created_at").in("creator_profile_id", submitted.map((profile) => profile.id)).order("created_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
-    approved.length
-      ? supabase.from("creator_point_accounts").select("creator_profile_id,points_balance").in("creator_profile_id", approved.map((profile) => profile.id))
+    submitted.length
+      ? supabase.from("profiles").select("id,email_verified_at").in("id", submitted.map((profile) => profile.owner_id))
       : Promise.resolve({ data: [], error: null }),
   ]);
-  for (const result of [accountsResult, portfolioResult, citiesResult, reviewsResult, pointsResult]) {
+  for (const result of [accountsResult, portfolioResult, citiesResult, reviewsResult, ownerProfilesResult]) {
     if (result.error) throw new Error(result.error.message);
   }
+  const verifiedOwnerIds = new Set((ownerProfilesResult.data ?? []).filter((owner) => owner.email_verified_at).map((owner) => owner.id));
   const { data: signedMedia, error: signedMediaError } = mediaPaths.length
     ? await supabase.storage.from("creator-profile-media").createSignedUrls(mediaPaths, 60 * 60)
     : { data: [], error: null };
@@ -75,7 +76,6 @@ export default async function AdminCreatorsPage({
   for (const review of reviewsResult.data ?? []) {
     if (!latestNotes.has(review.creator_profile_id)) latestNotes.set(review.creator_profile_id, review.review_note);
   }
-  const balances = new Map((pointsResult.data ?? []).map((account) => [account.creator_profile_id, account.points_balance]));
   const influenceById = await getCreatorInfluence(supabase, approved.map((profile) => profile.id));
   const citiesById = new Map((citiesResult.data ?? []).map((city) => [city.city_id, `${city.city_name}, ${city.country_code}`]));
   const specialtyLabel = (value: string) => creatorSpecialties.find((item) => item.value === value)?.label ?? value;
@@ -85,11 +85,9 @@ export default async function AdminCreatorsPage({
       <header className="admin-page-heading">
         <p className="admin-eyebrow">CREATOR PROGRAMME</p>
         <h1>Creator applications</h1>
-        <p>Review applications before profiles become visible. Creator points are separate from visitor loyalty points.</p>
+        <p>Review applications before profiles become visible. Creators use standalone accounts and confirm their email before approval.</p>
       </header>
       {reviewed === "1" && <p className="admin-save-success" role="status">Creator review decision saved.</p>}
-      {granted === "1" && <p className="admin-save-success" role="status">Creator points grant recorded.</p>}
-      {duplicate === "1" && <p className="admin-save-success" role="status">This points grant was already recorded and was not applied twice.</p>}
 
       <section className="admin-dashboard-section" aria-labelledby="creator-review-queue-title">
         <div className="admin-loyalty-list-heading">
@@ -105,6 +103,9 @@ export default async function AdminCreatorsPage({
                 <article className="creator-admin-item" key={profile.id}>
                   <div className="creator-admin-profile">
                     <div className="creator-admin-status"><span className="admin-status admin-status-pending">Submitted</span><time>{formatDateTime(profile.submitted_at)}</time></div>
+                    <small className={verifiedOwnerIds.has(profile.owner_id) ? "admin-email-confirmed" : "admin-email-unconfirmed"}>
+                      {verifiedOwnerIds.has(profile.owner_id) ? "Email confirmed" : "Email not confirmed yet — approval is blocked until the creator confirms it"}
+                    </small>
                     <h3>{profile.display_name}</h3>
                     {(profile.profile_image_path || profile.cover_image_path) && (
                       <div className="creator-admin-media-preview" aria-label="Submitted creator images">
@@ -183,14 +184,6 @@ export default async function AdminCreatorsPage({
                   <a href={`/creators/${profile.slug}`} target="_blank" rel="noreferrer">Open public profile <ExternalLink size={12} aria-hidden="true" /></a>
                 </div>
                 <div className="creator-admin-points">
-                  <p><Coins size={14} aria-hidden="true" />{formatNumber(balances.get(profile.id) ?? 0)} creator points</p>
-                  <form action={grantCreatorPoints}>
-                    <input type="hidden" name="creator_profile_id" value={profile.id} />
-                    <input type="hidden" name="idempotency_key" value={crypto.randomUUID()} />
-                    <label>Points<input name="points" type="number" min="1" max="100000" step="1" required /></label>
-                    <label>Reason<input name="reason" type="text" minLength={5} maxLength={500} required /></label>
-                    <button className="admin-approve-button" type="submit">Grant points</button>
-                  </form>
                   <form className="creator-admin-suspend" action={reviewCreatorProfile}>
                     <input type="hidden" name="creator_profile_id" value={profile.id} />
                     <input type="hidden" name="decision" value="suspend" />

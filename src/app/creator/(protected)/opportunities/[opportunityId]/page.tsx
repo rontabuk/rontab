@@ -6,11 +6,12 @@ import { connection } from "next/server";
 import { ArrowLeft, ArrowUpRight, CalendarDays, MapPin, PackageCheck, Send, UsersRound } from "lucide-react";
 import { ActionForm } from "@/components/ActionForm";
 import { SellerVerificationBadge } from "@/components/seller/SellerVerificationBadge";
-import { submitCreatorProductOpportunityProposal, withdrawCreatorProductOpportunityProposal } from "@/app/visitor/creator-opportunity-actions";
+import { CollaborationProgress, CollaborationRatingForm, CollaborationReviews, RatingSummary } from "@/components/creator-opportunities/Collaboration";
+import { markCreatorProductOpportunityDelivered, rateSellerForProductOpportunity, submitCreatorProductOpportunityProposal, withdrawCreatorProductOpportunityProposal } from "@/app/creator/(protected)/opportunity-actions";
 import { creatorSpecialties } from "@/lib/creator/catalog";
 import { formatDate, formatPrice } from "@/lib/format";
 import { getSupportedLocations } from "@/lib/locations";
-import { getVisitorAccount } from "@/lib/visitor/access";
+import { getCreatorAccount } from "@/lib/creator/access";
 import { isUuid } from "@/lib/validation";
 import { createProductMediaUrls } from "@/lib/supabase/storage";
 import "../opportunities.css";
@@ -23,22 +24,18 @@ export default async function CreatorOpportunityDetailPage({
   searchParams,
 }: {
   params: Promise<{ opportunityId: string }>;
-  searchParams: Promise<{ submitted?: string; withdrawn?: string }>;
+  searchParams: Promise<{ submitted?: string; withdrawn?: string; delivered?: string; rated?: string }>;
 }) {
   await connection();
-  const [{ opportunityId }, { submitted, withdrawn }, { supabase }, { cities }] = await Promise.all([
+  const [{ opportunityId }, { submitted, withdrawn, delivered, rated }, { supabase, creatorProfileId: profileId }, { cities }] = await Promise.all([
     params,
     searchParams,
-    getVisitorAccount("/visitor/creator/opportunities"),
+    getCreatorAccount(),
     getSupportedLocations(),
   ]);
   if (!isUuid(opportunityId)) notFound();
 
-  const { data: profileId, error: profileIdError } = await supabase.rpc("get_my_creator_profile_id");
-  if (profileIdError) throw new Error(profileIdError.message);
-  const { data: creator, error: creatorError } = profileId
-    ? await supabase.from("creator_profiles").select("id,status,is_public").eq("id", profileId).maybeSingle()
-    : { data: null, error: null };
+  const { data: creator, error: creatorError } = await supabase.from("creator_profiles").select("id,status,is_public").eq("id", profileId).maybeSingle();
   if (creatorError) throw new Error(creatorError.message);
 
   let opportunity: {
@@ -55,6 +52,13 @@ export default async function CreatorOpportunityDetailPage({
     deadline: string | null;
     contact_methods: string[];
     status: string;
+    allow_counter_offers: boolean;
+    invited_creator_profile_id: string | null;
+    delivery_url: string | null;
+    delivery_note: string | null;
+    revision_note: string | null;
+    delivered_at: string | null;
+    completed_at: string | null;
   } | null = null;
   let proposal: {
     id: string;
@@ -68,7 +72,7 @@ export default async function CreatorOpportunityDetailPage({
   if (creator?.is_public && creator.status === "approved") {
     const [{ data, error }, { data: proposalData, error: proposalError }] = await Promise.all([
       supabase.from("creator_product_opportunities")
-        .select("id,product_id,seller_profile_id,budget,currency,target_specialties,is_nationwide,target_city_ids,brief,product_provided,deadline,contact_methods,status")
+        .select("id,product_id,seller_profile_id,budget,currency,target_specialties,is_nationwide,target_city_ids,brief,product_provided,deadline,contact_methods,status,allow_counter_offers,invited_creator_profile_id,delivery_url,delivery_note,revision_note,delivered_at,completed_at")
         .eq("id", opportunityId).maybeSingle(),
       supabase.from("creator_product_opportunity_proposals")
         .select("id,amount,offer_details,status,share_email,share_phone")
@@ -85,9 +89,9 @@ export default async function CreatorOpportunityDetailPage({
   if (!opportunity) {
     if (!creator?.is_public || creator.status !== "approved") {
       return (
-        <main className="admin-overview visitor-creator-page creator-opportunities-page">
-          <Link className="creator-opportunity-back" href="/visitor/creator/opportunities"><ArrowLeft size={14} aria-hidden="true" />All promotions</Link>
-          <div className="admin-empty-state"><h1>An approved creator profile is needed</h1><p>Publish your creator profile to view matching product promotions.</p><Link href="/visitor/creator">Manage creator profile<ArrowUpRight size={14} aria-hidden="true" /></Link></div>
+        <main className="admin-overview creator-studio-page creator-opportunities-page">
+          <Link className="creator-opportunity-back" href="/creator/opportunities"><ArrowLeft size={14} aria-hidden="true" />All promotions</Link>
+          <div className="admin-empty-state"><h1>An approved creator profile is needed</h1><p>Publish your creator profile to view matching product promotions.</p><Link href="/creator">Manage creator profile<ArrowUpRight size={14} aria-hidden="true" /></Link></div>
         </main>
       );
     }
@@ -107,14 +111,25 @@ export default async function CreatorOpportunityDetailPage({
   }
   if (!product || !seller) notFound();
 
-  const [{ data: category, error: categoryError }, { data: contact, error: contactError }] = await Promise.all([
+  const isSelected = proposal?.status === "selected";
+  const [{ data: category, error: categoryError }, { data: contact, error: contactError }, { data: sellerRatings, error: sellerRatingsError }, { data: reviews, error: reviewsError }] = await Promise.all([
     supabase.from("categories").select("name").eq("id", product.category_id).maybeSingle(),
-    proposal?.status === "selected"
+    isSelected && proposal
       ? supabase.rpc("get_creator_product_opportunity_contact", { p_proposal_id: proposal.id })
+      : Promise.resolve({ data: [], error: null }),
+    supabase.rpc("get_seller_opportunity_ratings", { p_seller_profile_ids: [opportunity.seller_profile_id] }),
+    isSelected && opportunity.status === "completed"
+      ? supabase.from("creator_product_opportunity_reviews").select("reviewer_role,rating,comment,created_at").eq("opportunity_id", opportunity.id).order("created_at")
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (categoryError) throw new Error(categoryError.message);
   if (contactError) throw new Error(contactError.message);
+  if (sellerRatingsError) throw new Error(sellerRatingsError.message);
+  if (reviewsError) throw new Error(reviewsError.message);
+  const sellerRating = sellerRatings?.[0];
+  const collaborationReviews = reviews ?? [];
+  const creatorHasRated = collaborationReviews.some((review) => review.reviewer_role === "creator");
+  const isInvited = opportunity.invited_creator_profile_id === creator.id;
 
   const media = [...(images ?? [])].sort((first, second) => Number(second.media_type === "video") - Number(first.media_type === "video"))[0];
   const mediaUrls = await createProductMediaUrls(supabase, media ? [media.storage_path] : []);
@@ -125,14 +140,16 @@ export default async function CreatorOpportunityDetailPage({
   const selectedContact = contact?.[0] ?? null;
 
   return (
-    <main className="admin-overview visitor-creator-page creator-opportunities-page creator-opportunity-detail-page">
-      <Link className="creator-opportunity-back" href="/visitor/creator/opportunities"><ArrowLeft size={14} aria-hidden="true" />All promotions</Link>
+    <main className="admin-overview creator-studio-page creator-opportunities-page creator-opportunity-detail-page">
+      <Link className="creator-opportunity-back" href="/creator/opportunities"><ArrowLeft size={14} aria-hidden="true" />All promotions</Link>
       {submitted === "1" && <p className="admin-save-success" role="status">Your offer was sent to the seller.</p>}
       {withdrawn === "1" && <p className="admin-save-success" role="status">Your pending offer was withdrawn.</p>}
+      {delivered === "1" && <p className="admin-save-success" role="status">Delivery sent. The seller will review it.</p>}
+      {rated === "1" && <p className="admin-save-success" role="status">Thank you. Your rating was saved.</p>}
       <header className="creator-opportunity-detail-heading">
         <p className="admin-eyebrow">{category?.name ?? "Product promotion"}</p>
         <h1>{product.name}</h1>
-        <p>{seller.shop_name} {sellerBadge}</p>
+        <p>{seller.shop_name} {sellerBadge} <RatingSummary average={sellerRating?.average_rating} count={sellerRating?.review_count} label="seller rating" /></p>
       </header>
 
       <section className="creator-opportunity-detail-product">
@@ -147,23 +164,43 @@ export default async function CreatorOpportunityDetailPage({
       </section>
 
       <section className="creator-opportunity-detail-terms" aria-labelledby="promotion-details-title">
-        <div className="creator-opportunity-budget-line"><strong>{formatPrice(opportunity.budget, opportunity.currency)}</strong><span>Promotion budget</span></div>
+        <div className="creator-opportunity-budget-line"><strong>{formatPrice(opportunity.budget, opportunity.currency)}</strong><span>Promotion budget</span>{isInvited && <span className="collaboration-badge">Private invitation for you</span>}<span className={`collaboration-badge${opportunity.allow_counter_offers ? "" : " is-fixed"}`}>{opportunity.allow_counter_offers ? "You can propose your own price" : "Fixed price"}</span></div>
         <h2 id="promotion-details-title">Campaign details</h2>
         <p className="creator-opportunity-target-line">Seller will share: {opportunity.contact_methods.map((method) => method === "email" ? "Email" : "Phone").join(" or ")}</p>
-        <p className="creator-opportunity-target-line"><UsersRound size={14} aria-hidden="true" />{opportunity.target_specialties.map((specialty) => creatorSpecialties.find((item) => item.value === specialty)?.label ?? specialty).join(", ")}</p>
-        <p className="creator-opportunity-target-line"><MapPin size={14} aria-hidden="true" />{opportunity.is_nationwide ? "United Kingdom" : opportunity.target_city_ids.map((cityId) => cityNames.get(cityId)).filter(Boolean).join(", ")}</p>
+        {!isInvited && <p className="creator-opportunity-target-line"><UsersRound size={14} aria-hidden="true" />{opportunity.target_specialties.map((specialty) => creatorSpecialties.find((item) => item.value === specialty)?.label ?? specialty).join(", ")}</p>}
+        {!isInvited && <p className="creator-opportunity-target-line"><MapPin size={14} aria-hidden="true" />{opportunity.is_nationwide ? "United Kingdom" : opportunity.target_city_ids.map((cityId) => cityNames.get(cityId)).filter(Boolean).join(", ")}</p>}
         {opportunity.deadline && <p className="creator-opportunity-target-line"><CalendarDays size={14} aria-hidden="true" />Preferred completion: {formatDate(opportunity.deadline)}</p>}
         {opportunity.product_provided && <p className="creator-opportunity-target-line"><PackageCheck size={14} aria-hidden="true" />Seller plans to provide the product</p>}
         <p className="creator-opportunity-brief">{opportunity.brief}</p>
       </section>
 
-      {proposal?.status === "selected" && <div className="creator-opportunity-result is-selected"><strong>Your offer was selected</strong><p>Contact the seller to agree payment and delivery directly.</p>{selectedContact?.email && <a href={`mailto:${selectedContact.email}`}>{selectedContact.email}</a>}{selectedContact?.phone && <a href={`tel:${selectedContact.phone}`}>{selectedContact.phone}</a>}</div>}
+      {isSelected && <CollaborationProgress status={opportunity.status} />}
+      {isSelected && <div className="creator-opportunity-result is-selected"><strong>Your offer was selected</strong><p>Contact the seller to agree payment and delivery directly.</p>{selectedContact?.email && <a href={`mailto:${selectedContact.email}`}>{selectedContact.email}</a>}{selectedContact?.phone && <a href={`tel:${selectedContact.phone}`}>{selectedContact.phone}</a>}</div>}
+      {isSelected && opportunity.status === "awarded" && <section className={`collaboration-panel${opportunity.revision_note ? " is-attention" : ""}`} aria-labelledby="delivery-title">
+        <h2 id="delivery-title">{opportunity.revision_note ? "The seller requested changes" : "Deliver the promotion"}</h2>
+        {opportunity.revision_note && <p>{opportunity.revision_note}</p>}
+        <ActionForm className="creator-opportunity-offer-form" action={markCreatorProductOpportunityDelivered}>
+          <input type="hidden" name="opportunity_id" value={opportunity.id} />
+          <label>Link to the published content<input name="delivery_url" type="url" pattern="https://.*" maxLength={500} required defaultValue={opportunity.delivery_url ?? ""} placeholder="https://" /></label>
+          <label>Note for the seller (optional)<textarea name="delivery_note" maxLength={1000} rows={3} defaultValue={opportunity.delivery_note ?? ""} /></label>
+          <button type="submit"><Send size={14} aria-hidden="true" />Send delivery</button>
+        </ActionForm>
+      </section>}
+      {isSelected && opportunity.status === "delivered" && <section className="collaboration-panel"><h2>Delivery sent</h2><p>The seller is reviewing your delivery{opportunity.delivered_at ? ` sent ${formatDate(opportunity.delivered_at)}` : ""}.</p>{opportunity.delivery_url && <a href={opportunity.delivery_url} target="_blank" rel="noreferrer">Open published content<ArrowUpRight size={14} aria-hidden="true" /></a>}</section>}
+      {isSelected && opportunity.status === "completed" && <section className="collaboration-panel" aria-labelledby="completed-title">
+        <h2 id="completed-title">Collaboration completed</h2>
+        {opportunity.completed_at && <p>The seller confirmed completion on {formatDate(opportunity.completed_at)}.</p>}
+        <CollaborationReviews reviews={collaborationReviews} />
+        {!creatorHasRated && <CollaborationRatingForm action={rateSellerForProductOpportunity} title="Rate this seller" hiddenFields={{ opportunity_id: opportunity.id }} />}
+      </section>}
       {proposal?.status === "not_selected" && <p className="creator-opportunity-result">The seller selected another offer.</p>}
       {proposal?.status === "pending" && <div className="creator-opportunity-result"><strong>Your offer: {formatPrice(proposal.amount, opportunity.currency)}</strong><p>The seller is reviewing your offer.</p><p>{proposal.offer_details}</p><form action={withdrawCreatorProductOpportunityProposal}><input type="hidden" name="proposal_id" value={proposal.id} /><button type="submit">Withdraw offer</button></form></div>}
       {!proposal && opportunity.status === "open" && <ActionForm className="creator-opportunity-offer-form creator-opportunity-detail-form" action={submitCreatorProductOpportunityProposal}>
         <input type="hidden" name="opportunity_id" value={opportunity.id} />
         <h2>Send your offer</h2>
-        <label>Your offer amount ({opportunity.currency})<input name="amount" type="number" min="0.01" max="1000000" step="0.01" inputMode="decimal" required /></label>
+        {opportunity.allow_counter_offers
+          ? <label>Your offer amount ({opportunity.currency})<input name="amount" type="number" min="0.01" max="1000000" step="0.01" inputMode="decimal" defaultValue={opportunity.budget} required /></label>
+          : <label>Fixed promotion fee ({opportunity.currency})<input name="amount" type="number" value={opportunity.budget} readOnly /><small>The seller set a fixed price for this promotion.</small></label>}
         <label>What you will deliver<textarea name="offer_details" minLength={30} maxLength={2000} rows={5} required placeholder="Describe the platform, content format, and what is included in your price." /></label>
         <fieldset><legend>Contact details shared only if selected</legend><label><input type="checkbox" name="share_email" />Share my confirmed account email</label><label><input type="checkbox" name="share_phone" />Share my phone number</label><input name="contact_phone" type="tel" maxLength={32} defaultValue={creatorContact?.phone ?? ""} placeholder="Add a phone in your creator profile" /></fieldset>
         <p>Payment is agreed directly with the seller. The platform does not collect campaign payments.</p>

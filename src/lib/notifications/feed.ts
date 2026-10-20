@@ -8,7 +8,7 @@ import type { NotificationChannel } from "@/lib/notifications/channels";
 
 export type SiteNotification = {
   id: string;
-  kind: "welcome" | "verify-email" | "announcement" | "new-product" | "loyalty-offer" | "reward-result" | "support-case" | "collaboration-request" | "creator-programme";
+  kind: "welcome" | "verify-email" | "announcement" | "new-product" | "loyalty-offer" | "reward-result" | "support-case" | "creator-programme";
   title: string;
   body: string;
   href: string | null;
@@ -118,7 +118,7 @@ export const getNotificationFeed = cache(async (): Promise<NotificationFeed> => 
     viewer.role === "visitor" && viewer.emailVerifiedAt
       ? supabase.rpc("get_visitor_marketplace_support_notifications")
       : Promise.resolve({ data: null, error: null }),
-    (viewer.role === "visitor" || viewer.role === "seller")
+    (viewer.role === "creator" || viewer.role === "seller")
       ? supabase.rpc("get_creator_collaboration_notifications")
       : Promise.resolve({ data: null, error: null }),
   ]);
@@ -126,7 +126,7 @@ export const getNotificationFeed = cache(async (): Promise<NotificationFeed> => 
   const announcementAudience = viewer.role === "admin" ? null
     : viewer.role === "seller" ? "sellers"
       : viewer.role === "visitor" ? "visitors"
-        : "guest";
+        : "everyone";
   const visibleAnnouncements = (announcements.data ?? []).filter((item) =>
     viewer.role === "admin" || item.audience === "everyone" || item.audience === announcementAudience
   );

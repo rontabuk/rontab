@@ -9,6 +9,6 @@ export const instant = false;
 export default async function ForgotPasswordPage({ searchParams }: { searchParams: Promise<{ returnTo?: string; expired?: string }> }) {
   await connection();
   const { returnTo: requestedReturn, expired } = await searchParams;
-  const returnTo = requestedReturn === "/seller/login" || requestedReturn === "/admin/login" ? requestedReturn : "/account";
+  const returnTo = requestedReturn === "/seller/login" || requestedReturn === "/admin/login" || requestedReturn === "/creator/login" ? requestedReturn : "/account";
   return <PasswordRecoveryForm mode="request" returnTo={returnTo} expired={expired === "1"} />;
 }

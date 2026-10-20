@@ -2,7 +2,6 @@ import { adminAreas } from "@/lib/admin/areas";
 import { getViewer } from "@/lib/auth/viewer";
 import { formatNumber } from "@/lib/format";
 import { getNotificationFeed } from "@/lib/notifications/feed";
-import { getCreatorWorkspaceLabel } from "@/lib/creator/workspace";
 import { MobileBottomNavBar, type MobileNavConfig } from "@/components/MobileBottomNavBar";
 
 const guestNav: MobileNavConfig = {
@@ -15,6 +14,7 @@ const guestNav: MobileNavConfig = {
   menuLinks: [
     { href: "/account?next=%2Fvisitor", label: "Sign in" },
     { href: "/account?mode=register&next=%2Fvisitor", label: "Create a free account" },
+    { href: "/creator/login", label: "For creators" },
     { href: "/seller/register", label: "Open your shop" },
   ],
 };
@@ -28,8 +28,6 @@ export async function MobileBottomNav() {
       if (item.kind !== "loyalty-offer" || feed.readIds.includes(item.id)) return false;
       return !feed.lastSeenAt || Date.parse(item.createdAt) > Date.parse(feed.lastSeenAt);
     }).length;
-    const creatorIsPublic = viewer.creatorProfileIsPublic;
-    const creatorLabel = getCreatorWorkspaceLabel(viewer.creatorProfileStatus, creatorIsPublic);
     return (
       <MobileBottomNavBar
         notifications={feed}
@@ -50,14 +48,37 @@ export async function MobileBottomNav() {
           ],
           menuLinks: [
             { href: "/visitor", label: "My account" },
-            { href: "/visitor/creator", label: creatorLabel },
-            { href: "/visitor/creator/opportunities", label: "Creator opportunities" },
             { href: "/visitor/fans", label: "I'm a fan of" },
             { href: "/visitor/shops-following", label: "Shops I follow" },
             { href: "/visitor/offers?view=vouchers", label: "My vouchers" },
+            { href: "/visitor?becomeCreator=1", label: "Become a creator" },
             { href: "/seller/register", label: "Open your shop" },
           ],
           signOutTo: "/",
+        }}
+      />
+    );
+  }
+
+  if (viewer.role === "creator") {
+    return (
+      <MobileBottomNavBar
+        notifications={feed}
+        config={{
+          label: "Creator navigation",
+          account: { href: "/creator", displayName: viewer.displayName, avatarUrl: viewer.avatarUrl, label: "Creator studio" },
+          items: [
+            { href: "/products", label: "Home", icon: "home", exact: true },
+            { href: "/creator/opportunities", label: "Offers", icon: "ticket", ariaLabel: "Product opportunities" },
+            { href: "/creators", label: "Creators", icon: "creators" },
+            { href: "/notifications", label: "Inbox", icon: "inbox" },
+          ],
+          menuLinks: [
+            { href: "/creator", label: "Creator studio" },
+            { href: "/creator/opportunities", label: "Product opportunities" },
+            ...(viewer.isPublic && viewer.slug ? [{ href: `/creators/${viewer.slug}`, label: "My public profile" }] : []),
+          ],
+          signOutTo: "/creator/login",
         }}
       />
     );

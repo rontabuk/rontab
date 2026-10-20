@@ -61,10 +61,18 @@
 .creator-collaboration-form-section { max-width: 760px; padding: 25px 0; border-bottom: 1px solid #dde2d9; }
 .creator-collaboration-form { display: grid; gap: 12px; margin-top: 14px; }
 .creator-collaboration-form label { display: grid; gap: 5px; color: #626c60; font-size: 11px; font-weight: 700; }
-.creator-collaboration-form input, .creator-collaboration-form textarea { width: 100%; min-height: 38px; padding: 8px 9px; border: 1px solid #d9ded5; border-radius: 3px; background: #fff; color: #29332a; font: inherit; font-size: 12px; }
+.creator-collaboration-form input:not([type="checkbox"]), .creator-collaboration-form textarea, .creator-collaboration-form select { width: 100%; min-height: 38px; padding: 8px 9px; border: 1px solid #d9ded5; border-radius: 3px; background: #fff; color: #29332a; font: inherit; font-size: 12px; }
 .creator-collaboration-form textarea { min-height: 100px; resize: vertical; line-height: 1.55; }
 .creator-collaboration-form > small { color: #737c71; font-size: 10px; line-height: 1.5; }
 .creator-collaboration-submit { display: inline-flex; width: fit-content; min-height: 38px; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid var(--green); background: var(--green); color: #fff; cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; }
+.creator-collaboration-form label.creator-collaboration-check { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.creator-collaboration-form label.creator-collaboration-check input { width: auto; min-height: 0; }
+.creator-collaboration-form label small { font-weight: 400; color: #737c71; }
+.creator-collaboration-contact { display: grid; gap: 6px; margin: 0; padding: 10px 12px; border: 1px solid #dde2d9; color: #626c60; font-size: 11px; }
+.creator-collaboration-contact a { color: #405f45; text-decoration: underline; }
+.creator-invite-history { display: grid; gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; }
+.creator-invite-history a { display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; align-items: center; padding: 9px 11px; border: 1px solid #dde2d9; color: #29332a; font-size: 12px; text-decoration: none; }
+.creator-invite-history small { color: #737c71; }
 .creator-request-feedback { margin: 14px 0; padding: 10px 12px; border-left: 3px solid #527852; background: #e8f0e5; color: #355b39; font-size: 11px; }
 .creator-seller-invite { max-width: 760px; padding: 12px 0; }
 .creator-seller-invite a { color: #405f45; text-decoration: underline; text-underline-offset: 2px; }

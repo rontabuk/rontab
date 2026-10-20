@@ -20,3 +20,7 @@ export const creatorPlatforms = [
 ] as const;
 
 export type CreatorPlatform = (typeof creatorPlatforms)[number]["value"];
+
+export const MIN_CREATOR_OPPORTUNITY_BUDGET = 20;
+
+export const CREATOR_MIN_TOTAL_FOLLOWERS = 3000;

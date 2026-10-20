@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const flow = request.nextUrl.searchParams.get("flow");
   if (flow === "recovery") {
     const requestedReturn = request.nextUrl.searchParams.get("returnTo");
-    const returnTo = requestedReturn === "/seller/login" || requestedReturn === "/admin/login" ? requestedReturn : "/account";
+    const returnTo = requestedReturn === "/seller/login" || requestedReturn === "/admin/login" || requestedReturn === "/creator/login" ? requestedReturn : "/account";
     const tokenHash = request.nextUrl.searchParams.get("token_hash");
     const supabase = await createSupabaseServerClient();
     const { error } = tokenHash
@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(resultUrl);
   }
   if (flow === "verify-email") {
-    const resultUrl = new URL("/products", request.nextUrl.origin);
+    const creatorReturn = request.nextUrl.searchParams.get("returnTo") === "/creator";
+    const resultUrl = new URL(creatorReturn ? "/creator" : "/products", request.nextUrl.origin);
     const supabase = await createSupabaseServerClient();
     const tokenHash = request.nextUrl.searchParams.get("token_hash");
     const { error } = tokenHash

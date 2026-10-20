@@ -133,7 +133,7 @@ export default async function CreatorsDirectoryPage({
                 <div className="creator-directory-item-main">
                   <h2 className="creator-directory-name"><Link href={`/creators/${profile.slug}`}>{profile.published_display_name}</Link><CreatorVerificationBadge /></h2>
                   {influenceById.has(profile.id) && <><CreatorInfluenceBadge points={influenceById.get(profile.id)!.qualified_referrals} /><p className="creator-directory-total"><strong>{formatNumber(influenceById.get(profile.id)!.qualified_referrals)}</strong> influence points · {formatNumber(influenceById.get(profile.id)!.active_referrals_30d)} active referrals in 30 days</p></>}
-                  <Link className="creator-directory-request" href={`/creators/${profile.slug}#creator-collaboration-form-title`}><Send size={13} aria-hidden="true" />Send private request</Link>
+                  <Link className="creator-directory-request" href={`/creators/${profile.slug}#creator-invite-form-title`}><Send size={13} aria-hidden="true" />Invite to promote</Link>
                   <p className="creator-directory-total"><strong>{formatNumber(profile.totalFollowers)}</strong> self-reported social followers</p>
                 </div>
                 <Link className="creator-directory-view" href={`/creators/${profile.slug}`}>View profile <ArrowUpRight size={14} aria-hidden="true" /></Link>

@@ -73,3 +73,9 @@
   .creator-opportunity-specialties > div, .multi-city-options { grid-template-columns: minmax(0, 1fr); }
   .creator-opportunity-proposal-list > li > header { flex-direction: column; }
 }
+.creator-opportunity-counter-note { display: block; margin-top: 4px; color: #8a5a00; font-size: 12px; }
+.creator-opportunity-history-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.creator-opportunity-history-list a { display: grid; grid-template-columns: minmax(80px, auto) 1fr auto auto; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid #e3e3e3; border-radius: 10px; color: inherit; text-decoration: none; font-size: 14px; }
+.creator-opportunity-history-list a:hover { border-color: #111; }
+.creator-opportunity-history-list time { color: #666; font-size: 12px; }
+@media (max-width: 700px) { .creator-opportunity-history-list a { grid-template-columns: 1fr 1fr; } }

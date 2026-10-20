@@ -11,7 +11,7 @@ import { sendVisitorEmailVerification } from "@/app/account/actions";
 import type { SiteNotification } from "@/lib/notifications/feed";
 
 type Message = { id: string; title: string; body: string; link_url: string | null; created_at: string };
-const icons = { welcome: Mail, announcement: Megaphone, "new-product": Sparkles, "verify-email": MailWarning, "loyalty-offer": Gift, "reward-result": BadgeCheck, "support-case": LifeBuoy, "collaboration-request": MessageSquareText, "creator-programme": MessageSquareText };
+const icons = { welcome: Mail, announcement: Megaphone, "new-product": Sparkles, "verify-email": MailWarning, "loyalty-offer": Gift, "reward-result": BadgeCheck, "support-case": LifeBuoy, "creator-programme": MessageSquareText };
 function subscribeTime() { return () => {}; }
 
 function ReceivedTime({ value, compact = false }: { value: string; compact?: boolean }) {

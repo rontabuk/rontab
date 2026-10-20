@@ -239,9 +239,14 @@ export type Database = {
         [{ foreignKeyName: "creator_profile_audience_cities_city_id_fkey"; columns: ["city_id"]; isOneToOne: false; referencedRelation: "supported_cities"; referencedColumns: ["city_id"] }, { foreignKeyName: "creator_profile_audience_cities_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }]
       >;
       creator_product_opportunities: Table<
-        { brief: string; budget: number; contact_methods: string[]; created_at: string; currency: string; deadline: string | null; id: string; is_nationwide: boolean; product_id: string; product_provided: boolean; seller_profile_id: string; status: "open" | "awarded" | "closed"; target_city_ids: string[]; target_specialties: string[]; updated_at: string },
+        { allow_counter_offers: boolean; brief: string; budget: number; completed_at: string | null; contact_methods: string[]; created_at: string; currency: string; deadline: string | null; delivered_at: string | null; delivery_note: string | null; delivery_url: string | null; id: string; invited_creator_profile_id: string | null; is_nationwide: boolean; product_id: string; product_provided: boolean; revision_note: string | null; seller_profile_id: string; status: "open" | "awarded" | "delivered" | "completed" | "closed"; target_city_ids: string[]; target_specialties: string[]; updated_at: string },
         never,
-        [{ foreignKeyName: "creator_product_opportunities_product_id_fkey"; columns: ["product_id"]; isOneToOne: false; referencedRelation: "products"; referencedColumns: ["id"] }, { foreignKeyName: "creator_product_opportunities_seller_profile_id_fkey"; columns: ["seller_profile_id"]; isOneToOne: false; referencedRelation: "seller_profiles"; referencedColumns: ["id"] }]
+        [{ foreignKeyName: "creator_product_opportunities_product_id_fkey"; columns: ["product_id"]; isOneToOne: false; referencedRelation: "products"; referencedColumns: ["id"] }, { foreignKeyName: "creator_product_opportunities_seller_profile_id_fkey"; columns: ["seller_profile_id"]; isOneToOne: false; referencedRelation: "seller_profiles"; referencedColumns: ["id"] }, { foreignKeyName: "creator_product_opportunities_invited_creator_profile_id_fkey"; columns: ["invited_creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }]
+      >;
+      creator_product_opportunity_reviews: Table<
+        { comment: string | null; created_at: string; creator_profile_id: string; id: string; opportunity_id: string; rating: number; reviewer_role: "seller" | "creator"; seller_profile_id: string },
+        never,
+        [{ foreignKeyName: "creator_product_opportunity_reviews_opportunity_id_fkey"; columns: ["opportunity_id"]; isOneToOne: false; referencedRelation: "creator_product_opportunities"; referencedColumns: ["id"] }]
       >;
       creator_product_opportunity_proposals: Table<
         { amount: number; created_at: string; creator_profile_id: string; id: string; offer_details: string; opportunity_id: string; share_email: boolean; share_phone: boolean; status: "pending" | "selected" | "not_selected" | "withdrawn"; updated_at: string },
@@ -262,14 +267,6 @@ export type Database = {
         { created_at: string; creator_profile_id: string; id: string; is_published: boolean; position: number; title: string; url: string },
         never,
         [{ foreignKeyName: "creator_portfolio_items_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }]
-      >;
-      creator_collaboration_requests: Table<
-        { brief: string; created_at: string; creator_profile_id: string; creator_response: string | null; id: string; proposed_compensation: string | null; responded_at: string | null; seller_profile_id: string; status: string; title: string; updated_at: string },
-        never,
-        [
-          { foreignKeyName: "creator_collaboration_requests_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] },
-          { foreignKeyName: "creator_collaboration_requests_seller_profile_id_fkey"; columns: ["seller_profile_id"]; isOneToOne: false; referencedRelation: "seller_profiles"; referencedColumns: ["id"] }
-        ]
       >;
       creator_fans: Table<
         { creator_profile_id: string; first_code: string; followed_at: string; visitor_id: string },
@@ -293,16 +290,6 @@ export type Database = {
         { admin_id: string; created_at: string; creator_profile_id: string; decision: string; id: number; review_note: string | null },
         never,
         [{ foreignKeyName: "creator_profile_reviews_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }]
-      >;
-      creator_point_accounts: Table<
-        { creator_profile_id: string; points_balance: number; updated_at: string },
-        never,
-        [{ foreignKeyName: "creator_point_accounts_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: true; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }]
-      >;
-      creator_point_transactions: Table<
-        { admin_id: string; created_at: string; creator_profile_id: string; id: number; idempotency_key: string; points_delta: number; reason: string },
-        never,
-        [{ foreignKeyName: "creator_point_transactions_creator_profile_id_fkey"; columns: ["creator_profile_id"]; isOneToOne: false; referencedRelation: "creator_profiles"; referencedColumns: ["id"] }]
       >;
     };
     Views: { [_ in never]: never };
@@ -409,11 +396,7 @@ export type Database = {
       save_creator_application: { Args: { p_audience_city_id: string | null; p_bio: string; p_display_name: string; p_platform_accounts: Json; p_portfolio_items: Json; p_public_profile_consent: boolean; p_specialties: string[] }; Returns: string };
       admin_review_creator_profile: { Args: { p_creator_profile_id: string; p_decision: string; p_review_note: string | null }; Returns: undefined };
       creator_withdraw_public_profile: { Args: Record<PropertyKey, never>; Returns: undefined };
-      admin_grant_creator_points: { Args: { p_creator_profile_id: string; p_points: number; p_reason: string; p_idempotency_key: string }; Returns: boolean };
-      seller_create_creator_collaboration_request: { Args: { p_brief: string; p_creator_profile_id: string; p_proposed_compensation: string; p_seller_profile_id: string; p_title: string }; Returns: string };
-      creator_decide_collaboration_request: { Args: { p_decision: string; p_request_id: string; p_response: string }; Returns: undefined };
       get_creator_collaboration_notifications: { Args: Record<PropertyKey, never>; Returns: { body: string; created_at: string; href: string; notification_id: string; title: string }[] };
-      seller_withdraw_creator_collaboration_request: { Args: { p_request_id: string }; Returns: undefined };
       creator_follow_by_code: { Args: { p_code: string }; Returns: Json };
       creator_unfollow: { Args: { p_creator_profile_id: string }; Returns: boolean };
       creator_get_my_follows: { Args: Record<PropertyKey, never>; Returns: { audience_city_name: string | null; country_code: string | null; creator_profile_id: string; display_name: string; followed_at: string; referral_code: string; slug: string; specialties: string[] }[] };
@@ -434,7 +417,12 @@ export type Database = {
       get_public_seller_contact_phones: { Args: { p_seller_profile_ids: string[] }; Returns: { phone: string; seller_profile_id: string }[] };
       save_creator_application_with_audience_cities: { Args: { p_audience_city_ids: string[]; p_bio: string; p_display_name: string; p_platform_accounts: Json; p_portfolio_items: Json; p_public_profile_consent: boolean; p_specialties: string[] }; Returns: string };
       creator_can_view_product_opportunity: { Args: { p_opportunity_id: string }; Returns: boolean };
-      seller_create_creator_product_opportunity: { Args: { p_brief: string; p_budget: number; p_contact_methods: string[]; p_deadline: string | null; p_is_nationwide: boolean; p_product_id: string; p_product_provided: boolean; p_target_city_ids: string[]; p_target_specialties: string[] }; Returns: string };
+      seller_create_creator_product_opportunity: { Args: { p_allow_counter_offers?: boolean; p_brief: string; p_budget: number; p_contact_methods: string[]; p_deadline: string | null; p_invited_creator_profile_id?: string | null; p_is_nationwide: boolean; p_product_id: string; p_product_provided: boolean; p_target_city_ids: string[]; p_target_specialties: string[] }; Returns: string };
+      creator_mark_product_opportunity_delivered: { Args: { p_delivery_note: string | null; p_delivery_url: string; p_opportunity_id: string }; Returns: undefined };
+      seller_review_product_opportunity_delivery: { Args: { p_decision: "complete" | "revise"; p_opportunity_id: string; p_revision_note: string | null }; Returns: undefined };
+      submit_product_opportunity_review: { Args: { p_comment: string | null; p_opportunity_id: string; p_rating: number }; Returns: "seller" | "creator" };
+      get_creator_opportunity_ratings: { Args: { p_creator_profile_ids: string[] }; Returns: { average_rating: number; creator_profile_id: string; review_count: number }[] };
+      get_seller_opportunity_ratings: { Args: { p_seller_profile_ids: string[] }; Returns: { average_rating: number; review_count: number; seller_profile_id: string }[] };
       creator_submit_product_opportunity_proposal: { Args: { p_amount: number; p_contact_phone: string | null; p_offer_details: string; p_opportunity_id: string; p_share_email: boolean; p_share_phone: boolean }; Returns: string };
       creator_withdraw_product_opportunity_proposal: { Args: { p_proposal_id: string }; Returns: undefined };
       seller_select_creator_product_opportunity_proposal: { Args: { p_proposal_id: string }; Returns: string };

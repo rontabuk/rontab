@@ -341,7 +341,7 @@ export async function setSellerVerificationBadge(formData: FormData) {
   updateTag("public-catalog");
   revalidatePath("/products");
   revalidatePath("/shops");
-  revalidatePath("/visitor/creator/opportunities");
+  revalidatePath("/creator/opportunities");
 }
 
 export async function setVisitorAccountStatus(formData: FormData) {

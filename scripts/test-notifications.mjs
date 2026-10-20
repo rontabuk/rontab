@@ -24,7 +24,7 @@ function loadModule(path, dependencies) {
 }
 
 const channels = loadModule("src/lib/notifications/channels.ts", {});
-const messages = ["announcement", "verify-email", "support-case", "collaboration-request", "creator-programme", "reward-result"];
+const messages = ["announcement", "verify-email", "support-case", "creator-programme", "reward-result"];
 const ads = ["new-product", "loyalty-offer"];
 const items = [...messages, ...ads].map((kind) => ({
   id: `${kind}-fixture`, kind, title: `Title for ${kind}`, body: `Body for ${kind}`,
@@ -68,7 +68,7 @@ test("Messages contains administration, support, creator and account messages bu
   const html = renderInbox();
   for (const kind of messages) assert.ok(html.includes(`Title for ${kind}`));
   for (const kind of ads) assert.ok(!html.includes(`Title for ${kind}`));
-  assert.match(html, /aria-label="6 unread messages"/);
+  assert.match(html, /aria-label="5 unread messages"/);
   assert.match(html, /aria-label="2 unread ad notifications"/);
   assert.ok(html.includes("Resend confirmation email"));
 });
@@ -82,7 +82,7 @@ test("Ad notifications contains products and offers but no personal messages", (
 
 test("section unread badges respect saved read state independently", () => {
   const html = renderInbox("messages", { readIds: items.filter((item) => messages.includes(item.kind)).map((item) => item.id) });
-  assert.ok(!html.includes('aria-label="6 unread messages"'));
+  assert.ok(!html.includes('aria-label="5 unread messages"'));
   assert.ok(html.includes('aria-label="2 unread ad notifications"'));
 });
 
@@ -186,8 +186,18 @@ test("old active reward offers do not become new-account notifications or consum
     get_creator_collaboration_notifications: [{ notification_id: "creator-own", title: "Own collaboration", body: "Update", href: "/creators", created_at: afterSignup }],
   });
   assert.deepEqual(Array.from(feed.items.filter((item) => item.kind === "loyalty-offer"), (item) => item.id), ["offer-new"]);
-  for (const id of ["result-own", "support-own", "creator-own"]) assert.ok(feed.items.some((item) => item.id === id));
+  for (const id of ["result-own", "support-own"]) assert.ok(feed.items.some((item) => item.id === id));
+  assert.ok(!feed.items.some((item) => item.id === "creator-own"), "visitor accounts do not receive creator programme notifications");
   assert.equal(offers.length, 51);
+});
+
+test("standalone creator accounts receive creator programme notifications but no visitor rewards", async () => {
+  const feed = await notificationFeed({ role: "creator", userId: "creator-user", createdAt: signupAt }, {}, {
+    get_visitor_loyalty_offers: [{ id: "new", title: "New offer", starts_at: afterSignup }],
+    get_creator_collaboration_notifications: [{ notification_id: "creator-own", title: "Own opportunity", body: "Update", href: "/creator/opportunities", created_at: afterSignup }],
+  });
+  assert.ok(feed.items.some((item) => item.id === "creator-own"));
+  assert.ok(!feed.items.some((item) => item.kind === "loyalty-offer"));
 });
 
 test("existing accounts keep the existing announcement and product recency windows", async () => {

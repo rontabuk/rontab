@@ -83,12 +83,24 @@ do $$ begin
 end; $$;
 reset role;
 
-insert into public.creator_point_accounts (creator_profile_id) values ('d3000000-0000-4000-8000-000000000001') on conflict do nothing;
-select set_config('request.jwt.claims', '{"sub":"d2000000-0000-4000-8000-000000000008","app_metadata":{"role":"admin"}}', true);
-select public.admin_grant_creator_points('d3000000-0000-4000-8000-000000000001', 100000, 'Independent grant test', gen_random_uuid());
 do $$ begin
-  assert (select qualified_referrals from public.get_creator_influence(array['d3000000-0000-4000-8000-000000000001']::uuid[])) = 2, 'Admin points must never purchase an influence badge';
+  assert public.is_creator_account('d2000000-0000-4000-8000-000000000002'), 'Creator profile owners are creator accounts';
+  assert not public.is_point_earning_visitor('d2000000-0000-4000-8000-000000000002'), 'Creator accounts never earn visitor points';
+  assert to_regclass('public.creator_point_accounts') is null and to_regclass('public.creator_point_transactions') is null, 'Creator point ledgers are removed';
+  assert to_regprocedure('public.admin_grant_creator_points(uuid,integer,text,uuid)') is null, 'Admin creator point grants are removed';
 end; $$;
+
+select set_config('request.jwt.claim.sub', 'd2000000-0000-4000-8000-000000000002', true);
+set local role authenticated;
+do $$ begin
+  begin
+    perform public.creator_follow_by_code('RT-INFLUENCETEST');
+    raise exception 'Creator accounts must not follow creators as fans';
+  exception when insufficient_privilege or raise_exception then
+    if sqlerrm = 'Creator accounts must not follow creators as fans' then raise; end if;
+  end;
+end; $$;
+reset role;
 
 update auth.users set banned_until = now() + interval '1 year' where id = 'd2000000-0000-4000-8000-000000000003';
 do $$ begin
