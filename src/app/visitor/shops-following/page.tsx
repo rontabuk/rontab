@@ -3,7 +3,6 @@ import { connection } from "next/server";
 import { FollowedShopsList } from "@/components/FollowedShopsList";
 import { getVisitorAccount } from "@/lib/visitor/access";
 import type { Database } from "@/lib/supabase/database.types";
-import "../visitor.css";
 import "./shops-following.css";
 
 export const metadata: Metadata = { title: "Shops I follow", robots: { index: false, follow: false } };

@@ -12,7 +12,6 @@ import { isSellerOfferSchemaUnavailable } from "@/lib/seller/offer-schema";
 import { londonOfferDate } from "@/lib/seller/available-offers";
 import { PRODUCT_REWARD_POINTS } from "@/lib/seller/offer-policy";
 import { isUuid } from "@/lib/validation";
-import "../../../../seller.css";
 
 export const metadata: Metadata = { title: "Offer to the public", robots: { index: false, follow: false } };
 export const instant = false;

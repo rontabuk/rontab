@@ -11,7 +11,6 @@ import { formatDateTime, formatNumber } from "@/lib/format";
 import { getVisitorAccount } from "@/lib/visitor/access";
 import { followCreatorByCode, unfollowCreator } from "@/app/visitor/creator-actions";
 import type { Database } from "@/lib/supabase/database.types";
-import "../visitor.css";
 
 export const metadata: Metadata = { title: "I'm a fan of", robots: { index: false, follow: false } };
 export const instant = false;

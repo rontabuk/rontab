@@ -9,7 +9,6 @@ import { formatNumber, formatPrice } from "@/lib/format";
 import { getSupportedLocations } from "@/lib/locations";
 import { getVisitorAccount } from "@/lib/visitor/access";
 import { createProductMediaUrls } from "@/lib/supabase/storage";
-import "../../visitor.css";
 import "./opportunities.css";
 
 export const metadata: Metadata = { title: "Available creator opportunities", robots: { index: false, follow: false } };

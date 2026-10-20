@@ -17,7 +17,6 @@ import { getSupportedLocations } from "@/lib/locations";
 import { getVisitorAccount } from "@/lib/visitor/access";
 import { saveCreatorApplication } from "@/app/visitor/creator-actions";
 import type { Database } from "@/lib/supabase/database.types";
-import "../visitor.css";
 
 export const metadata: Metadata = { title: "Creator profile", robots: { index: false, follow: false } };
 export const instant = false;

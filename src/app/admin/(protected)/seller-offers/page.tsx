@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/admin/access";
 import { formatDate, formatNumber } from "@/lib/format";
 import { isSellerOfferSchemaUnavailable } from "@/lib/seller/offer-schema";
 import { PRODUCT_REWARD_POINTS, MIN_PRODUCT_REWARD_POINTS, MAX_PRODUCT_REWARD_POINTS } from "@/lib/seller/offer-policy";
+import { groupBy } from "@/lib/collections";
 
 export const metadata: Metadata = { title: "Seller offer review", robots: { index: false, follow: false } };
 export const instant = false;
@@ -264,14 +265,6 @@ export default async function AdminSellerOffersPage({
   );
 }
 
-function groupBy<T, K extends string>(values: readonly T[], getKey: (value: T) => K) {
-  const groups = new Map<K, T[]>();
-  for (const value of values) {
-    const key = getKey(value);
-    groups.set(key, [...(groups.get(key) ?? []), value]);
-  }
-  return groups;
-}
 
 function weekdayLabel(weekday: number) {
   return ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][weekday] ?? "Day";

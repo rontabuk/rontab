@@ -16,7 +16,6 @@ import { getSupportedLocations } from "@/lib/locations";
 import { getSellerAccount } from "@/lib/seller/access";
 import { createProductMediaUrls } from "@/lib/supabase/storage";
 import { isUuid } from "@/lib/validation";
-import "../../../../seller.css";
 import "./creator-opportunity.css";
 
 export const metadata: Metadata = { title: "Promote a product to creators", robots: { index: false, follow: false } };

@@ -53,20 +53,3 @@ export async function followShop(_state: FormState, formData: FormData) {
     redirect(`/shops/${shopSlug}?followed=1`);
   });
 }
-
-export async function unfollowShop(_state: FormState, formData: FormData) {
-  return runFormAction(async () => {
-    const sellerProfileId = String(formData.get("seller_profile_id") ?? "");
-    const shopSlug = String(formData.get("shop_slug") ?? "");
-    if (!isUuid(sellerProfileId) || !SHOP_SLUG_PATTERN.test(shopSlug)) throw new FormError("Invalid followed shop.");
-
-    const { supabase } = await getVisitorAccount("/visitor/shops-following");
-    const { error } = await supabase.rpc("visitor_unfollow_seller_shop", { p_seller_profile_id: sellerProfileId });
-    if (error?.code === "42501") throw new FormError(error.message);
-    if (error) throw new Error(error.message);
-    revalidatePath(`/shops/${shopSlug}`);
-    revalidatePath("/visitor/shops-following");
-    revalidatePath("/seller/profile");
-    redirect("/visitor/shops-following?unfollowed=1");
-  });
-}

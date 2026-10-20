@@ -13,7 +13,6 @@ import { getSupportedLocations } from "@/lib/locations";
 import { getVisitorAccount } from "@/lib/visitor/access";
 import { isUuid } from "@/lib/validation";
 import { createProductMediaUrls } from "@/lib/supabase/storage";
-import "../../../visitor.css";
 import "../opportunities.css";
 
 export const metadata: Metadata = { title: "Creator promotion details", robots: { index: false, follow: false } };

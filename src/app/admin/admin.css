@@ -86,7 +86,6 @@
 .admin-category-row { grid-template-columns: repeat(3, minmax(110px, 1fr)) auto; padding: 13px; border: 1px solid #e0e4dc; border-radius: 4px; background: var(--surface); }
 .admin-category-form input:not([type="checkbox"]), .admin-category-row input:not([type="checkbox"]) { width: 100%; }
 .admin-category-row .admin-checkbox-label { min-height: 34px; }
-.admin-category-path { grid-column: 1 / -1; margin: 0; color: var(--ink); font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
 .admin-category-form select, .admin-category-row select { width: 100%; min-width: 0; min-height: 34px; padding: 0 8px; border: 1px solid #d9ded5; border-radius: 3px; background: #fff; color: #374239; font: inherit; font-size: 12px; }
 .admin-video-ad-row { display: grid; grid-template-columns: 160px minmax(0, 1fr) auto; align-items: center; gap: 11px; }
 .admin-video-ad-preview { width: 160px; aspect-ratio: 16 / 5; border-radius: 4px; background: #30251f; object-fit: cover; }

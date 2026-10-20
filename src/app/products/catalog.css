@@ -136,7 +136,6 @@
 .catalog-theme .empty-state { border-top-color: var(--border); }
 
 .catalog-theme .site-footer { border-top: 1px solid var(--line); background: var(--surface); color: var(--ink); }
-.catalog-theme .wordmark-light { color: var(--ink); }
 .catalog-theme .footer-brand p, .catalog-theme .footer-bottom { color: var(--muted); }
 .catalog-theme .footer-links a { color: var(--blue); }
 .catalog-theme .footer-links a:hover { color: var(--green-dark); }

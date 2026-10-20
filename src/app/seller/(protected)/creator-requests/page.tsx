@@ -9,7 +9,6 @@ import { withdrawCreatorCollaborationRequest } from "@/app/seller/(protected)/cr
 import { getSellerAccount } from "@/lib/seller/access";
 import { createSupabasePublicClient } from "@/lib/supabase/server";
 import { formatDateTime, formatNumber } from "@/lib/format";
-import "../../seller.css";
 import "./creator-requests.css";
 
 export const metadata: Metadata = { title: "Creator collaborations", robots: { index: false, follow: false } };

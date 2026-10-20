@@ -10,6 +10,7 @@ import { isSellerOfferSchemaUnavailable } from "@/lib/seller/offer-schema";
 import { getAvailableSellerOffers, londonOfferDate } from "@/lib/seller/available-offers";
 import { getOfferAvailabilityVersion, getOfferBookingBlock } from "@/lib/seller/offer-policy";
 import { OfferAvailabilityProvider, OfferCapacity } from "@/components/visitor/OfferAvailability";
+import { groupBy } from "@/lib/collections";
 
 export const metadata: Metadata = { title: "Offer gallery", robots: { index: false, follow: false } };
 export const instant = false;
@@ -249,14 +250,6 @@ export default async function VisitorOfferGalleryPage({
   );
 }
 
-function groupBy<T, K extends string>(values: readonly T[], getKey: (value: T) => K) {
-  const groups = new Map<K, T[]>();
-  for (const value of values) {
-    const key = getKey(value);
-    groups.set(key, [...(groups.get(key) ?? []), value]);
-  }
-  return groups;
-}
 
 function formatOfferDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${value}T12:00:00Z`));

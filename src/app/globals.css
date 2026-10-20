@@ -291,7 +291,6 @@ li[data-unread] .notification-copy time { color: #065fd4; font-weight: 700; }
 @keyframes notification-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 @keyframes notification-pop { from { transform: scale(.4); } to { transform: scale(1); } }
 .wordmark { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; font-family: var(--font-display), Georgia, serif; font-size: 34px; line-height: 1; white-space: nowrap; }
-.brand-mark { display: block; flex: 0 0 auto; height: auto; }
 .header-actions { display: flex; align-items: center; gap: 16px; }
 .header-account-link { display: inline-flex; min-height: 40px; align-items: center; gap: 8px; padding: 0 14px; border: 1px solid #d4d3ca; border-radius: 40px; color: var(--green-dark); font-size: 12px; font-weight: 600; white-space: nowrap; transition: border-color 160ms ease, background-color 160ms ease; }
 .header-account-link:hover { border-color: var(--green-dark); background: #e9eee5; }
@@ -355,9 +354,6 @@ li[data-unread] .notification-copy time { color: #065fd4; font-weight: 700; }
 .button-outline:hover { border-color: var(--green-dark); background: #f0f2ec; }
 .product-image > img, .detail-image > img { object-fit: cover; transition: transform 500ms cubic-bezier(0.2, 0.7, 0.2, 1); }
 .product-image-link > video, .detail-image > video { width: 100%; height: 100%; object-fit: cover; }
-.product-preview-audio-toggle { position: absolute; z-index: 3; top: 10px; right: 10px; display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid rgb(255 255 255 / 52%); border-radius: 50%; background: rgb(32 35 31 / 76%); color: white; cursor: pointer; }
-.product-preview-audio-toggle:hover { background: #34483a; }
-.product-preview-audio-toggle:focus-visible { outline: 2px solid white; outline-offset: 2px; }
 .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 30px; margin-bottom: 26px; }
 .section-heading .eyebrow { margin-bottom: 11px; }
 .section-heading h2 { font-size: 43px; line-height: 1.1; }

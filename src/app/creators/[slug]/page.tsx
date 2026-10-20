@@ -14,7 +14,6 @@ import { getViewer } from "@/lib/auth/viewer";
 import { creatorSpecialties } from "@/lib/creator/catalog";
 import { formatDate, formatDateTime, formatNumber } from "@/lib/format";
 import { createSupabasePublicClient, createSupabaseServerClient } from "@/lib/supabase/server";
-import "../creators.css";
 
 export const instant = false;
 
