@@ -385,6 +385,50 @@ export async function setVisitorAccountStatus(formData: FormData) {
   revalidatePath("/admin/visitors");
 }
 
+export async function adjustVisitorPoints(formData: FormData) {
+  const visitorId = String(formData.get("visitor_id") ?? "");
+  const direction = String(formData.get("direction") ?? "");
+  const amount = Number(formData.get("points"));
+  const reason = String(formData.get("reason") ?? "").trim();
+  const requestedReturn = String(formData.get("return_to") ?? "");
+  const returnUrl = new URL(requestedReturn.startsWith("/admin/visitors") ? requestedReturn : "/admin/visitors", "http://admin.local");
+  returnUrl.searchParams.delete("points");
+  returnUrl.searchParams.delete("pointsError");
+
+  if (!isUuid(visitorId) || !["add", "deduct"].includes(direction) || !Number.isInteger(amount) || amount < 1 || amount > 100000 || reason.length < 3 || reason.length > 200) {
+    returnUrl.searchParams.set("pointsError", "Enter whole points from 1 to 100,000 and a reason between 3 and 200 characters.");
+    redirect(`${returnUrl.pathname}${returnUrl.search}`);
+  }
+
+  const supabase = await requireAdminClient();
+  const { data: newBalance, error } = await supabase.rpc("admin_adjust_visitor_points", {
+    p_visitor_id: visitorId,
+    p_points_delta: direction === "add" ? amount : -amount,
+    p_reason: reason,
+  });
+  if (error) {
+    returnUrl.searchParams.set("pointsError", error.message);
+  } else {
+    returnUrl.searchParams.set("points", `${direction === "add" ? "Added" : "Deducted"} ${amount} points. New balance: ${newBalance} points.`);
+  }
+
+  revalidatePath("/admin/visitors");
+  revalidatePath("/visitor/rewards");
+  redirect(`${returnUrl.pathname}${returnUrl.search}`);
+}
+
+export async function saveVisitorWelcomeBonus(formData: FormData) {
+  const points = Number(formData.get("visitor_welcome_bonus_points"));
+  if (!Number.isInteger(points) || points < 0 || points > 1000) {
+    throw new Error("Enter welcome points between 0 and 1,000.");
+  }
+  const supabase = await requireAdminClient();
+  const { error } = await supabase.rpc("admin_set_visitor_welcome_bonus_points", { p_points: points });
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/settings");
+  redirect("/admin/settings?saved=1");
+}
+
 export async function grantSellerAdCredits(formData: FormData) {
   const sellerId = String(formData.get("seller_id") ?? "");
   const clicks = Number(formData.get("clicks"));

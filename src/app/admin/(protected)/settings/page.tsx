@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { requireAdmin } from "@/lib/admin/access";
-import { saveMarketplaceSettings } from "@/app/admin/(protected)/actions";
+import { saveMarketplaceSettings, saveVisitorWelcomeBonus } from "@/app/admin/(protected)/actions";
 
 export const metadata: Metadata = { title: "Marketplace settings", robots: { index: false, follow: false } };
 export const instant = false;
@@ -23,7 +23,7 @@ export default async function AdminSettingsPage({
   const { supabase } = await requireAdmin();
   const { data: settings, error } = await supabase
     .from("marketplace_settings")
-    .select("product_approval_mode,seller_approval_mode,featured_duration_minutes,new_products_duration_minutes,click_price_pence_per_1000,visitor_daily_visit_points_cap,seller_reel_upload_enabled")
+    .select("product_approval_mode,seller_approval_mode,featured_duration_minutes,new_products_duration_minutes,click_price_pence_per_1000,visitor_daily_visit_points_cap,seller_reel_upload_enabled,visitor_welcome_bonus_points")
     .eq("singleton", true)
     .single();
 
@@ -117,6 +117,20 @@ export default async function AdminSettingsPage({
           </label>
         </section>
         <button className="admin-primary-button" type="submit">Save marketplace settings</button>
+      </form>
+      <form className="admin-settings-form" action={saveVisitorWelcomeBonus}>
+        <section className="admin-settings-section" aria-labelledby="welcome-bonus-title">
+          <div>
+            <h2 id="welcome-bonus-title">Welcome points for new visitors</h2>
+            <p>Added once to each new visitor account after the visitor confirms their email. Changes apply to future confirmations only; existing balances are not changed.</p>
+          </div>
+          <label>
+            Welcome points
+            <input name="visitor_welcome_bonus_points" type="number" min="0" max="1000" step="1" defaultValue={settings.visitor_welcome_bonus_points} required />
+            <small>Between 0 and 1,000 points. Set 0 to turn welcome points off. Default: 50.</small>
+          </label>
+        </section>
+        <button className="admin-primary-button" type="submit">Save welcome points</button>
       </form>
     </main>
   );

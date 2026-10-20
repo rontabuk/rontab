@@ -129,12 +129,12 @@ export type Database = {
         never
       >;
       loyalty_point_transactions: Table<
-        { created_at: string; id: number; idempotency_key: string; offer_claim_id: string | null; points_delta: number; source_product_id: string | null; source_product_name: string; transaction_type: "visit_earned" | "participation_spent" | "redemption_spent"; visitor_id: string },
+        { created_at: string; created_by: string | null; id: number; idempotency_key: string; offer_claim_id: string | null; points_delta: number; source_product_id: string | null; source_product_name: string; transaction_type: "visit_earned" | "participation_spent" | "redemption_spent" | "welcome_bonus" | "admin_adjustment"; visitor_id: string },
         never
       >;
       marketplace_settings: Table<
-        { click_price_pence_per_1000: number; featured_duration_minutes: number; loyalty_random_draws_enabled: boolean; new_products_duration_minutes: number; product_approval_mode: "manual" | "automatic"; seller_approval_mode: "manual" | "automatic"; seller_reel_upload_enabled: boolean; singleton: boolean; updated_at: string; visitor_daily_visit_points_cap: number },
-        { click_price_pence_per_1000?: number; featured_duration_minutes?: number; loyalty_random_draws_enabled?: boolean; new_products_duration_minutes?: number; product_approval_mode?: "manual" | "automatic"; seller_approval_mode?: "manual" | "automatic"; seller_reel_upload_enabled?: boolean; singleton?: boolean; updated_at?: string; visitor_daily_visit_points_cap?: number }
+        { click_price_pence_per_1000: number; featured_duration_minutes: number; loyalty_random_draws_enabled: boolean; new_products_duration_minutes: number; product_approval_mode: "manual" | "automatic"; seller_approval_mode: "manual" | "automatic"; seller_reel_upload_enabled: boolean; singleton: boolean; updated_at: string; visitor_daily_visit_points_cap: number; visitor_welcome_bonus_points: number },
+        { click_price_pence_per_1000?: number; featured_duration_minutes?: number; loyalty_random_draws_enabled?: boolean; new_products_duration_minutes?: number; product_approval_mode?: "manual" | "automatic"; seller_approval_mode?: "manual" | "automatic"; seller_reel_upload_enabled?: boolean; singleton?: boolean; updated_at?: string; visitor_daily_visit_points_cap?: number; visitor_welcome_bonus_points?: number }
       >;
       top_video_ads: Table<
         { created_at: string; display_seconds: number; id: string; is_active: boolean; media_type: "video" | "image"; sort_order: number; storage_path: string; target_url: string | null; title: string; updated_at: string },
@@ -396,6 +396,8 @@ export type Database = {
       get_my_creator_profile_id: { Args: Record<PropertyKey, never>; Returns: string | null };
       save_creator_application: { Args: { p_audience_city_id: string | null; p_bio: string; p_display_name: string; p_platform_accounts: Json; p_portfolio_items: Json; p_public_profile_consent: boolean; p_specialties: string[] }; Returns: string };
       admin_get_creator_owner_verification: { Args: { p_creator_profile_ids: string[] }; Returns: { creator_profile_id: string; email_verified_at: string | null }[] };
+      admin_adjust_visitor_points: { Args: { p_visitor_id: string; p_points_delta: number; p_reason: string }; Returns: number };
+      admin_set_visitor_welcome_bonus_points: { Args: { p_points: number }; Returns: undefined };
       admin_review_creator_profile: { Args: { p_creator_profile_id: string; p_decision: string; p_review_note: string | null }; Returns: undefined };
       creator_withdraw_public_profile: { Args: Record<PropertyKey, never>; Returns: undefined };
       get_creator_collaboration_notifications: { Args: Record<PropertyKey, never>; Returns: { body: string; created_at: string; href: string; notification_id: string; title: string }[] };

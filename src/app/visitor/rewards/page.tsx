@@ -307,6 +307,8 @@ function transactionLabel(type: PointTransaction["transaction_type"]) {
   if (type === "participation_spent") return "Offer entry";
   if (type === "seller_offer_spent") return "Seller voucher reservation";
   if (type === "seller_offer_refund") return "Voucher cancellation refund";
+  if (type === "welcome_bonus") return "Welcome gift";
+  if (type === "admin_adjustment") return "Points adjustment by RonTab";
   return "Gift redemption";
 }
 
