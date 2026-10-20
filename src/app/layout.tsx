@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { DM_Sans, DM_Serif_Display } from "next/font/google";
+import { BetaBanner } from "@/components/BetaBanner";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { siteUrl } from "@/lib/site-url";
@@ -48,6 +49,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${dmSans.variable} ${dmSerifDisplay.variable}`} data-scroll-behavior="smooth">
       <body>
+        <BetaBanner />
         {children}
         <Suspense fallback={null}>
           <MobileBottomNav />

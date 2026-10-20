@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { CalendarDays, Gift, MapPin, Ticket } from "lucide-react";
 import { joinLoyaltyOffer, reportLoyaltyClaimIssue } from "@/app/visitor/actions";
 import { OfferNotificationReadMarker } from "@/components/OfferNotificationReadMarker";
+import { BetaPointsNotice } from "@/components/BetaPointsNotice";
 import { ProfileOffers } from "@/components/visitor/ProfileOffers";
 import { getAvailableSellerOffers } from "@/lib/seller/available-offers";
 import { formatDateTime, formatNumber as formatPoints } from "@/lib/format";
@@ -91,6 +92,7 @@ export default async function VisitorRewardsPage({
         <h1>Good things add up.</h1>
         <p>Earn points through eligible product visits and choose how to use them.</p>
       </header>
+      <BetaPointsNotice />
 
       {offerMessage === "joined" && <p className="admin-save-success" role="status">Your points were used and your place is confirmed.</p>}
       {offerMessage === "already" && <p className="admin-save-success" role="status">You already joined this offer. Your points were not charged again.</p>}

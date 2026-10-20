@@ -4,6 +4,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { ArrowUpRight, CalendarDays, Clock3, MapPin, Ticket, X } from "lucide-react";
 import { cancelSellerOfferCoupon, reportSellerVoucherIssue, reserveSellerOfferCoupon } from "@/app/visitor/actions";
+import { BetaPointsNotice } from "@/components/BetaPointsNotice";
 import { getVisitorAccount } from "@/lib/visitor/access";
 import { formatNumber } from "@/lib/format";
 import { isSellerOfferSchemaUnavailable } from "@/lib/seller/offer-schema";
@@ -93,6 +94,7 @@ export default async function VisitorOfferGalleryPage({
         <h1>Offer gallery</h1>
         <p>Public offers and exclusive rewards from local shops.</p>
       </header>
+      <BetaPointsNotice />
       {pageError === "points" && <p className="visitor-rewards-error" role="alert">You do not have enough points for this offer.</p>}
       {pageError === "location" && <p className="visitor-rewards-error" role="alert">Choose a supported city on your profile to reserve local offers.</p>}
       {pageError === "confirmation" && <p className="visitor-rewards-error" role="alert">Confirm the points cost and voucher conditions before reserving.</p>}

@@ -129,7 +129,7 @@ export default async function SellerProductCreatorOpportunityPage({
             <input type="hidden" name="product_id" value={product.id} />
             <label className="creator-opportunity-budget">Promotion budget
               <span><input name="budget" type="number" min={MIN_CREATOR_OPPORTUNITY_BUDGET} max="1000000" step="0.01" inputMode="decimal" required /><strong>{product.currency}</strong></span>
-              <small>Minimum {formatPrice(MIN_CREATOR_OPPORTUNITY_BUDGET, product.currency)}. Payment is arranged directly between you and the selected creator.</small>
+              <small>Minimum {formatPrice(MIN_CREATOR_OPPORTUNITY_BUDGET, product.currency)}.</small>
             </label>
             <label className="creator-opportunity-product-toggle"><input type="checkbox" name="allow_counter_offers" defaultChecked /><span>Allow creators to propose a different price. Untick to make this a fixed-price promotion.</span></label>
             <fieldset className="creator-opportunity-specialties">
@@ -153,7 +153,7 @@ export default async function SellerProductCreatorOpportunityPage({
               <label><input type="checkbox" name="contact_method" value="phone" disabled={!canSharePhone} /><span>Phone{!canSharePhone && " · verify your phone in seller profile first"}</span></label>
               {!canShareEmail && !canSharePhone && <Link href="/seller/profile">Add and verify your contact details</Link>}
             </fieldset>
-            <p className="creator-opportunity-payment-note">The platform does not collect campaign payments. Agree on payment and delivery directly with the creator before work begins.</p>
+            <p className="creator-opportunity-payment-note">Payments between sellers and creators happen outside RonTab. RonTab is not a party to these agreements. Agree on payment and delivery directly with the creator before work begins.</p>
             <button className="seller-auth-submit" type="submit">Publish creator opportunity</button>
           </ActionForm>
           {latestOpportunity && <Link className="creator-opportunity-new-link" href={`/seller/products/${product.id}/creator-opportunity`}>Return to previous promotion</Link>}

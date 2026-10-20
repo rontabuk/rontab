@@ -7,6 +7,7 @@ import { ActionForm } from "@/components/ActionForm";
 import { ProfileImageUpload } from "@/components/ProfileImageUpload";
 import { CityPicker } from "@/components/CityPicker";
 import { VisitorProfileEditDialog } from "@/components/VisitorProfileEditDialog";
+import { BetaPointsNotice } from "@/components/BetaPointsNotice";
 import { ProfileOffers } from "@/components/visitor/ProfileOffers";
 import { getAvailableSellerOffers } from "@/lib/seller/available-offers";
 import { formatNumber } from "@/lib/format";
@@ -179,6 +180,7 @@ export default async function VisitorAccountPage({
             </div>
           </Link>
         </section>
+        <BetaPointsNotice />
       </section>
       <ProfileOffers offers={sellerOffers.offers} cityId={profile.city_id} available={sellerOffers.available} platformOfferCount={availableOffers.length} />
     </main>

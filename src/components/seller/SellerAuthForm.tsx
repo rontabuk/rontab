@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { isBetaMode } from "@/lib/beta";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export function SellerAuthForm({ mode }: { mode: "register" | "login" }) {
+  const betaMode = isBetaMode();
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,6 +110,12 @@ export function SellerAuthForm({ mode }: { mode: "register" | "login" }) {
       <input id="seller-email" name="email" type="email" autoComplete="email" required />
       <label htmlFor="seller-password">Password</label>
       <input id="seller-password" name="password" type="password" minLength={8} autoComplete={mode === "register" ? "new-password" : "current-password"} required />
+      {mode === "register" && betaMode && (
+        <label className="seller-beta-consent">
+          <input name="beta_acknowledgement" type="checkbox" required />
+          <span>I understand RonTab is in beta and results are not guaranteed.</span>
+        </label>
+      )}
       {mode === "login" && <Link className="seller-auth-switch" href="/auth/forgot-password?returnTo=%2Fseller%2Flogin">Forgot password?</Link>}
       {message && <p className="seller-auth-message" role="status">{message}</p>}
       <button className="seller-auth-submit" type="submit" disabled={isSubmitting}>

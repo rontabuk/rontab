@@ -203,10 +203,9 @@ export default async function CreatorOpportunityDetailPage({
           : <label>Fixed promotion fee ({opportunity.currency})<input name="amount" type="number" value={opportunity.budget} readOnly /><small>The seller set a fixed price for this promotion.</small></label>}
         <label>What you will deliver<textarea name="offer_details" minLength={30} maxLength={2000} rows={5} required placeholder="Describe the platform, content format, and what is included in your price." /></label>
         <fieldset><legend>Contact details shared only if selected</legend><label><input type="checkbox" name="share_email" />Share my confirmed account email</label><label><input type="checkbox" name="share_phone" />Share my phone number</label><input name="contact_phone" type="tel" maxLength={32} defaultValue={creatorContact?.phone ?? ""} placeholder="Add a phone in your creator profile" /></fieldset>
-        <p>Payment is agreed directly with the seller. The platform does not collect campaign payments.</p>
         <button type="submit"><Send size={14} aria-hidden="true" />Send offer</button>
       </ActionForm>}
-      <p className="creator-opportunity-disclosure">Offers and payment are arranged directly by the seller and creator. The platform does not handle campaign payments or guarantee delivery.</p>
+      <p className="creator-opportunity-disclosure">Payments between sellers and creators happen outside RonTab. RonTab is not a party to these agreements. The platform does not handle campaign payments or guarantee delivery.</p>
     </main>
   );
 }

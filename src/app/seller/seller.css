@@ -6,6 +6,8 @@
 .seller-auth-form { display: grid; gap: 8px; }
 .seller-auth-form label { margin-top: 7px; color: #465246; font-size: 11px; font-weight: 700; }
 .seller-auth-form input, .seller-product-form input, .seller-product-form select, .seller-product-form textarea { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--ink); font: inherit; font-size: 12px; }
+.seller-auth-form .seller-beta-consent { display: flex; align-items: flex-start; gap: 9px; margin-top: 12px; color: #465246; font-size: 12px; font-weight: 400; line-height: 1.55; cursor: pointer; }
+.seller-auth-form .seller-beta-consent input { width: 16px; height: 16px; min-height: 16px; flex: 0 0 16px; margin: 2px 0 0; padding: 0; accent-color: var(--green); }
 .seller-auth-submit { min-height: 42px; margin-top: 11px; padding-inline: 14px; border: 0; border-radius: 3px; background: var(--green); color: #fff; cursor: pointer; font-size: 12px; font-weight: 700; transition: background-color 150ms ease; }
 .seller-auth-submit:hover:not(:disabled) { background: var(--green-dark); }
 .seller-auth-submit:disabled { cursor: wait; opacity: .65; }
@@ -316,6 +318,16 @@
 .seller-ad-topup-button { display: inline-flex; min-height: 37px; align-items: center; gap: 8px; margin-top: 15px; padding: 0 12px; border: 1px solid #d7ddd2; border-radius: 3px; background: #ecefe9; color: #6f766c; cursor: not-allowed; font: inherit; font-size: 12px; font-weight: 700; }
 .seller-ad-topup-button:not(:disabled) { background: var(--green-dark); color: #fff; cursor: pointer; }
 .seller-ad-topup-button:not(:disabled):hover { background: var(--green); }
+.seller-beta-payment-dialog { width: min(440px, calc(100% - 32px)); max-width: 440px; padding: 0; border: 1px solid #dce2d8; border-radius: 5px; background: var(--surface); color: var(--ink); box-shadow: 0 18px 56px rgb(31 35 40 / 20%); }
+.seller-beta-payment-dialog::backdrop { background: rgb(24 31 25 / 48%); }
+.seller-beta-payment-panel { padding: 20px; }
+.seller-beta-payment-panel header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.seller-beta-payment-panel h2 { margin: 0; font-family: var(--font-display), Georgia, serif; font-size: 22px; font-weight: 400; }
+.seller-beta-payment-panel p { margin: 12px 0 18px; color: #626c60; font-size: 13px; line-height: 1.65; }
+.seller-beta-payment-close { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--ink); cursor: pointer; }
+.seller-beta-payment-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.seller-beta-payment-actions a, .seller-beta-payment-actions button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; padding: 0 12px; border: 1px solid var(--green-dark); border-radius: 3px; background: var(--green-dark); color: #fff; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
+.seller-beta-payment-actions button { border-color: #d7ddd2; background: var(--surface); color: #405745; }
 .seller-checkout-error { margin-top: 12px; color: #a13326; font-size: 13px; }
 .seller-checkout-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; padding: 12px 0; border-block: 1px solid var(--line); }
 .seller-checkout-status p { margin: 0; font-size: 13px; }

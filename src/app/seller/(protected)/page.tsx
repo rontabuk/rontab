@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { AddProductForm } from "@/components/seller/AddProductForm";
+import { isBetaMode } from "@/lib/beta";
 import { getSellerAccount } from "@/lib/seller/access";
 
 export const metadata: Metadata = { title: "Add products", robots: { index: false, follow: false } };
@@ -25,6 +26,12 @@ export default async function SellerDashboardPage() {
         <p>Add a product to {seller.shop_name} for review.</p>
       </header>
 
+      {isBetaMode() && (
+        <section className="seller-account-notice" role="status">
+          <strong>Trial credits (beta)</strong>
+          <span>Seller accounts receive 10,000 free advertising clicks once on registration. These trial credits have no charge.</span>
+        </section>
+      )}
       {seller.status === "pending" && (
         <section className="seller-account-notice" role="status">
           <strong>Your shop is awaiting review.</strong>

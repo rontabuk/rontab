@@ -1,4 +1,5 @@
 .visitor-overview { max-width: 1120px; padding-top: 18px; }
+.visitor-beta-value-notice { margin: 12px 0; padding: 10px 12px; border-left: 3px solid #b77b4e; background: #f7efe8; color: #5f5144; font-size: 12px; line-height: 1.55; }
 .visitor-account-back { display: inline-flex; min-height: 34px; align-items: center; gap: 6px; margin: 0 0 12px; color: var(--blue); font-size: 11px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .visitor-fans-page { max-width: 900px; }
 .visitor-fan-summary { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 20px; padding: 15px 0; border-bottom: 1px solid #dde2d9; }

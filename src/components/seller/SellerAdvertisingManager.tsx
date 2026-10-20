@@ -1,11 +1,12 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { CreditCard, Save, Search } from "lucide-react";
+import { CreditCard, Save, Search, X } from "lucide-react";
 import { saveSellerAdAllocations } from "@/app/seller/(protected)/actions";
 import { startTestCreditCheckout } from "@/app/seller/(protected)/advertising/payment-actions";
 import { ProductCard } from "@/components/ProductCard";
 import type { Product } from "@/data/products";
+import { isBetaMode } from "@/lib/beta";
 import { formatNumber } from "@/lib/format";
 
 export type AdvertisingProduct = Product & { id: string; clicksPreviously: number };
@@ -33,10 +34,12 @@ export function SellerAdvertisingManager({
   canManage: boolean;
   canPurchase: boolean;
 }) {
+  const betaMode = isBetaMode();
   const [topUpClicks, setTopUpClicks] = useState(1_000);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutPending, startCheckoutTransition] = useTransition();
   const checkoutRequest = useRef<{ clicks: number; rate: number; id: string } | null>(null);
+  const betaDialogRef = useRef<HTMLDialogElement>(null);
   const [allocations, setAllocations] = useState(initialAllocations);
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -58,6 +61,10 @@ export function SellerAdvertisingManager({
   });
 
   function startCheckout() {
+    if (betaMode) {
+      betaDialogRef.current?.showModal();
+      return;
+    }
     if (!canPurchase || checkoutPending) return;
     if (checkoutRequest.current?.clicks !== topUpClicks || checkoutRequest.current?.rate !== clickPricePencePer1000) {
       checkoutRequest.current = { clicks: topUpClicks, rate: clickPricePencePer1000, id: crypto.randomUUID() };
@@ -117,7 +124,7 @@ export function SellerAdvertisingManager({
         <div className="seller-ad-section-heading">
           <div>
             <h2 id="seller-ad-topup-title">Add click credits</h2>
-            <p>{canPurchase ? "Stripe test mode. No real payment will be taken." : "Online payments are not active. Prices are shown in GBP."}</p>
+            <p>{betaMode ? "Payments are not enabled during the beta. Trial credits are free." : canPurchase ? "Stripe test mode. No real payment will be taken." : "Online payments are not active. Prices are shown in GBP."}</p>
           </div>
           <CreditCard size={19} aria-hidden="true" />
         </div>
@@ -138,12 +145,31 @@ export function SellerAdvertisingManager({
           aria-label="Choose the number of click credits to purchase"
         />
         <div className="seller-ad-slider-scale"><span>{formatGbp(1_000, clickPricePencePer1000)}</span><span>{formatGbp(1_000_000, clickPricePencePer1000)}</span></div>
-        <button className="seller-ad-topup-button" type="button" disabled={!canPurchase || checkoutPending} onClick={startCheckout}>
-          <CreditCard size={15} aria-hidden="true" /> {checkoutPending ? "Opening test checkout..." : canPurchase ? "Test checkout" : "Payments unavailable"}
+        <button className="seller-ad-topup-button" type="button" disabled={(!betaMode && !canPurchase) || checkoutPending} onClick={startCheckout}>
+          <CreditCard size={15} aria-hidden="true" /> {checkoutPending ? "Opening test checkout..." : betaMode ? "Request more trial credits" : canPurchase ? "Test checkout" : "Payments unavailable"}
         </button>
+        <dialog className="seller-beta-payment-dialog" ref={betaDialogRef} aria-labelledby="seller-beta-payment-title" aria-describedby="seller-beta-payment-description">
+          <div className="seller-beta-payment-panel">
+            <header>
+              <h2 id="seller-beta-payment-title">Payments are not enabled</h2>
+              <button className="seller-beta-payment-close" type="button" aria-label="Close" onClick={() => betaDialogRef.current?.close()}>
+                <X size={19} aria-hidden="true" />
+              </button>
+            </header>
+            <p id="seller-beta-payment-description">RonTab is currently in beta test mode. Payments are not enabled and you will not be charged. Your trial credits are free. Contact us to request more.</p>
+            <div className="seller-beta-payment-actions">
+              <a href="mailto:rontabuk@gmail.com?subject=RonTab%20beta%20click%20credits">Contact us</a>
+              <button type="button" onClick={() => betaDialogRef.current?.close()}>Close</button>
+            </div>
+          </div>
+        </dialog>
         {checkoutError && <p className="seller-checkout-error" role="alert">{checkoutError}</p>}
         <div className="seller-ad-credit-balances" aria-label="Credit balance breakdown">
-          <div><span>Welcome gift</span><strong>{formatNumber(welcomeClicks)} clicks</strong><small>Free once on registration</small></div>
+          <div>
+            <span>{betaMode ? "Trial credits (beta)" : "Welcome gift"}</span>
+            <strong>{formatNumber(welcomeClicks)} clicks</strong>
+            <small>{betaMode ? "10,000 free clicks granted once on registration" : "Free once on registration"}</small>
+          </div>
           <div><span>Admin gifts</span><strong>{formatNumber(adminClicks)} clicks</strong><small>Used before the welcome gift</small></div>
           <div><span>Paid balance</span><strong>{formatNumber(paidClicks)} clicks</strong><small>Used after free credits</small></div>
         </div>

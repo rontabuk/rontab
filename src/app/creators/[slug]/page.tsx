@@ -194,7 +194,7 @@ export default async function CreatorProfilePage({
                 <option value="" disabled>Choose an approved product</option>
                 {sellerProducts.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
               </select></label>
-              <label>Promotion budget (GBP)<input name="budget" type="number" min={MIN_CREATOR_OPPORTUNITY_BUDGET} max="1000000" step="0.01" inputMode="decimal" required /><small>Minimum {formatPrice(MIN_CREATOR_OPPORTUNITY_BUDGET, "GBP")}. Payment is arranged directly with the creator.</small></label>
+              <label>Promotion budget (GBP)<input name="budget" type="number" min={MIN_CREATOR_OPPORTUNITY_BUDGET} max="1000000" step="0.01" inputMode="decimal" required /><small>Minimum {formatPrice(MIN_CREATOR_OPPORTUNITY_BUDGET, "GBP")}. Payments between sellers and creators happen outside RonTab. RonTab is not a party to these agreements.</small></label>
               <label className="creator-collaboration-check"><input type="checkbox" name="allow_counter_offers" defaultChecked />Let the creator propose a different price</label>
               <label>Campaign brief<textarea name="brief" minLength={30} maxLength={2000} rows={5} required placeholder="Describe the content, platform and key messages you want." /></label>
               <label>Preferred completion date<input type="date" name="deadline" /></label>

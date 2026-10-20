@@ -1,11 +1,13 @@
 "use server";
 
 import { headers } from "next/headers";
+import { isBetaMode } from "@/lib/beta";
 import { createTestStripe, getTestBillingConfig, purchaseIdPattern } from "@/lib/billing/stripe";
 import { getSellerAccount } from "@/lib/seller/access";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 
 export async function startTestCreditCheckout(formData: FormData): Promise<{ error: string | null; url: string | null }> {
+  if (isBetaMode()) return { error: "Payments are not enabled during the beta.", url: null };
   const config = getTestBillingConfig();
   if (!config) return { error: "Test payments are not configured.", url: null };
   const clicks = Number(formData.get("clicks"));
