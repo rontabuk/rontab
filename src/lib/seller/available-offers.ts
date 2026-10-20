@@ -12,13 +12,13 @@ export function londonOfferDate() {
 export async function getAvailableSellerOffers(supabase: SupabaseClient<Database>, cityId: string | null) {
   if (!cityId) return { offers: [], available: true };
   let { data, error } = await supabase.from("seller_offers")
-    .select("id,title,offer_kind,description,benefit_details,discount_percent,media_url,media_storage_path,product_media_path,media_type,points_cost,audience,terms,valid_from,valid_until,fulfillment,external_url,external_code,max_claims,max_per_customer,target_all_uk,seller_offer_locations(id,offer_id,city_id,branch_name,branch_address),audience_locations:seller_offer_locations()")
+    .select("id,seller_profile_id,title,offer_kind,description,benefit_details,discount_percent,media_url,media_storage_path,product_media_path,media_type,points_cost,audience,terms,valid_from,valid_until,fulfillment,external_url,external_code,max_claims,max_per_customer,target_all_uk,seller_offer_locations(id,offer_id,city_id,branch_name,branch_address),audience_locations:seller_offer_locations()")
     .eq("status", "published").eq("audience_locations.city_id", cityId)
     .or("target_all_uk.eq.true,audience_locations.not.is.null")
     .gte("valid_until", londonOfferDate()).order("valid_from").limit(60);
   if (error?.code === "42703" || error?.code === "PGRST204") {
     const legacy = await supabase.from("seller_offers")
-      .select("id,title,offer_kind,description,benefit_details,discount_percent,media_url,media_storage_path,product_media_path,media_type,points_cost,terms,valid_from,valid_until,fulfillment,external_url,external_code,max_claims,seller_offer_locations!inner(id,offer_id,city_id,branch_name,branch_address)")
+      .select("id,seller_profile_id,title,offer_kind,description,benefit_details,discount_percent,media_url,media_storage_path,product_media_path,media_type,points_cost,terms,valid_from,valid_until,fulfillment,external_url,external_code,max_claims,seller_offer_locations!inner(id,offer_id,city_id,branch_name,branch_address)")
       .eq("status", "published").eq("seller_offer_locations.city_id", cityId)
       .gte("valid_until", londonOfferDate()).order("valid_from").limit(60);
     data = legacy.data?.map((offer) => ({
@@ -48,19 +48,27 @@ export async function getAvailableSellerOffers(supabase: SupabaseClient<Database
       && (quota.offer_date > today || quota.ends_at > currentTime)) ? [offer.id] : [];
   }));
   data = data.filter((offer) => offer.fulfillment === "online" || scheduledOfferIds.has(offer.id));
-  const [productUrls, availability] = await Promise.all([
+  const sellerIds = [...new Set(data.map((offer) => offer.seller_profile_id))];
+  const [productUrls, availability, sellersResult] = await Promise.all([
     createProductMediaUrls(supabase, data.flatMap((offer) => offer.product_media_path ? [offer.product_media_path] : [])),
     data.length ? supabase.rpc("get_public_seller_offer_availability", { p_offer_ids: data.map((offer) => offer.id) }) : { data: [], error: null },
+    sellerIds.length ? supabase.from("seller_profiles").select("id,shop_name,slug,logo_url").in("id", sellerIds) : { data: [], error: null },
   ]);
   if (availability.error) throw new Error(availability.error.message);
+  if (sellersResult.error) throw new Error(sellersResult.error.message);
   const remaining = new Map(availability.data?.map((offer) => [offer.offer_id, offer.remaining_claims]));
+  const sellers = new Map((sellersResult.data ?? []).map((seller) => [seller.id, {
+    name: seller.shop_name,
+    slug: seller.slug,
+    logoUrl: seller.logo_url?.startsWith("https://") ? seller.logo_url : null,
+  }]));
   const offers = await Promise.all(data.map(async (offer) => {
     let mediaDisplayUrl = offer.product_media_path ? productUrls.get(offer.product_media_path) ?? "" : offer.media_url ?? "";
     if (offer.media_storage_path) {
       const { data: media, error: mediaError } = await supabase.storage.from("seller-offer-media").createSignedUrl(offer.media_storage_path, 1800);
       if (!mediaError) mediaDisplayUrl = media.signedUrl;
     }
-    return { ...offer, mediaDisplayUrl, remainingClaims: remaining.get(offer.id) ?? null, locations: offer.seller_offer_locations };
+    return { ...offer, mediaDisplayUrl, remainingClaims: remaining.get(offer.id) ?? null, locations: offer.seller_offer_locations, seller: sellers.get(offer.seller_profile_id) ?? null };
   }));
   return { offers, available: true };
 }

@@ -146,6 +146,16 @@ export default async function VisitorOfferGalleryPage({
                 </div>
                 <div className="seller-offer-card-body">
                   <div className="seller-offer-card-meta"><span>{offer.offer_kind.replaceAll("_", " ")}</span><span><MapPin size={12} aria-hidden="true" />{offer.target_all_uk ? "All UK" : citiesById.get(cityId) ?? "Your city"}</span></div>
+                  {offer.seller && (() => {
+                    const seller = offer.seller;
+                    const identity = <>
+                      {seller.logoUrl ? <Image src={seller.logoUrl} alt="" width={26} height={26} unoptimized /> : <span aria-hidden="true">{seller.name.charAt(0).toUpperCase()}</span>}
+                      <strong>{seller.name}</strong>
+                    </>;
+                    return seller.slug
+                      ? <Link className="seller-offer-card-seller" href={`/shops/${seller.slug}`}>{identity}<small>Visit shop</small></Link>
+                      : <p className="seller-offer-card-seller">{identity}</p>;
+                  })()}
                   <h2>{offer.title}</h2>
                   <p>{offer.benefit_details}</p>
                   <p className="seller-offer-card-description">{offer.description}</p>
