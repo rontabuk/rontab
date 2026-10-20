@@ -12,10 +12,10 @@ export const instant = false;
 export default async function SellerProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ updated?: string }>;
+  searchParams: Promise<{ updated?: string; deleted?: string }>;
 }) {
   await connection();
-  const [{ updated }, { supabase, seller }] = await Promise.all([searchParams, getSellerAccount()]);
+  const [{ updated, deleted }, { supabase, seller }] = await Promise.all([searchParams, getSellerAccount()]);
   const { data: products, error } = await supabase
     .from("products")
     .select("id,name,slug,status,price,currency,click_count,created_at,category_id")
@@ -49,6 +49,7 @@ export default async function SellerProductsPage({
       </header>
       {updated === "approved" && <p className="admin-save-success" role="status">Changes saved. The product was approved automatically and is live.</p>}
       {updated === "review" && <p className="admin-save-success" role="status">Changes saved and sent for admin review.</p>}
+      {deleted === "1" && <p className="admin-save-success" role="status">Product deleted.</p>}
       <SellerProductList products={listProducts} canDelete={seller.status === "active"} canPromote={seller.status === "active"} />
     </main>
   );

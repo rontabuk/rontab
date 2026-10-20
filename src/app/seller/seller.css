@@ -197,7 +197,17 @@
 .seller-confirm-dialog > p:not(.admin-eyebrow) { margin: 9px 0 0; color: #687166; font-size: 12px; line-height: 1.6; }
 .seller-confirm-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 23px; }
 .seller-confirm-cancel, .seller-confirm-delete { min-height: 38px; padding: 0 12px; border: 1px solid #d7ddd2; border-radius: 3px; background: #fff; color: #465246; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
-.seller-confirm-delete { border-color: #91483d; background: #91483d; color: #fff; }
+.seller-confirm-delete { display: inline-flex; align-items: center; gap: 6px; border-color: #91483d; background: #91483d; color: #fff; }
+.seller-confirm-cancel:disabled, .seller-confirm-delete:disabled { cursor: progress; opacity: .7; }
+.seller-confirm-spinner { animation: seller-confirm-spin .8s linear infinite; }
+@keyframes seller-confirm-spin { to { transform: rotate(360deg); } }
+.seller-danger-zone { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 28px; padding: 18px 20px; border: 1px solid #e7c9c3; border-radius: 5px; background: #fdf6f4; }
+.seller-danger-zone h2 { margin: 0; color: #7a3a31; font-size: 15px; font-weight: 700; }
+.seller-danger-zone p { margin: 5px 0 0; color: #7d6a66; font-size: 12px; line-height: 1.5; }
+.seller-danger-button { display: inline-flex; flex: 0 0 auto; min-height: 38px; align-items: center; gap: 7px; padding: 0 14px; border: 1px solid #91483d; border-radius: 3px; background: #fff; color: #91483d; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
+.seller-danger-button:hover { background: #91483d; color: #fff; }
+.seller-danger-button:focus-visible { outline: 3px solid rgb(145 72 61 / 35%); outline-offset: 2px; }
+@media (max-width: 600px) { .seller-danger-zone { align-items: stretch; flex-direction: column; } .seller-danger-button { justify-content: center; } }
 .seller-current-media { display: flex; grid-column: 1 / -1; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 11px; border: 1px solid #e0e4dc; background: #f5f7f2; color: #586258; font-size: 12px; }
 .seller-current-media .seller-media-clear { margin: 0; }
 .seller-edit-actions { display: flex; grid-column: 1 / -1; align-items: center; gap: 14px; }

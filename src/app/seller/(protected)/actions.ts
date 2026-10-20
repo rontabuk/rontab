@@ -276,7 +276,7 @@ export async function deleteSellerProduct(formData: FormData) {
   if (!product) {
     revalidatePath("/seller/products");
     revalidatePath("/seller");
-    return;
+    redirect("/seller/products?deleted=1");
   }
 
   const { data: media, error: mediaError } = await supabase
@@ -304,6 +304,7 @@ export async function deleteSellerProduct(formData: FormData) {
   revalidatePath("/seller/products");
   revalidatePath("/seller");
   revalidatePath("/");
+  redirect("/seller/products?deleted=1");
 }
 
 export async function refreshSellerCatalog() {

@@ -19,7 +19,7 @@ function sellerCatalogueFixture({ canPromote = true, canDelete = true } = {}) {
     "next/link": { default: ({ children, ...props }) => React.createElement("a", props, children) },
     "next/image": { default: ({ fill, unoptimized, sizes, ...props }) => React.createElement("img", { ...props, "data-unoptimized": Boolean(unoptimized), "data-sizes": sizes, ...(fill ? { style: { position: "absolute", inset: 0 } } : {}) }) },
     "@/components/DismissibleDetails": { DismissibleDetails: ({ children, className }) => React.createElement("details", { className }, children) },
-    "@/app/seller/(protected)/actions": { deleteSellerProduct() {} },
+    "@/components/seller/DeleteProductDialog": { DeleteProductDialog: ({ product }) => React.createElement("section", { role: "alertdialog", "data-product-id": product.id }) },
     "@/lib/format": { formatCompactNumber: (value) => String(value), formatDate: (value) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value)), formatPrice: (value) => value === null ? "Price on request" : `£${value}` },
   };
   vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/components/seller/SellerProductList.tsx", import.meta.url), "utf8"), {
@@ -72,6 +72,19 @@ test("catalogue promotion actions are limited to approved products and disappear
   const tree = inactive.render();
   assert.equal(inactive.nodes(tree).filter((node) => node.props?.href?.endsWith("/offer")).length, 0);
   assert.equal(inactive.nodes(tree).filter((node) => node.type === "button" && node.props?.children?.includes?.("Delete product")).length, 0);
+});
+
+test("delete product menu opens the confirmation dialog for the chosen product", () => {
+  const fixture = sellerCatalogueFixture();
+  const dialogFor = (tree) => fixture.nodes(tree).find((node) => node.props?.product && node.props?.onCancel);
+  assert.equal(dialogFor(fixture.render()), undefined);
+  const deleteButtons = fixture.nodes(fixture.render()).filter((node) => node.type === "button" && node.props?.children?.includes?.("Delete product"));
+  assert.equal(deleteButtons.length, 4);
+  deleteButtons[2].props.onClick({ currentTarget: { closest: () => null } });
+  const dialog = dialogFor(fixture.render());
+  assert.equal(dialog?.props.product.id, "bag");
+  dialog.props.onCancel();
+  assert.equal(dialogFor(fixture.render()), undefined);
 });
 
 if (process.argv.includes("--seller-preview") || process.argv.includes("--shop-preview")) {

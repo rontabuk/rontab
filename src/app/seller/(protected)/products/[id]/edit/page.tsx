@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
+import { DeleteProductButton } from "@/components/seller/DeleteProductDialog";
 import { EditProductForm } from "@/components/seller/EditProductForm";
 import { getSellerAccount } from "@/lib/seller/access";
 import { createProductMediaUrls } from "@/lib/supabase/storage";
@@ -51,15 +52,24 @@ export default async function EditSellerProductPage({ params }: EditProductPageP
         <p>Update the listing for {seller.shop_name}. Changes go through the current product approval setting.</p>
       </header>
       {seller.status === "active" ? (
-        <EditProductForm
-          sellerId={seller.id}
-          shopName={seller.shop_name}
-          shopLogo={seller.logo_url}
-          categories={categories}
-          product={product}
-          currentMedia={media}
-          canUploadReels={canUploadReels}
-        />
+        <>
+          <EditProductForm
+            sellerId={seller.id}
+            shopName={seller.shop_name}
+            shopLogo={seller.logo_url}
+            categories={categories}
+            product={product}
+            currentMedia={media}
+            canUploadReels={canUploadReels}
+          />
+          <section className="seller-danger-zone" aria-labelledby="delete-product-section-title">
+            <div>
+              <h2 id="delete-product-section-title">Delete this product</h2>
+              <p>Permanently removes the listing and its photos or Reel from your shop. This cannot be undone.</p>
+            </div>
+            <DeleteProductButton product={{ id: product.id, name: product.name }} />
+          </section>
+        </>
       ) : (
         <section className="seller-account-notice seller-account-suspended" role="status">
           <strong>Product editing is unavailable.</strong>

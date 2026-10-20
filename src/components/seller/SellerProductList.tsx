@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { ArrowDownWideNarrow, ArrowUpRight, Film, ImageIcon, MoreHorizontal, MousePointer2, Package, Pencil, Search, Tag, Trash2, UsersRound, X } from "lucide-react";
 import { DismissibleDetails } from "@/components/DismissibleDetails";
-import { deleteSellerProduct } from "@/app/seller/(protected)/actions";
+import { DeleteProductDialog } from "@/components/seller/DeleteProductDialog";
 import { formatCompactNumber, formatDate, formatPrice } from "@/lib/format";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -124,24 +124,7 @@ export function SellerProductList({ products, canDelete, canPromote }: { product
           {products.length ? <button type="button" onClick={clearFilters}>Clear filters</button> : <Link href="/seller">Add product</Link>}
         </div>
       )}
-      {displayedPendingDelete && (
-        <div className="seller-confirm-overlay" role="presentation" onMouseDown={(event) => {
-          if (event.target === event.currentTarget) setPendingDelete(null);
-        }}>
-          <section className="seller-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-product-title" onKeyDown={(event) => {
-            if (event.key === "Escape") setPendingDelete(null);
-          }}>
-            <p className="admin-eyebrow">DELETE PRODUCT</p>
-            <h2 id="delete-product-title">Delete {displayedPendingDelete.name}?</h2>
-            <p>This permanently removes the product and its photos or Reel from your shop.</p>
-            <form className="seller-confirm-actions" action={deleteSellerProduct}>
-              <input name="product_id" type="hidden" value={displayedPendingDelete.id} />
-              <button className="seller-confirm-cancel" type="button" autoFocus onClick={() => setPendingDelete(null)}>Keep product</button>
-              <button className="seller-confirm-delete" type="submit">Delete permanently</button>
-            </form>
-          </section>
-        </div>
-      )}
+      {displayedPendingDelete && <DeleteProductDialog product={displayedPendingDelete} onCancel={() => setPendingDelete(null)} />}
     </section>
   );
 }
