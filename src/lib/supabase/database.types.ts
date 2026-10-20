@@ -10,6 +10,7 @@ type ProductOfferFields = {
   audience: "general" | "reward";
   auto_published: boolean;
   external_code: string | null;
+  online_code_uses: number | null;
   external_url: string | null;
   fulfillment: "branch" | "online";
   daily_claim_limit: number | null;
@@ -379,6 +380,7 @@ export type Database = {
       admin_set_seller_reward_points: { Args: { p_points_cost: number; p_offer_id?: string }; Returns: undefined };
       seller_publish_product_offer: { Args: { p_request_id: string; p_product_id: string; p_payload: Json }; Returns: string };
       seller_publish_product_offer_in_cities: { Args: { p_request_id: string; p_product_id: string; p_payload: Json; p_city_ids: string[] }; Returns: string };
+      seller_publish_online_discount_offer: { Args: { p_request_id: string; p_product_id: string; p_payload: Json; p_city_ids: string[]; p_code_uses: number }; Returns: string };
       get_public_seller_offer_daily_availability: { Args: { p_offer_ids: string[] }; Returns: { offer_id: string; offer_date: string; remaining_claims: number }[] };
       get_my_seller_offer_booking_limits: { Args: { p_offer_ids: string[] }; Returns: { offer_id: string; reservations_used: number; next_free_at: string | null }[] };
       seller_cancel_product_offer: { Args: { p_offer_id: string }; Returns: undefined };

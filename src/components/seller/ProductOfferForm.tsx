@@ -41,7 +41,7 @@ export function ProductOfferForm({ productId, requestId, countries, cities, post
     </fieldset>
     <p className="seller-product-offer-note">{fulfillment === "branch" ? `Branch vouchers cost ${formatNumber(branchPointsCost)} points to reserve, for both public offers and exclusive rewards.` : "Online offers are public and do not use points."}</p>
     <div className="seller-product-offer-row">
-      <label>Benefit<select name="offer_kind" value={kind} onChange={(event) => setKind(event.target.value)}><option value="discount">Percentage discount</option><option value="free_item">Free product</option><option value="meal">Free meal</option><option value="other">Special offer</option></select></label>
+      <label>Benefit<select name="offer_kind" value={kind} onChange={(event) => { setKind(event.target.value); if (event.target.value !== "discount") setFulfillment("branch"); }}><option value="discount">Percentage discount</option><option value="free_item">Free product</option><option value="meal">Free meal</option><option value="other">Special offer</option></select></label>
       {kind === "discount" && <label>Discount %<input name="discount_percent" type="number" min="0.01" max="100" step="0.01" required /></label>}
     </div>
     <label>Offer details<textarea name="benefit_details" rows={3} minLength={3} maxLength={1000} placeholder="State exactly what is included, exclusions and any minimum spend." required /></label>
@@ -54,7 +54,7 @@ export function ProductOfferForm({ productId, requestId, countries, cities, post
     <div className="seller-product-offer-row"><label>Starts<input name="valid_from" type="date" min={today} defaultValue={today} required /></label><label>Ends<input name="valid_until" type="date" min={today} defaultValue={today} required /></label></div>
     <fieldset className="seller-offer-choice"><legend>Redemption</legend>
       <label><input type="radio" name="fulfillment" value="branch" checked={fulfillment === "branch"} onChange={() => setFulfillment("branch")} /><span>Branch voucher</span></label>
-      <label><input type="radio" name="fulfillment" value="online" checked={fulfillment === "online"} disabled={audience === "reward" || !shopUrl.startsWith("https://")} onChange={() => setFulfillment("online")} /><span>Seller website<small>Public offers only</small></span></label>
+      <label><input type="radio" name="fulfillment" value="online" checked={fulfillment === "online"} disabled={audience === "reward" || kind !== "discount" || !shopUrl.startsWith("https://")} onChange={() => setFulfillment("online")} /><span>Seller website<small>Public discounts with a code only</small></span></label>
     </fieldset>
     {fulfillment === "branch" ? <>
       <p className="seller-product-offer-note">One redemption branch. Total vouchers are shared across all selected cities and dates.</p>
@@ -64,7 +64,7 @@ export function ProductOfferForm({ productId, requestId, countries, cities, post
         <label>Total vouchers<input name="max_claims" type="number" min="1" max={MAX_PRODUCT_OFFER_VOUCHERS} step="1" value={maxClaims} onChange={(event) => { const nextTotal = Number(event.target.value); setMaxClaims(nextTotal); setMaxPerCustomer((current) => Math.min(current, nextTotal || 1)); }} required /></label>
         {kind === "discount" && <label>Maximum vouchers per customer<input name="max_per_customer" type="number" min="1" max={maxClaims} step="1" value={maxPerCustomer} onChange={(event) => setMaxPerCustomer(Number(event.target.value))} required /></label>}
       </div>
-    </> : <><p className="seller-product-offer-note">{shopUrl}</p><label>Public discount code · optional<input name="external_code" maxLength={80} autoComplete="off" /></label><p className="seller-product-offer-note">Usage and quantity cannot be verified on external websites.</p></>}
+    </> : <><p className="seller-product-offer-note">{shopUrl}</p><div className="seller-product-offer-row"><label>Discount code<input name="external_code" minLength={3} maxLength={40} pattern="[A-Za-z0-9_\-]{3,40}" title="3 to 40 letters, numbers, hyphens or underscores, no spaces" autoComplete="off" spellCheck={false} placeholder="SAVE10" required /></label><label>Code uses available<input name="online_code_uses" type="number" min="1" max="100000" step="1" defaultValue={50} required /></label></div><p className="seller-product-offer-note">Create this code on your website with the same discount and number of uses. Customers see it on RonTab; usage is checked by your website, not by RonTab.</p></>}
     <label className="seller-product-offer-accept"><input name="accept_terms" type="checkbox" required /><span>I will honor this offer as described{audience === "reward" ? " as an exclusive benefit for RonTab voucher holders" : ""}. {fulfillment === "branch" ? "Early customer cancellation releases the reserved place. Cancelling the offer cancels unused active vouchers." : "Payment, delivery and returns remain my responsibility."}</span></label>
     <button className="seller-auth-submit" type="submit"><Send size={15} aria-hidden="true" />Publish offer</button>
   </ActionForm>;

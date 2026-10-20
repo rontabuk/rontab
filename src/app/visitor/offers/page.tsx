@@ -163,7 +163,7 @@ export default async function VisitorOfferGalleryPage({
                   <p>{formatOfferDate(offer.valid_from)} to {formatOfferDate(offer.valid_until)}</p>
                   <details className="seller-offer-card-terms"><summary>Terms and cancellation</summary><p>{offer.terms}</p></details>
                   {offer.fulfillment === "online" ? <div className="seller-offer-online">
-                    {offer.external_code && <p>Public code <code>{offer.external_code}</code></p>}
+                    {offer.external_code && <p>Discount code <code>{offer.external_code}</code>{offer.online_code_uses ? <small> · limited to {formatNumber(offer.online_code_uses)} uses on the seller website</small> : null}</p>}
                     {offer.valid_from <= today && offer.external_url ? <a href={offer.external_url} target="_blank" rel="noopener noreferrer">Open seller website<ArrowUpRight size={14} aria-hidden="true" /></a> : <p>Available from {formatOfferDate(offer.valid_from)}</p>}
                     <p>Purchases, delivery and returns are arranged with the seller. External code usage is not tracked by RonTab.</p>
                   </div> : <OfferCapacity offerId={offer.id} maximum={offer.max_claims} remaining={offer.remainingClaims} closesAt={`${offer.valid_until}T23:59:59`}><div className="seller-offer-slot-list">

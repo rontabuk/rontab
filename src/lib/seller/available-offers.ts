@@ -12,7 +12,7 @@ export function londonOfferDate() {
 export async function getAvailableSellerOffers(supabase: SupabaseClient<Database>, cityId: string | null) {
   if (!cityId) return { offers: [], available: true };
   let { data, error } = await supabase.from("seller_offers")
-    .select("id,seller_profile_id,title,offer_kind,description,benefit_details,discount_percent,media_url,media_storage_path,product_media_path,media_type,points_cost,audience,terms,valid_from,valid_until,fulfillment,external_url,external_code,max_claims,max_per_customer,target_all_uk,seller_offer_locations(id,offer_id,city_id,branch_name,branch_address),audience_locations:seller_offer_locations()")
+    .select("id,seller_profile_id,title,offer_kind,description,benefit_details,discount_percent,media_url,media_storage_path,product_media_path,media_type,points_cost,audience,terms,valid_from,valid_until,fulfillment,external_url,external_code,online_code_uses,max_claims,max_per_customer,target_all_uk,seller_offer_locations(id,offer_id,city_id,branch_name,branch_address),audience_locations:seller_offer_locations()")
     .eq("status", "published").eq("audience_locations.city_id", cityId)
     .or("target_all_uk.eq.true,audience_locations.not.is.null")
     .gte("valid_until", londonOfferDate()).order("valid_from").limit(60);
@@ -24,6 +24,7 @@ export async function getAvailableSellerOffers(supabase: SupabaseClient<Database
     data = legacy.data?.map((offer) => ({
       ...offer,
       audience: offer.points_cost > 0 ? "reward" as const : "general" as const,
+      online_code_uses: null,
       max_per_customer: 3,
       target_all_uk: false,
       audience_locations: [],

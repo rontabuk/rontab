@@ -27,6 +27,11 @@ export async function publishProductOffer(_state: FormState, formData: FormData)
     if (!/^\d{4}-\d{2}-\d{2}$/.test(validFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(validUntil)) throw new FormError("Choose valid offer dates.");
     if (!["discount", "free_item", "meal", "other"].includes(kind) || benefit.length < 3 || benefit.length > 1000) throw new FormError("Describe the offer benefit in 3 to 1,000 characters.");
     if (fulfillment === "branch" && !postcode) throw new FormError("Enter a valid UK postcode for the redemption branch.");
+    const externalCode = String(formData.get("external_code") ?? "").trim();
+    const onlineCodeUses = Number(formData.get("online_code_uses"));
+    if (fulfillment === "online" && kind !== "discount") throw new FormError("Seller website offers must be percentage discounts. Free products, meals and special offers use RonTab branch vouchers.");
+    if (fulfillment === "online" && !/^[A-Za-z0-9_-]{3,40}$/.test(externalCode)) throw new FormError("Enter a discount code of 3 to 40 letters, numbers, hyphens or underscores.");
+    if (fulfillment === "online" && (!Number.isInteger(onlineCodeUses) || onlineCodeUses < 1 || onlineCodeUses > 100000)) throw new FormError("Enter how many times the code can be used, from 1 to 100,000.");
     if (formData.get("accept_terms") !== "on") throw new FormError("Accept the offer and cancellation conditions.");
     const maxClaims = Number(formData.get("max_claims"));
     const maxPerCustomer = Number(formData.get("max_per_customer"));
@@ -47,11 +52,13 @@ export async function publishProductOffer(_state: FormState, formData: FormData)
         daily_capacity: fulfillment === "branch" ? maxClaims : null,
         max_claims: fulfillment === "branch" ? maxClaims : null,
         max_per_customer: fulfillment === "branch" && kind === "discount" ? maxPerCustomer : null,
-        external_code: fulfillment === "online" ? String(formData.get("external_code") ?? "").trim() : null,
+        external_code: fulfillment === "online" ? externalCode : null,
         accept_terms: true,
       },
     };
-    const { error } = cityIds.length !== 1
+    const { error } = fulfillment === "online"
+      ? await supabase.rpc("seller_publish_online_discount_offer", { ...parameters, p_city_ids: cityIds, p_code_uses: onlineCodeUses })
+      : cityIds.length !== 1
       ? await supabase.rpc("seller_publish_product_offer_in_cities", { ...parameters, p_city_ids: cityIds })
       : await supabase.rpc("seller_publish_product_offer", parameters);
     if (cityIds.length !== 1 && isSellerOfferSchemaUnavailable(error)) throw new FormError("All UK and multi-city publishing require the latest database migrations. No offer was published.");
