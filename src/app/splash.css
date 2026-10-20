@@ -1,10 +1,15 @@
 .account-welcome-screen, .rontab-splash { --splash-brand: #1f3326; }
-.account-welcome-screen { position: relative; display: grid; min-height: 100svh; min-height: 100dvh; place-items: center; padding: 24px; background: #fff8ee; color: #1da1f2; }
-.account-welcome-screen h1 { margin: 0; color: inherit; font-family: var(--font-display), Georgia, serif; font-size: 64px; font-style: italic; font-weight: 400; line-height: 1.2; letter-spacing: 0; }
+.account-welcome-screen { position: relative; display: grid; min-height: 100svh; min-height: 100dvh; place-items: center; overflow: hidden; padding: 24px; background: radial-gradient(120% 80% at 50% 0%, #2c4a36 0%, #1f3326 55%, #15241b 100%); color: #f6efe2; isolation: isolate; }
+.account-welcome-screen::before { position: absolute; inset: 0; z-index: -1; background: radial-gradient(40% 30% at 50% 50%, rgb(224 105 63 / 16%), transparent 70%); content: ""; }
+.account-welcome-brand { display: grid; justify-items: center; gap: 14px; text-align: center; animation: account-welcome-arrive 900ms cubic-bezier(.2,.7,.2,1) both; }
+.account-welcome-screen h1 { margin: 0; color: #f6efe2; font-family: var(--font-display), Georgia, serif; font-size: clamp(44px, 17vw, 120px); font-weight: 400; line-height: 1; letter-spacing: -.02em; }
+.account-welcome-screen h1 span { color: #e9875f; }
+.account-welcome-brand p { margin: 0; padding-top: 14px; border-top: 1px solid rgb(246 239 226 / 22%); color: rgb(246 239 226 / 72%); font-size: clamp(10px, 2.6vw, 13px); font-weight: 600; letter-spacing: .24em; text-transform: uppercase; }
+@keyframes account-welcome-arrive { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
 .account-welcome-loading { position: absolute; bottom: max(12dvh, calc(env(safe-area-inset-bottom) + 32px)); left: 50%; display: grid; width: 24px; height: 24px; place-items: center; margin-left: -12px; color: inherit; opacity: .7; }
 .account-welcome-loading svg { animation: account-welcome-spin 900ms linear infinite; }
 @keyframes account-welcome-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .account-welcome-loading svg { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .account-welcome-loading svg, .account-welcome-brand { animation: none; } }
 .rontab-splash { position: relative; display: grid; min-height: 100svh; place-items: center; overflow: hidden; padding: 36px 24px; background: var(--surface); color: #223127; isolation: isolate; }
 .splash-blob { display: none; position: absolute; z-index: -1; border-radius: 50%; filter: blur(60px); pointer-events: none; }
 .splash-blob-a { top: -12%; left: -8%; width: min(52vw, 520px); aspect-ratio: 1; background: #f2b79c; opacity: .7; animation: splash-drift-a 14s ease-in-out infinite alternate; }

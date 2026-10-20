@@ -4,7 +4,7 @@ import { RontabSplash } from "@/components/RontabSplash";
 import { getSafeVisitorPath } from "@/lib/visitor/paths";
 import "./splash.css";
 
-export const metadata: Metadata = { title: { absolute: "Welcome" } };
+export const metadata: Metadata = { title: { absolute: "RonTab" } };
 export const instant = false;
 
 export default async function Home({
