@@ -137,7 +137,7 @@ export function VisitorAccountForm({ nextPath, notice, initialMode = "login", co
           {mode === "register" && (
             <>
               <label htmlFor="visitor-name">Your name</label>
-              <input id="visitor-name" name="display_name" autoComplete="name" minLength={2} maxLength={100} placeholder="e.g. Sarah Ahmed" required />
+              <input id="visitor-name" name="display_name" autoComplete="name" minLength={2} maxLength={100} placeholder="e.g. Sarah Jones" required />
             </>
           )}
           <label htmlFor="visitor-email">Email address</label>
@@ -187,7 +187,8 @@ export function VisitorAccountForm({ nextPath, notice, initialMode = "login", co
         <div className="visitor-account-footer">
           <Link href="/products">Continue browsing without an account</Link>
           <span>Have a shop? <Link href="/seller/login">Seller sign in</Link></span>
-        </div>
+                    <span>Content creator? {mode === "register" ? <Link href="/creator/register">Join as a creator</Link> : <Link href="/creator/login">Creator sign in</Link>}</span>
+                  </div>
       </section>
     </main>
   );
