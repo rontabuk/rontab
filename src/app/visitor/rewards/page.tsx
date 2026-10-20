@@ -60,7 +60,7 @@ export default async function VisitorRewardsPage({
   const claims = ((claimsResult.data ?? []) as (OfferClaim & { title: string })[]);
   const supportCasesByClaim = new Map((supportCasesResult.data ?? []).map((supportCase) => [supportCase.claim_id, supportCase]));
   const dailyStatus = dailyStatusResult.data?.[0] ?? null;
-  const dailyProgress = dailyStatus ? Math.min(100, dailyStatus.points_earned / dailyStatus.daily_cap * 100) : 0;
+  const dailyLimitReached = Boolean(dailyStatus && dailyStatus.points_earned >= dailyStatus.daily_cap);
   const visibleTransactions = transactions.slice(0, pageSize);
   const visibleClaims = claims.slice(0, pageSize);
   const nearestTarget = offers
@@ -120,16 +120,8 @@ export default async function VisitorRewardsPage({
             <div><strong>{formatPoints(summary.points_earned)}</strong><span>earned</span></div>
             <div><strong>{formatPoints(summary.points_spent)}</strong><span>used</span></div>
           </div>
-          {dailyStatus ? (
-            <div className="visitor-daily-points">
-              <div><span>Visit points in the last 24 hours</span><strong>{formatPoints(dailyStatus.points_earned)} / {formatPoints(dailyStatus.daily_cap)}</strong></div>
-              <div className="visitor-daily-points-track" role="progressbar" aria-label="Visit points earned in the last 24 hours" aria-valuemin={0} aria-valuemax={dailyStatus.daily_cap} aria-valuenow={Math.min(dailyStatus.points_earned, dailyStatus.daily_cap)}>
-                <span style={{ width: `${dailyProgress}%` }} />
-              </div>
-              {dailyStatus.points_earned >= dailyStatus.daily_cap && <small>The limit is reached. Points resume as earlier visits leave the 24-hour window.</small>}
-            </div>
-          ) : <p className="visitor-daily-points-unavailable" role="status">Daily visit-point status is unavailable for this account. Your saved balance and activity are unchanged.</p>}
-          <p className="visitor-rewards-location"><MapPin size={14} aria-hidden="true" />{profileResult.data.city ? `${profileResult.data.city}, ${profileResult.data.country_code}` : "Add a city to see local offers"}<Link href="/visitor">Edit profile</Link></p>
+          {dailyLimitReached && <p className="visitor-location-lock" role="status">You reached today&apos;s visit-points limit. Points resume as earlier visits leave the 24-hour window.</p>}
+          {!profileResult.data.city && <p className="visitor-rewards-location"><MapPin size={14} aria-hidden="true" />Add a city to see local offers<Link href="/visitor">Edit profile</Link></p>}
         </div>
       </section>
 
