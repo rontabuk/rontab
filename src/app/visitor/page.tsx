@@ -180,7 +180,7 @@ export default async function VisitorAccountPage({
           </Link>
         </section>
       </section>
-      <ProfileOffers offers={sellerOffers.offers} cityId={profile.city_id} available={sellerOffers.available} />
+      <ProfileOffers offers={sellerOffers.offers} cityId={profile.city_id} available={sellerOffers.available} platformOfferCount={availableOffers.length} />
     </main>
   );
 }

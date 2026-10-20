@@ -5,6 +5,8 @@ import { connection } from "next/server";
 import { CalendarDays, Gift, MapPin, Ticket } from "lucide-react";
 import { joinLoyaltyOffer, reportLoyaltyClaimIssue } from "@/app/visitor/actions";
 import { OfferNotificationReadMarker } from "@/components/OfferNotificationReadMarker";
+import { ProfileOffers } from "@/components/visitor/ProfileOffers";
+import { getAvailableSellerOffers } from "@/lib/seller/available-offers";
 import { formatDateTime, formatNumber as formatPoints } from "@/lib/format";
 import { getNotificationFeed } from "@/lib/notifications/feed";
 import { getVisitorAccount } from "@/lib/visitor/access";
@@ -41,7 +43,7 @@ export default async function VisitorRewardsPage({
     supabase.rpc("get_visitor_loyalty_offers"),
     supabase.rpc("get_visitor_loyalty_activity", { p_limit: pageSize + 1, p_offset: activityPage * pageSize }),
     supabase.rpc("get_visitor_offer_history", { p_limit: pageSize + 1, p_offset: offerPage * pageSize }),
-    supabase.from("profiles").select("city,country_code").eq("id", user.id).single(),
+    supabase.from("profiles").select("city,city_id,country_code").eq("id", user.id).single(),
     supabase.rpc("get_visitor_daily_visit_points_status"),
     supabase.from("loyalty_claim_support_cases").select("id,claim_id,issue_type,status,resolution_note,created_at,updated_at").order("created_at", { ascending: false }),
   ]);
@@ -63,11 +65,13 @@ export default async function VisitorRewardsPage({
   const dailyLimitReached = Boolean(dailyStatus && dailyStatus.points_earned >= dailyStatus.daily_cap);
   const visibleTransactions = transactions.slice(0, pageSize);
   const visibleClaims = claims.slice(0, pageSize);
-  const nearestTarget = offers
-    .map((offer) => Math.max(offer.minimum_points, offer.points_cost))
+  const sellerOffers = await getAvailableSellerOffers(supabase, profileResult.data.city_id);
+  const targets = [...offers.map((offer) => Math.max(offer.minimum_points, offer.points_cost)),
+    ...sellerOffers.offers.filter((offer) => offer.points_cost > 0 && offer.remainingClaims !== 0).map((offer) => offer.points_cost)];
+  const nearestTarget = targets
     .filter((target) => target > summary.points_balance)
     .sort((first, second) => first - second)[0];
-  const pointsReady = offers.length > 0 && !nearestTarget;
+  const pointsReady = targets.length > 0 && !nearestTarget;
   const progress = nearestTarget
     ? Math.min(100, summary.points_balance / nearestTarget * 100)
     : pointsReady ? 100 : 0;
@@ -125,9 +129,11 @@ export default async function VisitorRewardsPage({
         </div>
       </section>
 
+      <ProfileOffers offers={sellerOffers.offers} cityId={profileResult.data.city_id} available={sellerOffers.available} />
+
       <section className="visitor-offers-section" aria-labelledby="visitor-offers-title">
         <div className="visitor-rewards-section-heading">
-          <div><p className="admin-eyebrow">CURRENTLY AVAILABLE</p><h2 id="visitor-offers-title">Offers for you</h2></div>
+          <div><p className="admin-eyebrow">FROM RONTAB</p><h2 id="visitor-offers-title">RonTab rewards</h2></div>
           <span>{offers.length} available</span>
         </div>
         {offers.length ? (
@@ -139,8 +145,8 @@ export default async function VisitorRewardsPage({
         ) : (
           <div className="visitor-rewards-empty">
             <Gift size={25} aria-hidden="true" />
-            <h3>No active offers for your location</h3>
-            <p>New gifts and point offers will appear here when they are available to you.</p>
+            <h3>No RonTab rewards in your city right now</h3>
+            <p>Gifts and draws from RonTab will appear here when they are available to you.</p>
             {!profileResult.data.city && <Link href="/visitor">Add your city to find local offers</Link>}
           </div>
         )}

@@ -136,6 +136,8 @@
 .visitor-profile-offer-group { padding-block: 14px; border-bottom: 1px solid var(--line); }
 .visitor-profile-offer-group h3 { display: flex; align-items: center; gap: 7px; margin: 0 0 12px; font-size: 14px; }
 .visitor-profile-offers p { font-size: 12px; color: #657064; }
+.visitor-rewards-page .visitor-profile-offers { padding-top: 28px; border-bottom: 1px solid #dde2d9; }
+.visitor-profile-offer-more { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; font-size: 13px; font-weight: 600; }
 .visitor-profile-offer-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .visitor-profile-offer { display: grid; grid-template-columns: 72px minmax(0, 1fr) 15px; align-items: center; gap: 10px; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); }
 .visitor-profile-offer-media { position: relative; width: 72px; aspect-ratio: 1; overflow: hidden; background: #e7ece4; }
