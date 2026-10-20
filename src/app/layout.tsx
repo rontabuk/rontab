@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { DM_Sans, DM_Serif_Display } from "next/font/google";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { siteUrl } from "@/lib/site-url";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -16,13 +17,8 @@ const dmSerifDisplay = DM_Serif_Display({
   weight: "400",
 });
 
-const deploymentHost = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
-const metadataBase = process.env.NEXT_PUBLIC_SITE_URL
-  ? new URL(process.env.NEXT_PUBLIC_SITE_URL)
-  : new URL(deploymentHost ? `https://${deploymentHost}` : "http://localhost:3000");
-
 export const metadata: Metadata = {
-  metadataBase,
+  metadataBase: siteUrl,
   title: {
     default: "Discover products",
     template: "%s",

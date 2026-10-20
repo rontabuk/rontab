@@ -29,9 +29,14 @@ const Link = ({ children, ...props }) => React.createElement("a", props, childre
 const ActionForm = ({ children, className }) => React.createElement("form", { className, "data-fixture": "true" }, children);
 const cityModule = loadSource("components/CityPicker.tsx");
 const multiCityModule = loadSource("components/MultiCityPicker.tsx");
+const availableOffersModule = loadSource("lib/seller/available-offers.ts", {
+  "server-only": {}, "@/lib/seller/offer-schema": { isSellerOfferSchemaUnavailable: () => false },
+  "@/lib/supabase/storage": { createProductMediaUrls: async () => new Map() },
+});
 const profileModule = loadSource("components/visitor/ProfileOffers.tsx", {
   "next/image": { default: Image }, "next/link": { default: Link },
   "@/lib/format": { formatNumber: (value) => value.toLocaleString("en-GB") },
+  "@/lib/seller/available-offers": availableOffersModule,
 });
 
 function formFixture(rewardPoints = 100) {
@@ -329,14 +334,22 @@ test("profile previews separate audiences independently of points cost", () => {
 
 test("shared offer query filters by the saved city before limiting results and signs durable product paths", async () => {
   const calls = [];
-  const row = { ...fixtureOffer(0), product_media_path: "seller/product/photo.jpg", media_storage_path: null, media_url: null, seller_offer_locations: [{ id: "location", city_id: "GB-test" }] };
-  const query = { then(resolve) { return Promise.resolve({ data: [row], error: null }).then(resolve); } };
-  for (const name of ["select", "eq", "or", "gte", "order", "limit"]) query[name] = (...args) => { calls.push([name, ...args]); return query; };
+  const row = { ...fixtureOffer(0), seller_profile_id: "seller-fixture", fulfillment: "in_store", valid_from: "2000-01-01", valid_until: "2999-12-31", product_media_path: "seller/product/photo.jpg", media_storage_path: null, media_url: null, seller_offer_locations: [{ id: "location", city_id: "GB-test" }] };
+  const tables = {
+    seller_offers: [row],
+    seller_offer_daily_quotas: [{ location_id: "location", offer_date: "2999-01-01", ends_at: "23:59:59" }],
+    seller_profiles: [{ id: "seller-fixture", shop_name: "Fixture shop", slug: "fixture-shop", logo_url: null }],
+  };
+  const from = (table) => {
+    const query = { then(resolve) { return Promise.resolve({ data: tables[table], error: null }).then(resolve); } };
+    for (const name of ["select", "eq", "in", "or", "gte", "order", "limit"]) query[name] = (...args) => { if (table === "seller_offers") calls.push([name, ...args]); return query; };
+    return query;
+  };
   const { getAvailableSellerOffers } = loadSource("lib/seller/available-offers.ts", {
     "server-only": {}, "@/lib/seller/offer-schema": { isSellerOfferSchemaUnavailable: () => false },
     "@/lib/supabase/storage": { createProductMediaUrls: async (_client, paths) => { assert.equal(paths[0], row.product_media_path); return new Map([[paths[0], "https://signed.invalid/photo"]]); } },
   });
-  const result = await getAvailableSellerOffers({ from: () => query, rpc: async () => ({ data: [{ offer_id: row.id, remaining_claims: 3 }], error: null }) }, "GB-test");
+  const result = await getAvailableSellerOffers({ from, rpc: async () => ({ data: [{ offer_id: row.id, remaining_claims: 3 }], error: null }) }, "GB-test");
   assert.ok(calls.findIndex((call) => call[1] === "audience_locations.city_id") < calls.findIndex((call) => call[0] === "limit"));
   assert.ok(calls.some((call) => call[0] === "or" && call[1] === "target_all_uk.eq.true,audience_locations.not.is.null"));
   assert.equal(result.offers[0].mediaDisplayUrl, "https://signed.invalid/photo");
@@ -345,12 +358,14 @@ test("shared offer query filters by the saved city before limiting results and s
 
 test("offer discovery retains city-filtered results when the All UK migration is not yet installed", async () => {
   const queries = [];
-  const client = { from() {
-    const index = queries.length;
+  const client = { from(table) {
     const calls = [];
-    queries.push(calls);
-    const query = { then(resolve) { return Promise.resolve(index === 0 ? { data: null, error: { code: "42703" } } : { data: [{ ...fixtureOffer(0), product_media_path: null, media_storage_path: null, seller_offer_locations: [] }], error: null }).then(resolve); } };
-    for (const name of ["select", "eq", "or", "gte", "order", "limit"]) query[name] = (...args) => { calls.push([name, ...args]); return query; };
+    const index = table === "seller_offers" ? queries.push(calls) - 1 : -1;
+    const result = index === 0 ? { data: null, error: { code: "42703" } }
+      : index === 1 ? { data: [{ ...fixtureOffer(0), seller_profile_id: "seller-fixture", fulfillment: "online", product_media_path: null, media_storage_path: null, seller_offer_locations: [] }], error: null }
+      : { data: [], error: null };
+    const query = { then(resolve) { return Promise.resolve(result).then(resolve); } };
+    for (const name of ["select", "eq", "in", "or", "gte", "order", "limit"]) query[name] = (...args) => { calls.push([name, ...args]); return query; };
     return query;
   }, rpc: async () => ({ data: [], error: null }) };
   const { getAvailableSellerOffers } = loadSource("lib/seller/available-offers.ts", {

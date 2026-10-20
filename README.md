@@ -62,7 +62,7 @@ npm run test:offer-concurrency
 
 ## Supabase configuration
 
-`.env.local` contains the project URL and publishable key and is ignored by Git. Copy `.env.example` when configuring another environment. Product visit redirects also require `SUPABASE_SERVICE_ROLE_KEY`, available in the Supabase project's API keys. Add it only to the server-side `.env.local` file, never to a `NEXT_PUBLIC_` variable or source control, then restart `npm run dev`.
+`.env.local` contains the project URL and publishable key and is ignored by Git. Copy `.env.example` (committed, lists every supported variable) when configuring another environment. Set `NEXT_PUBLIC_SITE_URL` to the public origin in production so canonical URLs, `robots.txt` and `sitemap.xml` point at the live domain. Product visit redirects also require `SUPABASE_SERVICE_ROLE_KEY`, available in the Supabase project's API keys. Add it only to the server-side `.env.local` file, never to a `NEXT_PUBLIC_` variable or source control, then restart `npm run dev`.
 
 Local migration files do not imply hosted deployment. Confirm the linked project's migration status before deploying changes.
 
