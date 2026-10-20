@@ -7,8 +7,10 @@ import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/l
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Visitors are approved automatically, so the account is usable at once; email ownership is confirmed later.
-export async function registerVisitorAccount(email: string, password: string, cityId: string, countryCode: string): Promise<{ error: string | null }> {
+export async function registerVisitorAccount(email: string, password: string, cityId: string, countryCode: string, name: string): Promise<{ error: string | null }> {
   const normalizedEmail = email.trim().toLowerCase();
+  const displayName = name.trim().replace(/\s+/g, " ");
+  if (displayName.length < 2 || displayName.length > 100) return { error: "Enter your name (2 to 100 characters)." };
   if (!EMAIL_PATTERN.test(normalizedEmail) || normalizedEmail.length > 254) return { error: "Enter a valid email address." };
   if (password.length < 8 || password.length > 72) return { error: "Use a password between 8 and 72 characters." };
   if (!isCityId(cityId) || !/^[A-Z]{2}$/.test(countryCode)) return { error: "Choose a supported country and city." };
@@ -42,7 +44,7 @@ export async function registerVisitorAccount(email: string, password: string, ci
     email: normalizedEmail,
     password,
     email_confirm: true,
-    user_metadata: { account_type: "visitor" },
+    user_metadata: { account_type: "visitor", display_name: displayName },
   });
 
   if (error) {
@@ -56,7 +58,7 @@ export async function registerVisitorAccount(email: string, password: string, ci
 
   const { error: profileError } = await admin
     .from("profiles")
-    .update({ city_id: cityId, country_code: countryCode })
+    .update({ city_id: cityId, country_code: countryCode, display_name: displayName })
     .eq("id", data.user.id);
   if (profileError) {
     const { error: rollbackError } = await admin.auth.admin.deleteUser(data.user.id);

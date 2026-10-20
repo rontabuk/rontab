@@ -41,6 +41,10 @@ export default async function CreatorRegisterPage() {
         <ActionForm className="creator-application-form creator-register-form" action={registerCreatorAccount}>
           <fieldset className="creator-register-account">
             <legend>Account details</legend>
+            <label>Creator name
+              <input name="display_name" minLength={2} maxLength={100} autoComplete="nickname" placeholder="The name your audience knows you by" required />
+              <small>Shown on your public creator profile once approved.</small>
+            </label>
             <label>Email address
               <input name="email" type="email" inputMode="email" autoComplete="email" placeholder="you@example.com" maxLength={254} required />
             </label>
@@ -58,7 +62,7 @@ export default async function CreatorRegisterPage() {
             </div>
           </fieldset>
 
-          <CreatorApplicationFields cities={cities} requireProfileImage />
+          <CreatorApplicationFields cities={cities} requireProfileImage showDisplayName={false} />
 
           <button className="admin-primary-button" type="submit">Create creator account</button>
           <p className="visitor-account-legal">

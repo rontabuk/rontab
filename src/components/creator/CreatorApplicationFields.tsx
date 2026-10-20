@@ -16,6 +16,7 @@ export function CreatorApplicationFields({
   profileImageUrl = null,
   coverImageUrl = null,
   requireProfileImage = false,
+  showDisplayName = true,
 }: {
   cities: SupportedCity[];
   profile?: { display_name: string; bio: string; specialties: string[] } | null;
@@ -25,6 +26,7 @@ export function CreatorApplicationFields({
   profileImageUrl?: string | null;
   coverImageUrl?: string | null;
   requireProfileImage?: boolean;
+  showDisplayName?: boolean;
 }) {
   const accountsByPlatform = new Map(accounts.map((account) => [account.platform, account]));
   const portfolioByPosition = new Map(portfolioItems.map((item) => [item.position, item]));
@@ -38,10 +40,10 @@ export function CreatorApplicationFields({
           <CreatorMediaPicker kind="cover" initialUrl={coverImageUrl} />
         </div>
       </fieldset>
-      <label>
+      {showDisplayName && <label>
         Public display name
         <input name="display_name" defaultValue={profile?.display_name ?? ""} minLength={2} maxLength={100} autoComplete="nickname" required />
-      </label>
+      </label>}
 
       <div className="creator-audience-location">
         <p>Audience cities <small>Optional. Choose up to 10 cities where your audience is based, not your home address.</small></p>

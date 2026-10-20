@@ -97,7 +97,8 @@ export function SellerAuthForm({ mode }: { mode: "register" | "login" }) {
       {mode === "register" && (
         <>
           <label htmlFor="shop-name">Shop name</label>
-          <input id="shop-name" name="shop_name" autoComplete="organization" required />
+          <input id="shop-name" name="shop_name" autoComplete="organization" minLength={2} maxLength={100} placeholder="The name buyers will see" aria-describedby="shop-name-hint" required />
+          <small id="shop-name-hint">Shown on your shop page and on every product you list.</small>
           <label htmlFor="shop-slug">Shop handle</label>
           <input id="shop-slug" name="shop_slug" pattern="[a-z0-9]+(-[a-z0-9]+)*" autoComplete="off" placeholder="e.g. b2bmisr" aria-describedby="shop-handle-hint" required />
           <small id="shop-handle-hint">Your unique shop identifier, not a website address. Use lowercase letters, numbers or hyphens.</small>

@@ -80,7 +80,7 @@ export function VisitorAccountForm({ nextPath, notice, initialMode = "login", co
         setIsSubmitting(false);
         return;
       }
-      const { error: registerError } = await registerVisitorAccount(email, password, cityId, countryCode);
+      const { error: registerError } = await registerVisitorAccount(email, password, cityId, countryCode, String(formData.get("display_name") ?? ""));
       if (registerError) {
         setFeedback({ tone: "error", text: registerError });
         setIsSubmitting(false);
@@ -134,6 +134,12 @@ export function VisitorAccountForm({ nextPath, notice, initialMode = "login", co
         {notice && <p className="visitor-account-alert" data-tone="info" role="status">{notice}</p>}
 
         <form className="visitor-account-form" onSubmit={handleSubmit}>
+          {mode === "register" && (
+            <>
+              <label htmlFor="visitor-name">Your name</label>
+              <input id="visitor-name" name="display_name" autoComplete="name" minLength={2} maxLength={100} placeholder="e.g. Sarah Ahmed" required />
+            </>
+          )}
           <label htmlFor="visitor-email">Email address</label>
           <input id="visitor-email" name="email" type="email" inputMode="email" autoComplete="email" placeholder="you@example.com" required />
 
