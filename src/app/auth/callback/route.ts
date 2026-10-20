@@ -3,6 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSafeVisitorPath } from "@/lib/visitor/paths";
 
+// A reused link should still report success when this browser's account is already confirmed.
+async function isEmailAlreadyVerified(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data } = await supabase.from("profiles").select("email_verified_at").eq("id", user.id).maybeSingle();
+  return Boolean(data?.email_verified_at);
+}
+
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const flow = request.nextUrl.searchParams.get("flow");
@@ -28,7 +36,7 @@ export async function GET(request: NextRequest) {
       ? await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "email" })
       : code ? await supabase.auth.exchangeCodeForSession(code) : { error: true };
     const { error: verifyError } = error ? { error } : await supabase.rpc("visitor_mark_email_verified", {});
-    resultUrl.searchParams.set("emailVerified", verifyError ? "0" : "1");
+    resultUrl.searchParams.set("emailVerified", verifyError && !(await isEmailAlreadyVerified(supabase)) ? "0" : "1");
     revalidatePath("/", "layout");
     return NextResponse.redirect(resultUrl);
   }
