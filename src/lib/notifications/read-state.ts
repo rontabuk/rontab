@@ -51,7 +51,8 @@ export function useNotificationReads({ userId, readIds, lastSeenAt, autoReadId, 
   const [rawIds, guestLastSeenAt] = JSON.parse(snapshot) as [string, string | null];
   const savedIds = new Set([...readIds, ...parseIds(rawIds), ...(confirmed.userId === userId ? confirmed.ids : [])]);
   const baseline = userId ? lastSeenAt : guestLastSeenAt;
-  const isUnread = (item: SiteNotification) => (item.kind === "verify-email" && !item.completed) || (
+  // The email reminder is generated, not stored: it is unread only while confirmation is still pending.
+  const isUnread = (item: SiteNotification) => item.kind === "verify-email" ? !item.completed : (
     !savedIds.has(item.id) && (!baseline || Date.parse(item.createdAt) > Date.parse(baseline))
   );
 
