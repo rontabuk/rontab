@@ -22,11 +22,16 @@ export const getViewer = cache(async (): Promise<Viewer> => {
   if (user.app_metadata?.role === "admin") return { role: "admin", userId: user.id, createdAt: user.created_at };
 
   if (isCreatorUser(user)) {
-    const { data: creatorProfile, error: creatorProfileError } = await supabase
-      .from("creator_profiles")
-      .select("status,is_public,slug,display_name,profile_image_path,published_profile_image_path")
-      .eq("owner_id", user.id)
-      .maybeSingle();
+    // owner_id is not readable by users, so resolve the profile through the owner-scoped RPC.
+    const { data: creatorProfileId, error: creatorProfileIdError } = await supabase.rpc("get_my_creator_profile_id");
+    if (creatorProfileIdError) throw new Error(creatorProfileIdError.message);
+    const { data: creatorProfile, error: creatorProfileError } = creatorProfileId
+      ? await supabase
+        .from("creator_profiles")
+        .select("status,is_public,slug,display_name,profile_image_path,published_profile_image_path")
+        .eq("id", creatorProfileId)
+        .maybeSingle()
+      : { data: null, error: null };
     if (creatorProfileError) throw new Error(creatorProfileError.message);
     const creatorAvatarPath = creatorProfile?.profile_image_path ?? creatorProfile?.published_profile_image_path;
     const { data: creatorAvatar } = creatorAvatarPath

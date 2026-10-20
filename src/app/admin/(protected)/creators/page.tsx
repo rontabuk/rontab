@@ -22,7 +22,7 @@ export default async function AdminCreatorsPage({
   await connection();
   const [{ reviewed }, { supabase }] = await Promise.all([searchParams, requireAdmin()]);
   const [submittedResult, approvedResult, suspendedResult] = await Promise.all([
-    supabase.from("creator_profiles").select("id,owner_id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,published_display_name,published_bio,published_specialties,published_audience_city_id,profile_image_path,cover_image_path,published_profile_image_path,published_cover_image_path,created_at,updated_at").eq("status", "submitted").order("submitted_at", { ascending: true }),
+    supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,published_display_name,published_bio,published_specialties,published_audience_city_id,profile_image_path,cover_image_path,published_profile_image_path,published_cover_image_path,created_at,updated_at").eq("status", "submitted").order("submitted_at", { ascending: true }),
     supabase.from("creator_profiles").select("id,slug,display_name,bio,specialties,status,is_public,submitted_at,audience_city_id,published_display_name,published_bio,published_specialties,published_audience_city_id,profile_image_path,cover_image_path,published_profile_image_path,published_cover_image_path,created_at,updated_at").eq("is_public", true).order("updated_at", { ascending: false }).limit(100),
     supabase.from("creator_profiles").select("id,display_name").eq("status", "suspended").order("updated_at", { ascending: false }),
   ]);
@@ -54,13 +54,13 @@ export default async function AdminCreatorsPage({
       ? supabase.from("creator_profile_reviews").select("creator_profile_id,review_note,created_at").in("creator_profile_id", submitted.map((profile) => profile.id)).order("created_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
     submitted.length
-      ? supabase.from("profiles").select("id,email_verified_at").in("id", submitted.map((profile) => profile.owner_id))
+      ? supabase.rpc("admin_get_creator_owner_verification", { p_creator_profile_ids: submitted.map((profile) => profile.id) })
       : Promise.resolve({ data: [], error: null }),
   ]);
   for (const result of [accountsResult, portfolioResult, citiesResult, reviewsResult, ownerProfilesResult]) {
     if (result.error) throw new Error(result.error.message);
   }
-  const verifiedOwnerIds = new Set((ownerProfilesResult.data ?? []).filter((owner) => owner.email_verified_at).map((owner) => owner.id));
+  const verifiedProfileIds = new Set((ownerProfilesResult.data ?? []).filter((owner) => owner.email_verified_at).map((owner) => owner.creator_profile_id));
   const { data: signedMedia, error: signedMediaError } = mediaPaths.length
     ? await supabase.storage.from("creator-profile-media").createSignedUrls(mediaPaths, 60 * 60)
     : { data: [], error: null };
@@ -103,8 +103,8 @@ export default async function AdminCreatorsPage({
                 <article className="creator-admin-item" key={profile.id}>
                   <div className="creator-admin-profile">
                     <div className="creator-admin-status"><span className="admin-status admin-status-pending">Submitted</span><time>{formatDateTime(profile.submitted_at)}</time></div>
-                    <small className={verifiedOwnerIds.has(profile.owner_id) ? "admin-email-confirmed" : "admin-email-unconfirmed"}>
-                      {verifiedOwnerIds.has(profile.owner_id) ? "Email confirmed" : "Email not confirmed yet — approval is blocked until the creator confirms it"}
+                    <small className={verifiedProfileIds.has(profile.id) ? "admin-email-confirmed" : "admin-email-unconfirmed"}>
+                      {verifiedProfileIds.has(profile.id) ? "Email confirmed" : "Email not confirmed yet — approval is blocked until the creator confirms it"}
                     </small>
                     <h3>{profile.display_name}</h3>
                     {(profile.profile_image_path || profile.cover_image_path) && (

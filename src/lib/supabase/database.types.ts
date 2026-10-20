@@ -395,6 +395,7 @@ export type Database = {
       admin_update_seller_voucher_support_case: { Args: { p_case_id: string; p_resolution_note: string; p_status: string }; Returns: undefined };
       get_my_creator_profile_id: { Args: Record<PropertyKey, never>; Returns: string | null };
       save_creator_application: { Args: { p_audience_city_id: string | null; p_bio: string; p_display_name: string; p_platform_accounts: Json; p_portfolio_items: Json; p_public_profile_consent: boolean; p_specialties: string[] }; Returns: string };
+      admin_get_creator_owner_verification: { Args: { p_creator_profile_ids: string[] }; Returns: { creator_profile_id: string; email_verified_at: string | null }[] };
       admin_review_creator_profile: { Args: { p_creator_profile_id: string; p_decision: string; p_review_note: string | null }; Returns: undefined };
       creator_withdraw_public_profile: { Args: Record<PropertyKey, never>; Returns: undefined };
       get_creator_collaboration_notifications: { Args: Record<PropertyKey, never>; Returns: { body: string; created_at: string; href: string; notification_id: string; title: string }[] };
