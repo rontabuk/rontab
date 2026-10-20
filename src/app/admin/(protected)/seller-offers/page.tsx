@@ -251,7 +251,7 @@ export default async function AdminSellerOffersPage({
                     </form>}
                     {offer.status !== "ended" && <form action={setSellerOfferStatus}>
                       <input type="hidden" name="offer_id" value={offer.id} /><input type="hidden" name="status" value="ended" />
-                      <label><input type="checkbox" name="confirm_cancellation" required />Cancel unused active vouchers and return any points charged</label>
+                      <label><input type="checkbox" name="confirm_cancellation" required />Cancel unused active vouchers, return any points charged and notify affected customers</label>
                       <button className="is-secondary" type="submit"><X size={13} aria-hidden="true" />End offer</button>
                     </form>}
                   </div>

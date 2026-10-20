@@ -66,7 +66,7 @@ export type Database = {
         ]
       >;
       profiles: Table<
-        { avatar_url: string | null; city: string | null; city_id: string | null; country_code: string | null; created_at: string; display_name: string | null; email_verified_at: string | null; id: string; updated_at: string },
+        { avatar_url: string | null; city: string | null; city_changed_at: string | null; city_id: string | null; country_code: string | null; created_at: string; display_name: string | null; email_verified_at: string | null; id: string; updated_at: string },
         { avatar_url?: string | null; city?: string | null; city_id?: string | null; country_code?: string | null; created_at?: string; display_name?: string | null; id: string; updated_at?: string }
       >;
       member_contact_preferences: Table<
@@ -363,6 +363,7 @@ export type Database = {
       get_public_seller_verification_badges: { Args: { p_seller_profile_ids: string[] }; Returns: { is_blue: boolean; is_verified: boolean; seller_profile_id: string }[] };
       get_public_seller_follower_count: { Args: { p_seller_profile_id: string }; Returns: number };
       save_my_member_contact_profile: { Args: { p_contact_visibility: string; p_phone: string | null; p_social_links: Json; p_postcode?: string | null; p_postcode_visibility?: string }; Returns: undefined };
+      get_my_city_change_available_at: { Args: Record<PropertyKey, never>; Returns: string | null };
       get_member_contact_profile: { Args: { p_member_user_id: string }; Returns: { city_name: string | null; contact_email: string | null; contact_visibility: string; country_code: string | null; display_name: string | null; phone: string | null; postcode: string | null; profile_user_id: string; social_platform: string | null; social_profile_url: string | null }[] };
       get_member_profile_follower_summary: { Args: { p_member_user_id: string }; Returns: { follower_count: number; is_following: boolean }[] };
       follow_member_profile: { Args: { p_member_user_id: string }; Returns: boolean };

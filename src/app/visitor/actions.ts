@@ -106,6 +106,7 @@ async function persistVisitorProfile(formData: FormData) {
   if (error) {
     if (uploadedAvatarPath) await supabase.storage.from("visitor-avatars").remove([uploadedAvatarPath]);
     if (error.code === "55000" && locationSubmitted) redirect("/visitor?locationLocked=1");
+    if (error.code === "RT014" && locationSubmitted) redirect("/visitor?cityCooldown=1");
     throw new Error(error.message);
   }
 

@@ -17,13 +17,17 @@ import { saveVisitorProfile } from "@/app/visitor/actions";
 export const metadata: Metadata = { title: "My account", robots: { index: false, follow: false } };
 export const instant = false;
 
+function formatCityChangeDate(value: string) {
+  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/London" }).format(new Date(value));
+}
+
 export default async function VisitorAccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ locationLocked?: string; saved?: string }>;
+  searchParams: Promise<{ cityCooldown?: string; locationLocked?: string; saved?: string }>;
 }) {
   await connection();
-  const [{ locationLocked, saved }, { supabase, user }] = await Promise.all([searchParams, getVisitorAccount()]);
+  const [{ cityCooldown, locationLocked, saved },  { supabase, user }] = await Promise.all([searchParams, getVisitorAccount()]);
   const [{ data: profile, error: profileError }, { data: summaryRows, error: summaryError }, { data: offers, error: offersError }, { data: cityLocked, error: cityLockError }, { data: followedShops, error: shopsError }, { data: followedCreators, error: creatorsError }, { data: followerSummaryRows, error: followerSummaryError }, { data: contactPreferences, error: contactError }, { data: socialLinks, error: socialLinksError }, { countries, cities }] = await Promise.all([
     supabase.from("profiles").select("display_name,avatar_url,city,city_id,country_code,email_verified_at").eq("id", user.id).single(),
     supabase.rpc("get_visitor_loyalty_summary"),
@@ -36,8 +40,10 @@ export default async function VisitorAccountPage({
     supabase.from("member_social_links").select("position,platform,profile_url").eq("user_id", user.id).order("position"),
     getSupportedLocations(),
   ]);
+  const { data: cityChangeAvailableAt, error: cityCooldownError } = await supabase.rpc("get_my_city_change_available_at");
 
   if (profileError) throw new Error(profileError.message);
+  if (cityCooldownError) throw new Error(cityCooldownError.message);
   if (summaryError) throw new Error(summaryError.message);
   if (offersError) throw new Error(offersError.message);
   if (cityLockError) throw new Error(cityLockError.message);
@@ -80,6 +86,7 @@ export default async function VisitorAccountPage({
       <Link className="visitor-account-back" href="/products"><ArrowLeft size={14} aria-hidden="true" />Back to products</Link>
       {saved === "1" && <p className="admin-save-success" role="status">Your profile was saved.</p>}
       {locationLocked === "1" && <p className="visitor-rewards-error" role="alert">Your city could not be changed because a matching local offer became active. Your other profile changes were not saved.</p>}
+      {cityCooldown === "1" && <p className="visitor-rewards-error" role="alert">You can change your city once every 14 days. Your other profile changes were not saved.</p>}
       <section className="visitor-account-profile" aria-label="Profile overview">
         <div className="visitor-account-topline">
           <div className="visitor-account-identity">
@@ -138,7 +145,9 @@ export default async function VisitorAccountPage({
                   </fieldset>
                   <div className="visitor-location-heading"><MapPin size={15} aria-hidden="true" /><span>Offer location</span></div>
                   {cityLocked && <p className="visitor-location-lock" role="status">Your city is locked while a local offer is active. You can update it when that offer ends.</p>}
-                  <CityPicker name="city_id" countries={countries} cities={cities} initialCity={savedCity} initialCountryCode={profile.country_code} disabled={cityLocked} />
+                  {!cityLocked && cityChangeAvailableAt && <p className="visitor-location-lock" role="status">You can change your city once every 14 days. Next change available on {formatCityChangeDate(cityChangeAvailableAt)}.</p>}
+                  {!cityLocked && !cityChangeAvailableAt && profile.city_id && <p className="visitor-location-hint">You can change your city once every 14 days.</p>}
+                  <CityPicker name="city_id" countries={countries} cities={cities} initialCity={savedCity} initialCountryCode={profile.country_code} disabled={Boolean(cityLocked || cityChangeAvailableAt)} />
                   <button className="admin-primary-button" type="submit">Save profile</button>
                 </ActionForm>
               </VisitorProfileEditDialog>
