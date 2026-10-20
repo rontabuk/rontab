@@ -48,7 +48,7 @@ async function AccountLinks() {
 
   if (viewer.role === "seller") {
     return (
-      <HeaderActions accountHref="/seller/profile" accountLabel="Seller profile" accountName={viewer.displayName} accountImage={viewer.avatarUrl} bell={bell}>
+      <HeaderActions accountHref="/seller/profile" accountLabel="Seller profile" accountName={viewer.displayName}       accountImage={viewer.avatarUrl} creatorsLabel="Promote with creators" bell={bell}>
         <Link href="/seller">Seller workspace</Link>
         <Link href="/seller/advertising">Advertising</Link>
         <Link href="/seller/offers">Offer requests</Link>
@@ -67,7 +67,7 @@ async function AccountLinks() {
 
   if (viewer.role === "visitor") {
     return (
-      <HeaderActions accountHref="/visitor" accountLabel="My account" accountName={viewer.displayName} accountImage={viewer.avatarUrl} points={viewer.points} bell={bell}>
+      <HeaderActions accountHref="/visitor" accountLabel="My account" accountName={viewer.displayName} accountImage={viewer.avatarUrl} points={viewer.points} creatorsLabel="Creators & fan codes" bell={bell}>
         <Link href="/visitor/offers">Offer gallery</Link>
         <Link href="/visitor/rewards">Points & rewards</Link>
         <Link href="/visitor?becomeCreator=1">Become a creator</Link>
@@ -85,9 +85,11 @@ function HeaderActions({
   accountName,
   accountImage,
   points = null,
+  creatorsLabel = "Creators",
   bell,
   children,
 }: {
+  creatorsLabel?: string;
   accountHref: string;
   accountLabel: string;
   accountName?: string;
@@ -116,7 +118,7 @@ function HeaderActions({
               {points !== null && (
                 <span className="visitor-points-badge" aria-label={`${points} reward points`}>Points <strong>{formatNumber(points)}</strong></span>
               )}
-                <Link href="/creators">Creators</Link>
+              <Link href="/creators">{creatorsLabel}</Link>
               {children}
               <Link href="/information">Site information</Link>
               <HeaderSettings />

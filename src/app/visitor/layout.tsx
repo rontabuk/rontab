@@ -13,7 +13,9 @@ const visitorLinks = [
   { href: "/visitor", label: "My profile", exact: true },
   { href: "/visitor/support", label: "My reports" },
   { href: "/visitor/rewards", label: "Points & rewards" },
+  { href: "/visitor/offers", label: "Offer gallery" },
   { href: "/products", label: "Discover products" },
+  { href: "/creators", label: "Creators & fan codes" },
   { href: "/visitor/fans", label: "I'm a fan of" },
   { href: "/visitor/shops-following", label: "Shops I follow" },
 ];

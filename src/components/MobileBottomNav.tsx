@@ -48,6 +48,7 @@ export async function MobileBottomNav() {
           ],
           menuLinks: [
             { href: "/visitor", label: "My account" },
+            { href: "/creators", label: "Creators & fan codes" },
             { href: "/visitor/fans", label: "I'm a fan of" },
             { href: "/visitor/shops-following", label: "Shops I follow" },
             { href: "/visitor/offers?view=vouchers", label: "My vouchers" },
@@ -97,7 +98,7 @@ export async function MobileBottomNav() {
             { href: "/seller", label: "Add", icon: "add", exact: true, highlight: true, ariaLabel: "Add a product" },
             { href: "/notifications", label: "Inbox", icon: "inbox" },
           ],
-          menuLinks: [{ href: "/seller/products", label: "Products" }, { href: "/seller/offers", label: "Offer requests" }, { href: "/seller/profile", label: "Profile" }],
+          menuLinks: [{ href: "/seller/products", label: "Products" }, { href: "/seller/offers", label: "Offer requests" }, { href: "/creators", label: "Promote with creators" }, { href: "/seller/profile", label: "Profile" }],
           signOutTo: "/seller/login",
         }}
       />
