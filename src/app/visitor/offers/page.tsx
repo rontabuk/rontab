@@ -135,7 +135,7 @@ export default async function VisitorOfferGalleryPage({
                 && (quota.offer_date > today || quota.ends_at > currentTime) && offer.remainingClaims !== 0)
               .map((quota) => ({ location, quota })))
               .sort((first, second) => first.quota.offer_date.localeCompare(second.quota.offer_date) || first.quota.starts_at.localeCompare(second.quota.starts_at))
-              .slice(0, 4);
+              .slice(0, 8);
 
             return (
               <article className="seller-offer-card" id={`offer-${offer.id}`} key={offer.id}>
@@ -167,9 +167,9 @@ export default async function VisitorOfferGalleryPage({
                     {offer.valid_from <= today && offer.external_url ? <a href={offer.external_url} target="_blank" rel="noopener noreferrer">Open seller website<ArrowUpRight size={14} aria-hidden="true" /></a> : <p>Available from {formatOfferDate(offer.valid_from)}</p>}
                     <p>Purchases, delivery and returns are arranged with the seller. External code usage is not tracked by RonTab.</p>
                   </div> : <OfferCapacity offerId={offer.id} maximum={offer.max_claims} remaining={offer.remainingClaims} closesAt={`${offer.valid_until}T23:59:59`}><div className="seller-offer-slot-list">
-                    <h3>Available times</h3>
+                    <h3>Available times{slots.length > 1 && <span> · {slots.length} times, swipe to see more</span>}</h3>
                     {offer.offer_kind === "discount" && <p>{usage?.reservations_used ?? 0} of {formatNumber(offer.max_per_customer)} reservations used. Cancelled reservations do not count.</p>}
-                    {slots.length ? slots.map(({ location, quota }) => {
+                    {slots.length ? <div className="seller-offer-slot-track">{slots.map(({ location, quota }) => {
                       const alreadyReservedToday = !["discount", "free_item", "meal"].includes(offer.offer_kind)
                         && coupons.some((coupon) => coupon.offer_id === offer.id && coupon.offer_date === quota.offer_date && coupon.status !== "cancelled");
                       return (
@@ -205,7 +205,7 @@ export default async function VisitorOfferGalleryPage({
                           )}
                         </div>
                       );
-                    }) : <p className="seller-offer-no-slots">{offer.remainingClaims === 0 ? "All vouchers for this offer have been reserved." : "No more available times are scheduled."}</p>}
+                    })}</div> : <p className="seller-offer-no-slots">{offer.remainingClaims === 0 ? "All vouchers for this offer have been reserved." : "No more available times are scheduled."}</p>}
                   </div></OfferCapacity>}
                 </div>
               </article>

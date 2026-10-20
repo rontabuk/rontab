@@ -187,8 +187,13 @@ a.seller-offer-card-seller:hover strong { text-decoration: underline; }
 .seller-offer-card-terms { color: #6c756a; font-size: 11px; }
 .seller-offer-card-terms summary { width: fit-content; color: #405f45; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .seller-offer-card-terms p { margin: 7px 0 0; line-height: 1.55; white-space: pre-line; }
-.seller-offer-slot-list { display: grid; gap: 7px; margin-top: 2px; }
+.seller-offer-slot-list { display: grid; gap: 7px; min-width: 0; margin-top: 2px; }
 .seller-offer-slot-list h3 { margin: 0; color: #425543; font-size: 12px; }
+.seller-offer-slot-list h3 span { color: #788076; font-weight: 500; }
+.seller-offer-slot-track { display: flex; gap: 8px; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: thin; padding-bottom: 4px; }
+.seller-offer-slot-track > .seller-offer-slot { flex: 0 0 min(260px, 84%); grid-template-columns: minmax(0, 1fr); align-content: space-between; align-items: start; scroll-snap-align: start; }
+.seller-offer-slot-track > .seller-offer-slot:only-child { flex-basis: 100%; }
+.seller-offer-slot-track .seller-offer-slot form, .seller-offer-slot-track .seller-offer-slot form button { width: 100%; }
 .seller-offer-slot { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 12px; padding: 9px 10px; border: 1px solid #e0e5dd; background: #fff; }
 .seller-offer-slot > div { display: grid; gap: 3px; min-width: 0; }
 .seller-offer-slot strong { color: #48584a; font-size: 11px; }
