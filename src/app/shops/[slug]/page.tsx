@@ -136,7 +136,7 @@ export default async function PublicShopPage({
             <span>{formatNumber(products.length)}</span>
           </div>
           {products.length
-            ? <div className="public-shop-products">{products.map((product) => <ProductCard product={product} compact muteAutoplay priceBesideMaker hideSellerName isShopFollowed={isFollowing} showSellerOfferActions={showSellerOfferActions} key={product.slug} />)}</div>
+            ? <div className="product-grid public-shop-products">{products.map((product) => <ProductCard product={product} muteAutoplay showSellerOfferActions={showSellerOfferActions} key={product.slug} />)}</div>
             : <p className="public-shop-empty">This shop has no published products right now.</p>}
         </section>
       </main>

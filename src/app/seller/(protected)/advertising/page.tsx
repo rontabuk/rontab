@@ -3,7 +3,6 @@ import { connection } from "next/server";
 import { RefreshCw } from "lucide-react";
 import { SellerAdvertisingManager, type AdvertisingProduct } from "@/components/seller/SellerAdvertisingManager";
 import { getTestBillingConfig, purchaseIdPattern } from "@/lib/billing/stripe";
-import { getOverlayTone } from "@/data/products";
 import { getSellerAccount } from "@/lib/seller/access";
 import { getSellerProductDetails } from "@/lib/seller/products";
 
@@ -91,7 +90,6 @@ export default async function SellerAdvertisingPage({
       maker: seller.shop_name,
       shopUrl: seller.shop_url,
       makerImage: seller.logo_url?.startsWith("https://") ? seller.logo_url : "",
-      overlayTone: getOverlayTone(category?.slug),
     };
   });
 

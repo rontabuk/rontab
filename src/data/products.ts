@@ -1,5 +1,3 @@
-export type ProductOverlayTone = "ceramic" | "linen" | "glass" | "coffee" | "woven" | "lamp" | "oak";
-
 export type ProductCategory = {
   id: string;
   name: string;
@@ -30,17 +28,4 @@ export type Product = {
   shopPhone?: string | null;
   sellerBadge?: "blue" | "grey";
   makerImage: string;
-  overlayTone: ProductOverlayTone;
 };
-
-const overlayToneByCategory: Record<string, ProductOverlayTone> = {
-  kitchen: "coffee",
-  tableware: "ceramic",
-  textiles: "linen",
-  storage: "woven",
-  living: "lamp",
-};
-
-export function getOverlayTone(categorySlug: string | null | undefined): ProductOverlayTone {
-  return overlayToneByCategory[categorySlug ?? ""] ?? "ceramic";
-}

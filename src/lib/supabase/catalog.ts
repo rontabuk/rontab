@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { cacheLife, cacheTag } from "next/cache";
-import { getOverlayTone, type Product, type ProductCategory } from "@/data/products";
+import type { Product, ProductCategory } from "@/data/products";
 import { getVisibleCategoryRows } from "@/lib/categories";
 import type { Database } from "@/lib/supabase/database.types";
 import { createSupabasePublicClient } from "@/lib/supabase/server";
@@ -170,7 +170,6 @@ async function loadPublicCatalog(filter: CatalogFilter = {}): Promise<{
         shopPhone: seller?.phone ?? null,
         sellerBadge: seller?.badge,
         makerImage: seller?.logo_url?.startsWith("https://") ? seller.logo_url : "",
-        overlayTone: getOverlayTone(category?.slug),
       };
     }),
   };

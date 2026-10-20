@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Apple, Archive, Armchair, Baby, Bath, Bean, BedDouble, Beef, Bike, Blender, BookOpen, Brush, Camera, Candy,
-  ChevronLeft, ChevronRight, CircleDot, Coffee, Coins, Columns2, Cookie, CookingPot, Croissant, CupSoda, Dices, Drumstick,
+  ChevronLeft, ChevronRight, CircleDot, Coffee, Coins, Cookie, CookingPot, Croissant, CupSoda, Dices, Drumstick,
   Dumbbell, EggFried, Fence, Fish, Flag, Flower2, Folder, Footprints, Gamepad2, Gem,
   Guitar, Hammer, Hand, HardHat, Headphones, HeartPulse, IceCreamBowl, Laptop, Layers, Lamp, LayoutGrid, Leaf, Mail, Milk,
-  Music, Newspaper, Palette, PartyPopper, PawPrint, Plug, Puzzle, Rows2, Scissors, ScrollText, Search,
+  Music, Newspaper, Palette, PartyPopper, PawPrint, Plug, Puzzle, Scissors, ScrollText, Search,
   Nut, Pizza, Salad, Sandwich, Shapes, Shirt, ShoppingBag, Smartphone, Snowflake, Soup, Sparkles, SprayCan, Stamp,
   Tablet, Target, Tent, Tv, UtensilsCrossed, Video, WashingMachine, Watch, Waves, Wheat, X,
 } from "lucide-react";
@@ -52,7 +52,6 @@ type ProductBrowserProps = {
   initialCategory: string;
   categories: readonly ProductCategory[];
   products: readonly Product[];
-  followedShopIds: readonly string[];
 };
 
 export function ProductBrowser({
@@ -60,12 +59,10 @@ export function ProductBrowser({
   initialCategory,
   categories,
   products,
-  followedShopIds,
 }: ProductBrowserProps) {
   const [query, setQuery] = useState(initialQuery);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [currentTime, setCurrentTime] = useState(0);
-  const [twoColumnMobileView, setTwoColumnMobileView] = useState(true);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
@@ -155,57 +152,6 @@ export function ProductBrowser({
     return () => window.clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    let idleTimer: number | null = null;
-
-    const openDescriptionAfterScroll = () => {
-      if (idleTimer !== null) window.clearTimeout(idleTimer);
-
-      idleTimer = window.setTimeout(() => {
-        idleTimer = null;
-        if (document.querySelector(".description-panel")) return;
-
-        const visibleCards = Array.from(
-          document.querySelectorAll<HTMLElement>("[data-product-card]"),
-        )
-          .map((card) => {
-            const bounds = card.getBoundingClientRect();
-            const visibleWidth = Math.max(
-              0,
-              Math.min(bounds.right, window.innerWidth) - Math.max(bounds.left, 0),
-            );
-            const visibleHeight = Math.max(
-              0,
-              Math.min(bounds.bottom, window.innerHeight) - Math.max(bounds.top, 0),
-            );
-
-            return {
-              card,
-              visibleRatio:
-                (visibleWidth * visibleHeight) / (bounds.width * bounds.height),
-            };
-          })
-          .filter(({ visibleRatio }) => visibleRatio >= 0.4)
-          .sort((first, second) => second.visibleRatio - first.visibleRatio);
-
-        const descriptionButton = visibleCards[0]?.card.querySelector<HTMLButtonElement>(
-          ".product-description-preview",
-        );
-
-        if (descriptionButton?.getAttribute("aria-expanded") === "false") {
-          descriptionButton.click();
-        }
-      }, 5_000);
-    };
-
-    window.addEventListener("scroll", openDescriptionAfterScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener("scroll", openDescriptionAfterScroll);
-      if (idleTimer !== null) window.clearTimeout(idleTimer);
-    };
-  }, []);
-
   const normalizedQuery = query.trim().toLowerCase();
   const categoryPath = getCategoryPath(categories, activeCategory);
   const selectedBranch = getCategoryBranchIds(categories, activeCategory);
@@ -240,7 +186,6 @@ export function ProductBrowser({
     const matchesQuery = !normalizedQuery || `${product.name} ${product.categoryName} ${product.description} ${product.maker}`.toLowerCase().includes(normalizedQuery);
     return matchesCategory && matchesQuery;
   }).sort((first, second) => Number(isActiveUntil(second.featuredUntil)) - Number(isActiveUntil(first.featuredUntil)));
-  const followedShops = new Set(followedShopIds);
   const clearFilters = () => { setQuery(""); setActiveCategory("all"); setOpenCategory(null); };
 
   return (
@@ -318,29 +263,17 @@ export function ProductBrowser({
             <input id="product-search-input" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search for products, shops…" aria-controls="product-grid" />
             {query && <button className="clear-search" type="button" aria-label="Clear search" onClick={() => setQuery("")}><X size={15} aria-hidden="true" /></button>}
           </label>
-          <button
-            className="product-view-toggle"
-            type="button"
-            aria-label={twoColumnMobileView ? "Show one column" : "Show two columns"}
-            aria-controls="product-grid"
-            aria-pressed={twoColumnMobileView}
-            title={twoColumnMobileView ? "Show one column" : "Show two columns"}
-            onClick={() => setTwoColumnMobileView((current) => !current)}
-          >
-            {twoColumnMobileView ? <Rows2 size={19} aria-hidden="true" /> : <Columns2 size={19} aria-hidden="true" />}
-          </button>
         </div>
       </div>
       {categoryPath.length > 0 && <nav className="category-breadcrumb" aria-label="Selected category"><button type="button" onClick={() => selectCategory("all")}>All</button>{categoryPath.map((category, index) => <span key={category.id}><ChevronRight size={13} aria-hidden="true" /><button type="button" aria-current={index === categoryPath.length - 1 ? "page" : undefined} onClick={() => selectCategory(category.id)}>{category.name}</button></span>)}</nav>}
       <p className="visually-hidden" role="status" aria-live="polite">{filteredProducts.length} {filteredProducts.length === 1 ? "find" : "finds"}</p>
       {filteredProducts.length ? (
-        <div className="product-grid" id="product-grid" data-mobile-columns={twoColumnMobileView ? "two" : "one"}>
+        <div className="product-grid" id="product-grid">
           {filteredProducts.map((product, index) => (
             <ProductCard
               product={product}
               priority={index < 2}
               isFeatured={isActiveUntil(product.featuredUntil)}
-              isShopFollowed={product.sellerProfileId ? followedShops.has(product.sellerProfileId) : false}
               key={product.slug}
             />
           ))}

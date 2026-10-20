@@ -9,10 +9,8 @@ import { reportMarketplaceItem } from "@/app/visitor/actions";
 import { ProductCard } from "@/components/ProductCard";
 import { BrowserSpeechPlayer } from "@/components/BrowserSpeechPlayer";
 import { ShopVisitLink } from "@/components/ShopVisitLink";
-import { getViewer } from "@/lib/auth/viewer";
 import { formatPrice } from "@/lib/format";
 import { getPublicProduct, getRelatedPublicProducts } from "@/lib/supabase/catalog";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import "../catalog.css";
 
 type ProductPageProps = { params: Promise<{ slug: string }>; searchParams: Promise<{ report?: string }> };
@@ -28,15 +26,8 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 async function ProductPageContent({ params, searchParams }: ProductPageProps) {
   const [{ slug }, { report }] = await Promise.all([params, searchParams]);
   await io();
-  const [product, viewer] = await Promise.all([getPublicProduct(slug), getViewer()]);
+  const product = await getPublicProduct(slug);
   if (!product) notFound();
-  let followedShopIds: string[] = [];
-  if (viewer.role === "visitor") {
-    const sessionClient = await createSupabaseServerClient();
-    const { data, error } = await sessionClient.rpc("visitor_get_my_followed_shops");
-    if (error) throw new Error(error.message);
-    followedShopIds = (data ?? []).map((shop) => shop.seller_profile_id);
-  }
   return (
     <>
       <main className="product-detail page-shell">
@@ -115,23 +106,22 @@ async function ProductPageContent({ params, searchParams }: ProductPageProps) {
           </div>
         </div>
         <Suspense fallback={null}>
-          <RelatedProducts slug={slug} category={product.category} followedShopIds={followedShopIds} />
+          <RelatedProducts slug={slug} category={product.category} />
         </Suspense>
       </main>
     </>
   );
 }
 
-async function RelatedProducts({ slug, category, followedShopIds }: { slug: string; category: string; followedShopIds: string[] }) {
+async function RelatedProducts({ slug, category }: { slug: string; category: string }) {
   const products = await getRelatedPublicProducts(slug, category);
   if (!products.length) return null;
-  const followedShops = new Set(followedShopIds);
 
   return (
     <section className="related-section" aria-labelledby="related-title">
       <div className="section-heading"><div><p className="eyebrow">In the same corner</p><h2 id="related-title">A little more to explore.</h2></div></div>
       <div className="product-grid related-grid">
-        {products.map((item) => <ProductCard product={item} isShopFollowed={item.sellerProfileId ? followedShops.has(item.sellerProfileId) : false} key={item.slug} />)}
+        {products.map((item) => <ProductCard product={item} key={item.slug} />)}
       </div>
     </section>
   );

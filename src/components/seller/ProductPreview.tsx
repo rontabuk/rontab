@@ -2,7 +2,7 @@
 
 import { ProductCard } from "@/components/ProductCard";
 import { BrowserSpeechPlayer } from "@/components/BrowserSpeechPlayer";
-import { getOverlayTone, type Product } from "@/data/products";
+import type { Product } from "@/data/products";
 
 export type SellerCategoryOption = { id: string; slug: string; name: string; parent_id?: string | null };
 
@@ -44,7 +44,6 @@ export function ProductPreview({
     mediaType,
     maker: shopName,
     makerImage: shopLogo?.startsWith("https://") ? shopLogo : "",
-    overlayTone: getOverlayTone(category?.slug),
   };
 
   return (

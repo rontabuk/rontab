@@ -95,7 +95,6 @@ if (process.argv.includes("--seller-preview") || process.argv.includes("--shop-p
   const cardDependencies = {
     "next/link": { default: ({ children, ...props }) => React.createElement("a", props, children) },
     "next/image": { default: ({ fill, unoptimized, priority, sizes, ...props }) => React.createElement("img", { ...props, "data-priority": Boolean(priority), "data-unoptimized": Boolean(unoptimized), "data-sizes": sizes, ...(fill ? { style: { position: "absolute", width: "100%", height: "100%", objectFit: "cover" } } : {}) }) },
-    "@/components/ShopFollowButton": { ShopFollowButton: () => null },
     "@/components/ShopVisitLink": { ShopVisitLink: ({ children, slug, productName, ...props }) => React.createElement("a", { ...props, href: `/visit/${slug}`, "aria-label": `Visit shop for ${productName}` }, children) },
     "@/components/seller/SellerVerificationBadge": { SellerVerificationBadge: () => null },
     "@/lib/format": { formatCompactNumber: String, formatPrice: (price) => `GBP ${price}` },
@@ -110,7 +109,7 @@ if (process.argv.includes("--seller-preview") || process.argv.includes("--shop-p
     const query = new URL(request.url, "http://127.0.0.1:3002").searchParams;
     if (process.argv.includes("--shop-preview")) {
       const owner = query.get("owner") !== "0";
-      const product = { id: "10000000-0000-4000-8000-000000000001", slug: "trainers", name: "Everyday running trainers", maker: "Independent shop", description: "Lightweight running trainers for everyday use.", price: 85, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500", imageAlt: "Red running trainers", mediaType: "image", overlayTone: "glass", shopSlug: "independent-shop" };
+      const product = { id: "10000000-0000-4000-8000-000000000001", slug: "trainers", name: "Everyday running trainers", maker: "Independent shop", description: "Lightweight running trainers for everyday use.", price: 85, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500", imageAlt: "Red running trainers", mediaType: "image", shopSlug: "independent-shop" };
       const css = ["src/app/globals.css", "src/app/shops/[slug]/shop.css"].map((path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8")).join("\n");
       const icons = nodeRequire("lucide-react");
       const content = React.createElement("main", { className: "public-shop-page" },
@@ -181,7 +180,6 @@ function reelFixture({ desktop = true, autoplay = true } = {}) {
     "next/image": { default: "image" },
     "next/link": { default: "link" },
     "lucide-react": new Proxy({}, { get: (_target, name) => String(name) }),
-    "@/components/ShopFollowButton": { ShopFollowButton: "follow" },
     "@/components/ShopVisitLink": { ShopVisitLink: "visit" },
     "@/components/seller/SellerVerificationBadge": { SellerVerificationBadge: "badge" },
     "@/lib/format": { formatCompactNumber: String, formatPrice: String },
@@ -244,10 +242,12 @@ test("product card replaces the external visit only for seller offer controls an
   assert.ok(owner.elements.filter((node) => node.props.href?.startsWith("/seller/products/")).every((node) => node.props.title && node.props["aria-label"]));
   const preview = fixture.render({ showSellerOfferActions: true, previewOnly: true });
   assert.equal(preview.elements.filter((node) => node.props.href?.startsWith("/seller/products/")).length, 0);
-  const compact = fixture.render({ showSellerOfferActions: true, compact: true, hideSellerName: true, priceBesideMaker: true });
-  assert.equal(compact.elements.filter((node) => node.props.href?.startsWith("/seller/products/")).length, 2);
-  assert.equal(compact.elements.some((node) => node.props.className?.includes("advertiser-avatar")), false);
-  assert.equal(compact.elements.find((node) => node.props.className === "product-description-name-text").props.children, "Reel");
+  for (const view of [original, owner]) {
+    assert.ok(view.elements.some((node) => node.props.className?.includes("advertiser-avatar")));
+    assert.equal(view.elements.find((node) => node.props.className === "product-description-name-text").props.children, "Shop");
+    assert.equal(view.elements.find((node) => node.props.className === "product-description-maker-name").props.children, "Reel");
+    assert.equal(view.elements.find((node) => node.props.className === "product-card-description").props.children, "Description");
+  }
 });
 
 test("public shop contact icons use only the consent-filtered RPC, with a safe unmigrated fallback", async () => {
@@ -341,9 +341,7 @@ test("shop owner controls are server-verified and hidden from guests, visitors, 
           assert.equal(workspace.props.navigation.props.activeHref, "/seller/profile");
           assert.equal(workspace.props.sectionLabel, "SHOP WORKSPACE");
         }
-    assert.equal(card.props.compact, true);
-    assert.equal(card.props.hideSellerName, true);
-    assert.equal(card.props.priceBesideMaker, true);
+    assert.equal(card.props.muteAutoplay, true);
     assert.equal(card.props.showSellerOfferActions, isOwner && !viewer.inactiveShop, `${viewer.role}:${viewer.userId}`);
     assert.equal(ownershipQueries.length, viewer.role === "seller" ? 1 : 0);
     if (viewer.role === "seller") assert.deepEqual(ownershipQueries[0], { slug: seller.slug, user_id: viewer.userId });
@@ -548,7 +546,6 @@ function fixture() {
     "server-only": {},
     react: { cache: (callback) => callback },
     "next/cache": { cacheLife: (value) => lifetimes.push(value), cacheTag: (value) => tags.push(value) },
-    "@/data/products": { getOverlayTone: () => "sage" },
     "@/lib/categories": categoryModule.exports,
     "@/lib/supabase/server": { createSupabasePublicClient: () => database },
     "@/lib/supabase/storage": {
@@ -668,7 +665,7 @@ function browserFixture(mobile = false, extraCategories = []) {
     react: {
       useState(initial) {
         const index = stateIndex++;
-        if (!(index in state)) state[index] = index === 4 ? mobile : initial;
+        if (!(index in state)) state[index] = index === 3 ? mobile : initial;
         return [state[index], (value) => { state[index] = typeof value === "function" ? value(state[index]) : value; }];
       },
       useEffect() {},
@@ -703,7 +700,7 @@ function browserFixture(mobile = false, extraCategories = []) {
   const products = ["boots", "dresses", "kitchen", ...leaves].map((category) => ({ slug: category, category, name: category, description: "", maker: "Shop", categoryName: category }));
   const render = () => {
     stateIndex = 0;
-    return browserModule.exports.ProductBrowser({ initialQuery: "", initialCategory: "all", categories, products, followedShopIds: [] });
+    return browserModule.exports.ProductBrowser({ initialQuery: "", initialCategory: "all", categories, products });
   };
   const nodes = (node) => Array.isArray(node) ? node.flatMap(nodes) : node && typeof node === "object" ? [node, ...nodes(node.props.children)] : [];
   const find = (tree, predicate) => nodes(tree).find(predicate);
@@ -815,19 +812,12 @@ for (const mobile of [false, true]) {
   });
 }
 
-test("phone product catalog defaults to two columns and toggles to one column", () => {
+test("phone product catalog uses the single two-column card grid without a layout toggle", () => {
   const browser = browserFixture(true);
-  let tree = browser.render();
-  let grid = browser.find(tree, (node) => node.props.id === "product-grid");
-  let toggle = browser.find(tree, (node) => node.props.className === "product-view-toggle");
-  assert.equal(grid.props["data-mobile-columns"], "two");
-  assert.equal(toggle.props["aria-pressed"], true);
-  toggle.props.onClick();
-  tree = browser.render();
-  grid = browser.find(tree, (node) => node.props.id === "product-grid");
-  toggle = browser.find(tree, (node) => node.props.className === "product-view-toggle");
-  assert.equal(grid.props["data-mobile-columns"], "one");
-  assert.equal(toggle.props["aria-pressed"], false);
+  const tree = browser.render();
+  const grid = browser.find(tree, (node) => node.props.id === "product-grid");
+  assert.equal(grid.props.className, "product-grid");
+  assert.equal(browser.find(tree, (node) => node.props.className === "product-view-toggle"), undefined);
 });
 
 function adminActionsFixture() {
