@@ -28,6 +28,7 @@ const nextConfig: NextConfig = {
     }] : [],
   },
   experimental: {
+    agentUpgrade: "security",
     // Visitor avatars and seller logos (up to 5 MB) are uploaded through Server Actions.
     serverActions: {
       bodySizeLimit: "6mb",
