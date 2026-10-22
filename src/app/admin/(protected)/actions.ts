@@ -586,6 +586,7 @@ export async function createTopVideoAd(_state: FormState, formData: FormData): P
       throw new Error(error.message);
     }
 
+    updateTag("top-video-ads");
     revalidatePath("/admin/video-ads");
     revalidatePath("/products");
   });
@@ -607,6 +608,7 @@ export async function updateTopVideoAd(formData: FormData) {
   });
   if (error) throw new Error(error.message);
 
+  updateTag("top-video-ads");
   revalidatePath("/admin/video-ads");
   revalidatePath("/products");
 }
@@ -620,6 +622,7 @@ export async function deleteTopVideoAd(formData: FormData) {
   if (error) throw new Error(error.message);
   if (storagePath) await supabase.storage.from("top-video-ads").remove([storagePath]);
 
+  updateTag("top-video-ads");
   revalidatePath("/admin/video-ads");
   revalidatePath("/products");
 }

@@ -22,6 +22,10 @@ export function pickLeadMedia<T extends Pick<ProductImageRow, "product_id" | "me
 export type TopVideoAd = { id: string; title: string; mediaUrl: string; mediaType: "video" | "image"; displaySeconds: number; targetUrl: string | null };
 
 export async function getTopVideoAds(): Promise<TopVideoAd[]> {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 600, expire: 3300 });
+  cacheTag("top-video-ads");
+
   const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("top_video_ads")
@@ -59,7 +63,7 @@ async function loadPublicCatalog(filter: CatalogFilter = {}): Promise<{
   products: Product[];
 }> {
   "use cache";
-  cacheLife({ stale: 30, revalidate: 30, expire: 60 });
+  cacheLife({ stale: 300, revalidate: 600, expire: 3300 });
   cacheTag("public-catalog");
 
   const supabase = createSupabasePublicClient();
