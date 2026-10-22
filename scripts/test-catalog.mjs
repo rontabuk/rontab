@@ -504,6 +504,10 @@ function fixture() {
   }));
   const tables = {
     products,
+    top_video_ads: [
+      { id: "ad-active", title: "Active ad", storage_path: "active.mp4", media_type: "video", display_seconds: 8, target_url: null, is_active: true },
+      { id: "ad-inactive", title: "Inactive ad", storage_path: "inactive.jpg", media_type: "image", display_seconds: 5, target_url: "https://example.test", is_active: false },
+    ],
     categories: [
       { id: "kitchen-id", slug: "kitchen", name: "Kitchen", is_active: true },
       { id: "home-id", slug: "home", name: "Home", is_active: true },
@@ -541,6 +545,13 @@ function fixture() {
       return query;
     },
     async rpc() { return { data: [], error: null }; },
+    storage: {
+      from(bucket) {
+        return {
+          getPublicUrl(path) { return { data: { publicUrl: `https://storage.example.test/${bucket}/${path}` } }; },
+        };
+      },
+    },
   };
   const dependencies = {
     "server-only": {},
@@ -606,13 +617,24 @@ test("a full category does not fetch unrelated products", async () => {
   assert.equal(state.queries.filter((query) => query.table === "products").length, 1);
 });
 
-test("public data uses a short tagged cache, well within the signed URL lifetime", async () => {
+test("public catalog uses a tagged cache shorter than the signed URL lifetime", async () => {
   const state = fixture();
   await state.catalog.getPublicCatalog();
   assert.equal(state.tags.includes("public-catalog"), true);
-  assert.equal(state.lifetimes[0].stale, 30);
-  assert.equal(state.lifetimes[0].revalidate, 30);
-  assert.equal(state.lifetimes[0].expire, 60);
+  assert.equal(state.lifetimes[0].stale, 300);
+  assert.equal(state.lifetimes[0].revalidate, 600);
+  assert.equal(state.lifetimes[0].expire, 3300);
+});
+
+test("public top video ads use a tagged cache and only include active ads", async () => {
+  const state = fixture();
+  const ads = await state.catalog.getTopVideoAds();
+  assert.deepEqual(ads.map((ad) => ad.id), ["ad-active"]);
+  assert.equal(ads[0].mediaUrl, "https://storage.example.test/top-video-ads/active.mp4");
+  assert.equal(state.tags.includes("top-video-ads"), true);
+  assert.equal(state.lifetimes[0].stale, 300);
+  assert.equal(state.lifetimes[0].revalidate, 600);
+  assert.equal(state.lifetimes[0].expire, 3300);
 });
 
 test("database failures propagate rather than being cached as an empty catalog", async () => {
